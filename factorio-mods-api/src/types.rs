@@ -13,7 +13,7 @@ make_deserializable!(pub struct Mod {
 	id: ModId,
 
 	name: ModName,
-	owner: AuthorName,
+	owner: AuthorNames,
 	title: ModTitle,
 	summary: ModDescription,
 
@@ -34,7 +34,7 @@ make_deserializable!(pub struct ModId(u64));
 
 make_deserializable!(pub struct ModName(String));
 
-make_deserializable!(pub struct AuthorName(String));
+make_deserializable!(pub struct AuthorNames(Vec<String>));
 
 make_deserializable!(pub struct ModTitle(String));
 
@@ -65,10 +65,10 @@ make_deserializable!(pub struct Filename(String));
 make_deserializable!(pub struct FileSize(u64));
 
 make_deserializable!(pub struct ReleaseInfo {
-	author: AuthorName,
-	description: ModDescription,
+	author: AuthorNames,
+	/* description: ModDescription, # Can't represent since `description` isn't present in every ReleaseInfo */
 	factorio_version: GameVersion,
-	homepage: Url,
+	/* homepage: Url, # Can't represent since `homepage` isn't present in every ReleaseInfo */
 	name: ModName,
 	title: ModTitle,
 	version: ReleaseVersion,
@@ -79,7 +79,7 @@ make_deserializable!(pub struct Tag {
 	name: TagName,
 	title: TagTitle,
 	description: TagDescription,
-	/* type: TagType, */
+	/* type: TagType, # Can't represent since `type` is a keyword */
 });
 
 make_deserializable!(pub struct TagId(u64));
