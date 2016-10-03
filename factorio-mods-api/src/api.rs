@@ -25,11 +25,19 @@ make_deserializable!(pub struct PageNumber(u64));
 
 make_deserializable!(struct ResponseNumber(u64));
 
+make_deserializable!(struct SearchResponsePaginationLinks {
+	prev: Option<String>,
+	next: Option<String>,
+	first: Option<String>,
+	last: Option<String>,
+});
+
 make_deserializable!(struct SearchResponsePagination {
 	page_count: PageNumber,
 	page: PageNumber,
 	count: ResponseNumber,
 	page_size: ResponseNumber,
+	links: SearchResponsePaginationLinks,
 });
 
 make_deserializable!(struct SearchResponse {
