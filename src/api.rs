@@ -5,6 +5,14 @@ extern crate url;
 
 use types;
 
+fn get(client: &hyper::Client, url: hyper::Url) -> Result<hyper::client::Response, APIError> {
+	let response = try!(client.get(url).send().map_err(APIError::Hyper));
+	match response.status {
+		hyper::status::StatusCode::Ok => Ok(response),
+		code => Err(APIError::StatusCode(code))
+	}
+}
+
 #[derive(Debug)]
 pub enum APIError {
 	Hyper(hyper::Error),
@@ -76,32 +84,23 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 
 				url.query_pairs_mut().append_pair("page", self.current_page_number.0.to_string().as_str());
 
-				match self.client.get(url).send().map_err(APIError::Hyper) {
+				match get(self.client, url) {
 					Ok(response) => {
-						match response.status {
-							hyper::status::StatusCode::Ok => {
-								match serde_json::from_reader(response).map_err(APIError::JSON) {
-									Ok(page) => {
-										self.current_page = page;
-										return self.next();
-									},
-									Err(err) => {
-										self.errored = true;
-										return Some(Err(err));
-									}
-								}
+						match serde_json::from_reader(response).map_err(APIError::JSON) {
+							Ok(page) => {
+								self.current_page = page;
+								return self.next();
 							},
-
-							hyper::status::StatusCode::NotFound => {
+							Err(err) => {
 								self.errored = true;
-								return None;
-							},
-
-							code => {
-								self.errored = true;
-								return Some(Err(APIError::StatusCode(code)));
-							},
+								return Some(Err(err));
+							}
 						}
+					},
+
+					Err(APIError::StatusCode(hyper::status::StatusCode::NotFound)) => {
+						self.errored = true;
+						return None;
 					},
 
 					Err(err) => {
