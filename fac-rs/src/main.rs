@@ -7,7 +7,7 @@ fn main() {
 	for mod_ in iter {
 		match mod_ {
 			Ok(mod_) => {
-				println!("{:?}", mod_);
+				println!("{:#?}", mod_);
 			},
 			Err(err) => {
 				println!("{:?}", err);

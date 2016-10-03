@@ -4,7 +4,7 @@ extern crate hyper;
 mod util;
 
 mod types;
-pub use types::{ Mod };
+pub use types::*;
 
 mod api;
 pub use api::{ API, SearchResultsIterator };

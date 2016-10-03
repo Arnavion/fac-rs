@@ -5,44 +5,30 @@ extern crate url;
 
 use types;
 
-fn get(client: &hyper::Client, url: hyper::Url) -> Result<hyper::client::Response, APIError> {
-	let response = try!(client.get(url).send().map_err(APIError::Hyper));
-	match response.status {
-		hyper::status::StatusCode::Ok => Ok(response),
-		code => Err(APIError::StatusCode(code))
-	}
-}
-
-#[derive(Debug)]
-pub enum APIError {
-	Hyper(hyper::Error),
-	Parse(url::ParseError),
-	StatusCode(hyper::status::StatusCode),
-	JSON(serde_json::Error),
-}
-
 make_deserializable!(pub struct PageNumber(u64));
 
 make_deserializable!(struct ResponseNumber(u64));
+
+make_deserializable!(struct SearchResponse {
+	pagination: SearchResponsePagination,
+	results: Vec<types::Mod>,
+});
+
+make_deserializable!(struct SearchResponsePagination {
+	page_count: PageNumber,
+	page: PageNumber,
+
+	page_size: ResponseNumber,
+	count: ResponseNumber,
+
+	links: SearchResponsePaginationLinks,
+});
 
 make_deserializable!(struct SearchResponsePaginationLinks {
 	prev: Option<String>,
 	next: Option<String>,
 	first: Option<String>,
 	last: Option<String>,
-});
-
-make_deserializable!(struct SearchResponsePagination {
-	page_count: PageNumber,
-	page: PageNumber,
-	count: ResponseNumber,
-	page_size: ResponseNumber,
-	links: SearchResponsePaginationLinks,
-});
-
-make_deserializable!(struct SearchResponse {
-	pagination: SearchResponsePagination,
-	results: Vec<types::Mod>,
 });
 
 const BASE_URL: &'static str = "https://mods.factorio.com/api/";
@@ -92,18 +78,10 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 
 				url.query_pairs_mut().append_pair("page", self.current_page_number.0.to_string().as_str());
 
-				match get(self.client, url) {
-					Ok(response) => {
-						match serde_json::from_reader(response).map_err(APIError::JSON) {
-							Ok(page) => {
-								self.current_page = page;
-								return self.next();
-							},
-							Err(err) => {
-								self.errored = true;
-								return Some(Err(err));
-							}
-						}
+				match get_object(self.client, url) {
+					Ok(page) => {
+						self.current_page = Some(page);
+						return self.next();
 					},
 
 					Err(APIError::StatusCode(hyper::status::StatusCode::NotFound)) => {
@@ -157,4 +135,26 @@ impl API {
 			errored: false,
 		})
 	}
+}
+
+#[derive(Debug)]
+pub enum APIError {
+	Hyper(hyper::Error),
+	Parse(url::ParseError),
+	StatusCode(hyper::status::StatusCode),
+	JSON(serde_json::Error),
+}
+
+fn get(client: &hyper::Client, url: hyper::Url) -> Result<hyper::client::Response, APIError> {
+	let response = try!(client.get(url).send().map_err(APIError::Hyper));
+	match response.status {
+		hyper::status::StatusCode::Ok => Ok(response),
+		code => Err(APIError::StatusCode(code))
+	}
+}
+
+fn get_object<T>(client: &hyper::Client, url: hyper::Url) -> Result<T, APIError> where T: serde::Deserialize {
+	let response = try!(get(client, url));
+	let object = try!(serde_json::from_reader(response).map_err(APIError::JSON));
+	return Ok(object);
 }
