@@ -169,3 +169,25 @@ fn query_all_mods() {
 	println!("Found {} mods", count);
 	assert!(count > 500); // 700+ as of 2016-10-03
 }
+
+#[test]
+fn query_name() {
+	let api = API::new(None, None, None);
+
+	let mut iter = api.search("bob's functions library mod", vec![], None, None, None).unwrap();
+	let mod_ = iter.next().unwrap().unwrap();
+	println!("{:?}", mod_);
+	assert!(mod_.title.0 == "Bob's Functions Library mod");
+}
+
+#[test]
+fn query_tag() {
+	let api = API::new(None, None, None);
+
+	let mut iter = api.search("", vec!["logistics"], None, None, None).unwrap();
+	let mod_ = iter.next().unwrap().unwrap();
+	println!("{:?}", mod_);
+	let mut tags = mod_.tags.iter().filter(|tag| tag.name.0 == "logistics");
+	let tag = tags.next().unwrap();
+	println!("{:?}", tag);
+}
