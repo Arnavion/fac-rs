@@ -3,6 +3,8 @@ extern crate serde_json;
 
 make_deserializable!(pub struct DateTime(pub String));
 
+make_deserializable!(pub struct RatingCount(pub u64));
+
 make_deserializable!(pub struct DownloadCount(pub u64));
 
 make_deserializable!(pub struct GameVersion(pub String));
@@ -15,7 +17,8 @@ make_deserializable!(pub struct Mod {
 	pub name: ModName,
 	pub owner: AuthorNames,
 	pub title: ModTitle,
-	pub summary: ModDescription,
+	pub summary: ModSummary,
+	pub description: ModDescription,
 
 	pub github_path: Url,
 	pub homepage: Url,
@@ -23,8 +26,10 @@ make_deserializable!(pub struct Mod {
 	pub game_versions: Vec<GameVersion>,
 
 	pub created_at: DateTime,
-	pub latest_release: ModRelease,
+	pub updated_at: DateTime,
+	pub releases: Vec<ModRelease>,
 
+	pub ratings_count: RatingCount,
 	pub current_user_rating: Option<serde_json::Value>,
 	pub downloads_count: DownloadCount,
 	pub tags: Vec<Tag>,
@@ -37,6 +42,8 @@ make_deserializable!(pub struct ModName(pub String));
 make_deserializable!(pub struct AuthorNames(pub Vec<String>));
 
 make_deserializable!(pub struct ModTitle(pub String));
+
+make_deserializable!(pub struct ModSummary(pub String));
 
 make_deserializable!(pub struct ModDescription(pub String));
 

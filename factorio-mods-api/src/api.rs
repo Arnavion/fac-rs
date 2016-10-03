@@ -11,7 +11,7 @@ make_deserializable!(struct ResponseNumber(u64));
 
 make_deserializable!(struct SearchResponse {
 	pagination: SearchResponsePagination,
-	results: Vec<types::Mod>,
+	results: Vec<SearchResponseMod>,
 });
 
 make_deserializable!(struct SearchResponsePagination {
@@ -40,9 +40,30 @@ const DEFAULT_ORDER: &'static str = "top";
 pub struct API {
 	base_url: String,
 	login_url: String,
-	url: String,
+	url: hyper::Url,
 	client: hyper::Client,
 }
+
+make_deserializable!(pub struct SearchResponseMod {
+	pub id: types::ModId,
+
+	pub name: types::ModName,
+	pub owner: types::AuthorNames,
+	pub title: types::ModTitle,
+	pub summary: types::ModSummary,
+
+	pub github_path: types::Url,
+	pub homepage: types::Url,
+
+	pub game_versions: Vec<types::GameVersion>,
+
+	pub created_at: types::DateTime,
+	pub latest_release: types::ModRelease,
+
+	pub current_user_rating: Option<serde_json::Value>,
+	pub downloads_count: types::DownloadCount,
+	pub tags: Vec<types::Tag>,
+});
 
 #[derive(Debug)]
 pub struct SearchResultsIterator<'a> {
@@ -54,7 +75,7 @@ pub struct SearchResultsIterator<'a> {
 }
 
 impl<'a> Iterator for SearchResultsIterator<'a> {
-	type Item = Result<types::Mod, APIError>;
+	type Item = Result<SearchResponseMod, APIError>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if self.errored {
@@ -100,18 +121,19 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 }
 
 impl API {
-	pub fn new(base_url: Option<String>, login_url: Option<String>, client: Option<hyper::Client>) -> API {
+	pub fn new(base_url: Option<String>, login_url: Option<String>, client: Option<hyper::Client>) -> Result<API, APIError> {
 		let base_url = base_url.unwrap_or_else(|| BASE_URL.to_string());
 		let login_url = login_url.unwrap_or_else(|| LOGIN_URL.to_string());
 		let url = base_url.trim_right_matches('/').to_string() + "/mods";
+		let url = try!(hyper::Url::parse(url.as_str()).map_err(APIError::Parse));
 		let client = client.unwrap_or_else(hyper::Client::new);
 
-		API {
+		Ok(API {
 			base_url: base_url,
 			login_url: login_url,
 			url: url,
 			client: client,
-		}
+		})
 	}
 
 	pub fn search<'a>(&'a self, query: &str, tags: Vec<&str>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
@@ -120,7 +142,7 @@ impl API {
 		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
 		let page = page.unwrap_or_else(|| PageNumber(1));
 
-		let mut url = try!(hyper::Url::parse(self.url.as_str()).map_err(APIError::Parse));
+		let mut url = self.url.clone();
 		url.query_pairs_mut()
 			.append_pair("q", query)
 			.append_pair("tags", tags_query.as_str())
@@ -135,6 +157,12 @@ impl API {
 			errored: false,
 		})
 	}
+
+	pub fn get(&self, mod_name: types::ModName) -> Result<types::Mod, APIError> {
+		let mut url = self.url.clone();
+		try!(url.path_segments_mut().map_err(|_| APIError::Other)).push(mod_name.0.as_str());
+		get_object(&self.client, url)
+	}
 }
 
 #[derive(Debug)]
@@ -143,6 +171,7 @@ pub enum APIError {
 	Parse(url::ParseError),
 	StatusCode(hyper::status::StatusCode),
 	JSON(serde_json::Error),
+	Other,
 }
 
 fn get(client: &hyper::Client, url: hyper::Url) -> Result<hyper::client::Response, APIError> {
@@ -161,8 +190,8 @@ fn get_object<T>(client: &hyper::Client, url: hyper::Url) -> Result<T, APIError>
 
 
 #[test]
-fn query_all_mods() {
-	let api = API::new(None, None, None);
+fn test_search_list_all_mods() {
+	let api = API::new(None, None, None).unwrap();
 
 	let iter = api.search("", vec![], None, None, None).unwrap();
 	let count = iter.count();
@@ -171,8 +200,8 @@ fn query_all_mods() {
 }
 
 #[test]
-fn query_name() {
-	let api = API::new(None, None, None);
+fn test_search_by_name() {
+	let api = API::new(None, None, None).unwrap();
 
 	let mut iter = api.search("bob's functions library mod", vec![], None, None, None).unwrap();
 	let mod_ = iter.next().unwrap().unwrap();
@@ -181,8 +210,8 @@ fn query_name() {
 }
 
 #[test]
-fn query_tag() {
-	let api = API::new(None, None, None);
+fn test_search_by_tag() {
+	let api = API::new(None, None, None).unwrap();
 
 	let mut iter = api.search("", vec!["logistics"], None, None, None).unwrap();
 	let mod_ = iter.next().unwrap().unwrap();
@@ -190,4 +219,13 @@ fn query_tag() {
 	let mut tags = mod_.tags.iter().filter(|tag| tag.name.0 == "logistics");
 	let tag = tags.next().unwrap();
 	println!("{:?}", tag);
+}
+
+#[test]
+fn test_get() {
+	let api = API::new(None, None, None).unwrap();
+
+	let mod_ = api.get(types::ModName("boblibrary".to_string())).unwrap();
+	println!("{:?}", mod_);
+	assert!(mod_.title.0 == "Bob's Functions Library mod");
 }
