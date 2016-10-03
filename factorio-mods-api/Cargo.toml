@@ -8,3 +8,6 @@ hyper = "0.9.x"
 serde = "0.8.x"
 serde_json = "0.8.x"
 url = "1.2.x"
+
+[replace]
+"openssl:0.7.14" = { git = "https://github.com/Arnavion/rust-openssl", branch = "cfg-comp" }

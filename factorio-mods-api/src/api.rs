@@ -158,3 +158,14 @@ fn get_object<T>(client: &hyper::Client, url: hyper::Url) -> Result<T, APIError>
 	let object = try!(serde_json::from_reader(response).map_err(APIError::JSON));
 	return Ok(object);
 }
+
+
+#[test]
+fn query_all_mods() {
+	let api = API::new(None, None, None);
+
+	let iter = api.search("", vec![], None, None, None).unwrap();
+	let count = iter.count();
+	println!("Found {} mods", count);
+	assert!(count > 500); // 700+ as of 2016-10-03
+}
