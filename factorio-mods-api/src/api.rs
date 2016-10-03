@@ -5,7 +5,7 @@ extern crate url;
 
 use types;
 
-make_deserializable!(pub struct PageNumber(u64));
+make_deserializable!(pub struct PageNumber(pub u64));
 
 make_deserializable!(struct ResponseNumber(u64));
 

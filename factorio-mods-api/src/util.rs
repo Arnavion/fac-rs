@@ -177,11 +177,11 @@ macro_rules! make_deserializable {
 	};
 
 	(pub struct $struct_name:ident {
-		$($field_name:ident: $field_type:ty,)*
+		$(pub $field_name:ident: $field_type:ty,)*
 	}) => {
 		#[derive(Debug)]
 		pub struct $struct_name {
-			$($field_name: $field_type),*
+			$(pub $field_name: $field_type),*
 		}
 
 		impl_deserialize_struct!(struct $struct_name {
@@ -196,9 +196,9 @@ macro_rules! make_deserializable {
 		impl_deserialize_u64!($struct_name);
 	};
 
-	(pub struct $struct_name:ident(u64)) => {
+	(pub struct $struct_name:ident(pub u64)) => {
 		#[derive(Debug)]
-		pub struct $struct_name(u64);
+		pub struct $struct_name(pub u64);
 
 		impl_deserialize_u64!($struct_name);
 	};
@@ -210,9 +210,9 @@ macro_rules! make_deserializable {
 		impl_deserialize_string!($struct_name);
 	};
 
-	(pub struct $struct_name:ident(String)) => {
+	(pub struct $struct_name:ident(pub String)) => {
 		#[derive(Debug)]
-		pub struct $struct_name(String);
+		pub struct $struct_name(pub String);
 
 		impl_deserialize_string!($struct_name);
 	};
@@ -224,9 +224,9 @@ macro_rules! make_deserializable {
 		impl_deserialize_seq_string!($struct_name);
 	};
 
-	(pub struct $struct_name:ident(Vec<String>)) => {
+	(pub struct $struct_name:ident(pub Vec<String>)) => {
 		#[derive(Debug)]
-		pub struct $struct_name(Vec<String>);
+		pub struct $struct_name(pub Vec<String>);
 
 		impl_deserialize_seq_string!($struct_name);
 	};
