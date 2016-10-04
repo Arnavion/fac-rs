@@ -200,7 +200,7 @@ fn test_search_list_all_mods() {
 }
 
 #[test]
-fn test_search_by_name() {
+fn test_search_by_title() {
 	let api = API::new(None, None, None).unwrap();
 
 	let mut iter = api.search("bob's functions library mod", vec![], None, None, None).unwrap();
