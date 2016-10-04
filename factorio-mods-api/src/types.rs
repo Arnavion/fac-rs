@@ -101,12 +101,17 @@ make_deserializable!(pub struct TagDescription(pub String));
 
 make_deserializable!(pub struct TagType(pub String));
 
-pub struct DisplayableTags(pub Vec<Tag>);
+pub struct DisplayableTags<'a>(pub &'a Vec<Tag>);
 
-impl std::fmt::Display for DisplayableTags {
+impl<'a> std::fmt::Display for DisplayableTags<'a> {
 	fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-		for tag in &self.0 {
-			try!(write!(f, "{} ", tag.name.0));
+		for window in self.0.windows(2) {
+			let first = &window[0];
+			try!(write!(f, "{}, ", first.name.0));
+		}
+
+		if let Some(last_tag) = self.0.last() {
+			try!(write!(f, "{}", last_tag.name.0));
 		}
 
 		Ok(())

@@ -32,7 +32,7 @@ fn main() {
 				Ok(mod_) => {
 					println!("{}", mod_.title.0);
 					println!("    Name: {}", mod_.name.0);
-					println!("    Tags: {}", factorio_mods_api::DisplayableTags(mod_.tags));
+					println!("    Tags: {}", factorio_mods_api::DisplayableTags(&mod_.tags));
 					println!("");
 					println!("    {}", mod_.summary.0);
 					println!("");
