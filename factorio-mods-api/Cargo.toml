@@ -5,6 +5,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
 hyper = "0.9.x"
+itertools = "0.5.x"
 serde = "0.8.x"
 serde_json = "0.8.x"
 url = "1.2.x"

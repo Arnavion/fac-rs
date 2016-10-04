@@ -1,4 +1,5 @@
 extern crate hyper;
+extern crate itertools;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
@@ -136,8 +137,8 @@ impl API {
 		})
 	}
 
-	pub fn search<'a>(&'a self, query: &str, tags: Vec<&str>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
-		let tags_query = tags.join(",");
+	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&types::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
+		let tags_query = itertools::join(tags.iter().map(|t| &t.0), ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
 		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
 		let page = page.unwrap_or_else(|| PageNumber(1));
@@ -193,7 +194,7 @@ fn get_object<T>(client: &hyper::Client, url: hyper::Url) -> Result<T, APIError>
 fn test_search_list_all_mods() {
 	let api = API::new(None, None, None).unwrap();
 
-	let iter = api.search("", vec![], None, None, None).unwrap();
+	let iter = api.search("", &vec![], None, None, None).unwrap();
 	let count = iter.count();
 	println!("Found {} mods", count);
 	assert!(count > 500); // 700+ as of 2016-10-03
@@ -203,7 +204,7 @@ fn test_search_list_all_mods() {
 fn test_search_by_title() {
 	let api = API::new(None, None, None).unwrap();
 
-	let mut iter = api.search("bob's functions library mod", vec![], None, None, None).unwrap();
+	let mut iter = api.search("bob's functions library mod", &vec![], None, None, None).unwrap();
 	let mod_ = iter.next().unwrap().unwrap();
 	println!("{:?}", mod_);
 	assert!(mod_.title.0 == "Bob's Functions Library mod");
@@ -213,7 +214,7 @@ fn test_search_by_title() {
 fn test_search_by_tag() {
 	let api = API::new(None, None, None).unwrap();
 
-	let mut iter = api.search("", vec!["logistics"], None, None, None).unwrap();
+	let mut iter = api.search("", &vec![&types::TagName("logistics".to_string())], None, None, None).unwrap();
 	let mod_ = iter.next().unwrap().unwrap();
 	println!("{:?}", mod_);
 	let mut tags = mod_.tags.iter().filter(|tag| tag.name.0 == "logistics");

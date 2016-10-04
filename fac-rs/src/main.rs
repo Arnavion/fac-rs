@@ -40,7 +40,7 @@ fn main() {
 		("search", Some(matches)) => {
 			let query = matches.value_of("query").unwrap();
 
-			let iter = api.search(query, vec![], None, None, None).unwrap();
+			let iter = api.search(query, &vec![], None, None, None).unwrap();
 			for mod_ in iter {
 				let mod_ = mod_.unwrap();
 				println!("{}", mod_.title.0);
