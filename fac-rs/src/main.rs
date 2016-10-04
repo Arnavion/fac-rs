@@ -7,10 +7,10 @@ extern crate unicode_segmentation;
 
 fn main() {
 	let app =
-		clap::App::new("fac-rs")
+		clap::App::new("fac")
 			.author(crate_authors!())
 			.version(crate_version!())
-			.about("fac-rs")
+			.about("fac")
 			.subcommand(
 				clap::SubCommand::with_name("search")
 					.about("Search the mods database.")
