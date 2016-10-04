@@ -6,6 +6,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 [dependencies]
 clap = "2.13.x"
 factorio-mods-api = { version = "0.1.0", path = "../factorio-mods-api" }
+itertools = "0.5.x"
 term_size = "0.2.x"
 unicode-segmentation = "0.1.x"
 

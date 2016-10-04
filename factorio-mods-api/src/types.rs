@@ -1,8 +1,6 @@
 extern crate serde;
 extern crate serde_json;
 
-use std;
-
 make_deserializable!(pub struct DateTime(pub String));
 
 make_deserializable!(pub struct RatingCount(pub u64));
@@ -100,20 +98,3 @@ make_deserializable!(pub struct TagTitle(pub String));
 make_deserializable!(pub struct TagDescription(pub String));
 
 make_deserializable!(pub struct TagType(pub String));
-
-pub struct DisplayableTags<'a>(pub &'a Vec<Tag>);
-
-impl<'a> std::fmt::Display for DisplayableTags<'a> {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-		for window in self.0.windows(2) {
-			let first = &window[0];
-			try!(write!(f, "{}, ", first.name.0));
-		}
-
-		if let Some(last_tag) = self.0.last() {
-			try!(write!(f, "{}", last_tag.name.0));
-		}
-
-		Ok(())
-	}
-}
