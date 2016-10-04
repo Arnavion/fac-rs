@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate clap;
-
 extern crate factorio_mods_api;
+extern crate term_size;
+extern crate unicode_segmentation;
 
 fn main() {
 	let app =
@@ -26,6 +27,8 @@ fn main() {
 
 		let api = factorio_mods_api::API::new(None, None, None).unwrap();
 
+		let max_width = term_size::dimensions().map(|(w, _)| w);
+
 		let iter = api.search(query, vec![], None, None, None).unwrap();
 		for mod_ in iter {
 			match mod_ {
@@ -34,7 +37,11 @@ fn main() {
 					println!("    Name: {}", mod_.name.0);
 					println!("    Tags: {}", factorio_mods_api::DisplayableTags(&mod_.tags));
 					println!("");
-					println!("    {}", mod_.summary.0);
+					max_width.map_or_else(|| {
+						println!("    {}", mod_.summary.0);
+					}, |max_width| {
+						wrapping_println(mod_.summary.0.as_str(), "    ", max_width);
+					});
 					println!("");
 				},
 				Err(err) => {
@@ -43,5 +50,42 @@ fn main() {
 				}
 			}
 		}
+	}
+}
+
+fn wrapping_println(s: &str, indent: &str, max_width: usize) {
+	let max_len = max_width - indent.len();
+
+	let graphemes: Vec<&str> = unicode_segmentation::UnicodeSegmentation::graphemes(s, true).collect();
+	let mut graphemes = &graphemes[..];
+
+	loop {
+		print!("{}", indent);
+
+		if graphemes.is_empty() {
+			return;
+		}
+
+		if graphemes.len() <= max_len {
+			for s in graphemes {
+				print!("{}", s);
+			}
+			println!("");
+			return;
+		}
+
+		let (line, remaining) = if let Some(last_space_pos) = graphemes[..max_len].iter().rposition(|&s| s == " ") {
+			(&graphemes[..last_space_pos], &graphemes[last_space_pos + 1..])
+		}
+		else {
+			(&graphemes[..max_len], &graphemes[max_len..])
+		};
+
+		for s in line {
+			print!("{}", s);
+		}
+		println!("");
+
+		graphemes = remaining;
 	}
 }
