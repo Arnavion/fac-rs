@@ -1,3 +1,4 @@
+extern crate backtrace;
 extern crate hyper;
 extern crate itertools;
 extern crate serde;
@@ -106,7 +107,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 						return self.next();
 					},
 
-					Err(APIError::StatusCode(hyper::status::StatusCode::NotFound)) => {
+					Err(APIError::StatusCode { status_code: hyper::status::StatusCode::NotFound, .. }) => {
 						self.errored = true;
 						return None;
 					},
@@ -126,7 +127,7 @@ impl API {
 		let base_url = base_url.unwrap_or_else(|| BASE_URL.to_string());
 		let login_url = login_url.unwrap_or_else(|| LOGIN_URL.to_string());
 		let url = base_url.trim_right_matches('/').to_string() + "/mods";
-		let url = try!(hyper::Url::parse(url.as_str()).map_err(APIError::Parse));
+		let url = try!(hyper::Url::parse(url.as_str()).map_err(APIError::parse));
 		let client = client.unwrap_or_else(hyper::Client::new);
 
 		Ok(API {
@@ -161,31 +162,58 @@ impl API {
 
 	pub fn get(&self, mod_name: types::ModName) -> Result<types::Mod, APIError> {
 		let mut url = self.url.clone();
-		try!(url.path_segments_mut().map_err(|_| APIError::Other)).push(mod_name.0.as_str());
+		try!(url.path_segments_mut().map_err(|_| APIError::other())).push(mod_name.0.as_str());
 		get_object(&self.client, url)
 	}
 }
 
 #[derive(Debug)]
 pub enum APIError {
-	Hyper(hyper::Error),
-	Parse(url::ParseError),
-	StatusCode(hyper::status::StatusCode),
-	JSON(serde_json::Error),
-	Other,
+	Hyper { error: hyper::Error, backtrace: Option<backtrace::Backtrace> },
+	Parse { error: url::ParseError, backtrace: Option<backtrace::Backtrace> },
+	StatusCode { status_code: hyper::status::StatusCode, backtrace: Option<backtrace::Backtrace> },
+	JSON { error: serde_json::Error, backtrace: Option<backtrace::Backtrace> },
+	Other { backtrace: Option<backtrace::Backtrace> },
+}
+
+impl APIError {
+	fn hyper(error: hyper::Error) -> APIError {
+		APIError::Hyper { error: error, backtrace: APIError::backtrace() }
+	}
+
+	fn parse(error: url::ParseError) -> APIError {
+		APIError::Parse { error: error, backtrace: APIError::backtrace() }
+	}
+
+	fn status_code(status_code: hyper::status::StatusCode) -> APIError {
+		APIError::StatusCode { status_code: status_code, backtrace: APIError::backtrace() }
+	}
+
+	fn json(error: serde_json::Error) -> APIError {
+		APIError::JSON { error: error, backtrace: APIError::backtrace() }
+	}
+
+	fn other() -> APIError {
+		APIError::Other { backtrace: APIError::backtrace() }
+	}
+
+	fn backtrace() -> Option<backtrace::Backtrace> {
+		::std::env::var("RUST_BACKTRACE").ok()
+			.and_then(|value| { if value == "1" { Some(backtrace::Backtrace::new()) } else { None } })
+	}
 }
 
 fn get(client: &hyper::Client, url: hyper::Url) -> Result<hyper::client::Response, APIError> {
-	let response = try!(client.get(url).send().map_err(APIError::Hyper));
+	let response = try!(client.get(url).send().map_err(APIError::hyper));
 	match response.status {
 		hyper::status::StatusCode::Ok => Ok(response),
-		code => Err(APIError::StatusCode(code))
+		code => Err(APIError::status_code(code))
 	}
 }
 
 fn get_object<T>(client: &hyper::Client, url: hyper::Url) -> Result<T, APIError> where T: serde::Deserialize {
 	let response = try!(get(client, url));
-	let object = try!(serde_json::from_reader(response).map_err(APIError::JSON));
+	let object = try!(serde_json::from_reader(response).map_err(APIError::json));
 	return Ok(object);
 }
 
