@@ -99,7 +99,7 @@ fn main() {
 			}
 		},
 
-		_ => panic!(),
+		_ => unreachable!(),
 	}
 }
 
