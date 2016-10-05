@@ -73,9 +73,9 @@ make_deserializable!(pub struct FileSize(pub u64));
 
 make_deserializable!(pub struct ReleaseInfo {
 	pub author: AuthorNames,
-	/* pub description: ModDescription, # Can't represent since `description` isn't present in every ReleaseInfo */
+	pub description: Option<ModDescription>,
 	pub factorio_version: GameVersion,
-	/* pub homepage: Url, # Can't represent since `homepage` isn't present in every ReleaseInfo */
+	pub homepage: Option<Url>,
 	pub name: ModName,
 	pub title: ModTitle,
 	pub version: ReleaseVersion,

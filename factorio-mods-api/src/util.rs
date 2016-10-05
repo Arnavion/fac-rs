@@ -1,14 +1,11 @@
 macro_rules! impl_deserialize_struct {
 	(struct $struct_name:ident {
-		$($field_name:ident: $field_type:ty,)*
+		$($fields:tt)*
 	}) => {
 		impl serde::Deserialize for $struct_name {
 			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
-				#[allow(non_camel_case_types)]
-				enum Field {
-					$($field_name,)*
-					Unknown,
-				}
+				impl_deserialize_struct!(@enum_field enum Field {
+				} $($fields)*);
 
 				impl serde::Deserialize for Field {
 					fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: serde::Deserializer {
@@ -18,10 +15,8 @@ macro_rules! impl_deserialize_struct {
 							type Value = Field;
 
 							fn visit_str<E>(&mut self, value: &str) -> Result<Field, E> where E: serde::Error {
-								match value {
-									$(stringify!($field_name) => Ok(Field::$field_name),)*
-									_ => Ok(Field::Unknown),
-								}
+								impl_deserialize_struct!(@match_field match value {
+								} $($fields)*)
 							}
 						}
 
@@ -35,50 +30,232 @@ macro_rules! impl_deserialize_struct {
 					type Value = $struct_name;
 
 					fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error> where V: serde::de::MapVisitor {
-						$(
-							let mut $field_name: Option<$field_type> = None;
-						)*
+						impl_deserialize_struct!(@declare_values $($fields)*);
 
 						while let Some(key) = try!(visitor.visit_key::<Field>()) {
-							match key {
-								$(
-									Field::$field_name => {
-										if $field_name.is_some() {
-											return Err(<V::Error as serde::Error>::duplicate_field(stringify!($field_name)))
-										}
-
-										$field_name = Some(try!(visitor.visit_value()));
-									}
-								),*
-
-								Field::Unknown => {
-									try!(visitor.visit_value::<serde_json::Value>());
-								},
-							}
+							impl_deserialize_struct!(@match_value visitor match key {
+							} $($fields)*);
 						}
 
 						try!(visitor.end());
 
-						$(
-							let $field_name = match $field_name {
-								Some(x) => x,
-								None => try!(visitor.missing_field(stringify!($field_name)))
-							};
-						)*
+						impl_deserialize_struct!(@check_value visitor APIError $($fields)*);
 
-						Ok($struct_name {
-							$(
-								$field_name: $field_name,
-							)*
-						})
+						impl_deserialize_struct!(@assign_value Ok($struct_name {
+						}) $($fields)*)
 					}
 				}
 
-				const FIELDS: &'static [&'static str] = &[$(stringify!($field_name),)*];
+				impl_deserialize_struct!(@fields_array const FIELDS: &'static [&'static str] = &[] $($fields)*);
 				deserializer.deserialize_struct(stringify!($struct_name), FIELDS, Visitor)
 			}
 		}
-	}
+	};
+
+	(@enum_field enum Field {
+		$($existing_members:ident,)*
+	}) => {
+		#[allow(non_camel_case_types)]
+		enum Field {
+			$($existing_members,)*
+			Unknown,
+		}
+	};
+
+	(@enum_field enum Field {
+		$($existing_members:ident,)*
+	} pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@enum_field enum Field {
+			$($existing_members,)*
+			$field_name,
+		} $($fields)*);
+	};
+
+	(@enum_field enum Field {
+		$($existing_members:ident,)*
+	} $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@enum_field enum Field {
+			$($existing_members,)*
+			$field_name,
+		} $($fields)*);
+	};
+
+	(@match_field match $value:ident {
+		$($existing_case:pat => $existing_block:expr,)*
+	}) => {
+		match $value {
+			$($existing_case => $existing_block,)*
+			_ => Ok(Field::Unknown),
+		}
+	};
+
+	(@match_field match $value:ident {
+		$($existing_case:pat => $existing_block:expr,)*
+	} pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_field match $value {
+			$($existing_case => $existing_block,)*
+			stringify!($field_name) => Result::Ok::<Field, E>(Field::$field_name),
+		} $($fields)*);
+	};
+
+	(@match_field match $value:ident {
+		$($existing_case:pat => $existing_block:expr,)*
+	} $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_field match $value {
+			$($existing_case => $existing_block,)*
+			stringify!($field_name) => Result::Ok::<Field, E>(Field::$field_name),
+		} $($fields)*);
+	};
+
+	(@declare_values pub $field_name:ident : Option<$field_type:ty>, $($fields:tt)*) => {
+		let mut $field_name: Option<$field_type> = None;
+		impl_deserialize_struct!(@declare_values $($fields)*)
+	};
+
+	(@declare_values pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		let mut $field_name: Option<$field_type> = None;
+		impl_deserialize_struct!(@declare_values $($fields)*)
+	};
+
+	(@declare_values $field_name:ident : Option<$field_type:ty>, $($fields:tt)*) => {
+		let mut $field_name: Option<$field_type> = None;
+		impl_deserialize_struct!(@declare_values $($fields)*)
+	};
+
+	(@declare_values $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		let mut $field_name: Option<$field_type> = None;
+		impl_deserialize_struct!(@declare_values $($fields)*)
+	};
+
+	(@declare_values) => { };
+
+	(@match_value $visitor:ident match $key:ident {
+		$($existing_case:pat => $existing_block:block,)*
+	}) => {
+		match $key {
+			$($existing_case => $existing_block,)*
+
+			Field::Unknown => {
+				try!($visitor.visit_value::<serde_json::Value>());
+			},
+		}
+	};
+
+	(@match_value $visitor:ident match $key:ident {
+		$($existing_case:pat => $existing_block:block,)*
+	} pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_value $visitor match $key {
+			$($existing_case => $existing_block,)*
+
+			Field::$field_name => {
+				if $field_name.is_some() {
+					return Err(<V::Error as serde::Error>::duplicate_field(stringify!($field_name)))
+				}
+
+				$field_name = try!($visitor.visit_value());
+			},
+		} $($fields)*);
+	};
+
+	(@match_value $visitor:ident match $key:ident {
+		$($existing_case:pat => $existing_block:block,)*
+	} $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_value $visitor match $key {
+			$($existing_case => $existing_block,)*
+
+			Field::$field_name => {
+				if $field_name.is_some() {
+					return Err(<V::Error as serde::Error>::duplicate_field(stringify!($field_name)))
+				}
+
+				$field_name = try!($visitor.visit_value());
+			},
+		} $($fields)*);
+	};
+
+	(@check_value $visitor:ident $APIError:ident pub $field_name:ident : Option<$field_type:ty>, $($fields:tt)*) => {
+		impl_deserialize_struct!(@check_value $visitor $APIError $($fields)*)
+	};
+
+	(@check_value $visitor:ident $APIError:ident pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		let $field_name = match $field_name {
+			Some(x) => x,
+			None => try!($visitor.missing_field(stringify!($field_name)))
+		};
+
+		impl_deserialize_struct!(@check_value $visitor $APIError $($fields)*)
+	};
+
+	(@check_value $visitor:ident $APIError:ident $field_name:ident : Option<$field_type:ty>, $($fields:tt)*) => {
+		impl_deserialize_struct!(@check_value $visitor $APIError $($fields)*)
+	};
+
+	(@check_value $visitor:ident $APIError:ident $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		let $field_name = match $field_name {
+			Some(x) => x,
+			None => try!($visitor.missing_field(stringify!($field_name)))
+		};
+
+		impl_deserialize_struct!(@check_value $visitor $APIError $($fields)*)
+	};
+
+	(@check_value $visitor:ident $APIError:ident) => { };
+
+	(@assign_value Ok($struct_name:ident {
+		$($existing_member:ident : $existing_value:expr,)*
+	})) => {
+		Ok($struct_name {
+			$($existing_member: $existing_value,)*
+		})
+	};
+
+	(@assign_value Ok($struct_name:ident {
+		$($existing_member:ident : $existing_value:expr,)*
+	}) pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@assign_value Ok($struct_name {
+			$($existing_member: $existing_value,)*
+			$field_name: $field_name,
+		}) $($fields)*);
+	};
+
+	(@assign_value Ok($struct_name:ident {
+		$($existing_member:ident : $existing_value:expr,)*
+	}) $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@assign_value Ok($struct_name {
+			$($existing_member: $existing_value,)*
+			$field_name: $field_name,
+		}) $($fields)*);
+	};
+
+	(@assign_value) => { };
+
+	(@fields_array const $array_name:ident : &'static [&'static str] = &[
+		$($existing_elements:expr,)*
+	]) => {
+		const $array_name: &'static [&'static str] = &[
+			$($existing_elements,)*
+		];
+	};
+
+	(@fields_array const $array_name:ident : &'static [&'static str] = &[
+		$($existing_elements:expr,)*
+	] pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@fields_array const $array_name: &'static [&'static str] = &[
+			$($existing_elements,)*
+			stringify!($field_name),
+		] $($fields)*);
+	};
+
+	(@fields_array const $array_name:ident : &'static [&'static str] = &[
+		$($existing_elements:expr,)*
+	] $field_name:ident : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@fields_array const $array_name: &'static [&'static str] = &[
+			$($existing_elements,)*
+			stringify!($field_name),
+		] $($fields)*);
+	};
+
+	(@fields_array) => { };
 }
 
 macro_rules! impl_deserialize_u64 {
@@ -164,28 +341,28 @@ macro_rules! impl_deserialize_seq_string {
 #[macro_export]
 macro_rules! make_deserializable {
 	(struct $struct_name:ident {
-		$($field_name:ident: $field_type:ty,)*
+		$($fields:tt)*
 	}) => {
 		#[derive(Debug)]
 		struct $struct_name {
-			$($field_name: $field_type),*
+			$($fields)*
 		}
 
 		impl_deserialize_struct!(struct $struct_name {
-			$($field_name: $field_type,)*
+			$($fields)*
 		});
 	};
 
 	(pub struct $struct_name:ident {
-		$(pub $field_name:ident: $field_type:ty,)*
+		$($fields:tt)*
 	}) => {
 		#[derive(Debug)]
 		pub struct $struct_name {
-			$(pub $field_name: $field_type),*
+			$($fields)*
 		}
 
 		impl_deserialize_struct!(struct $struct_name {
-			$($field_name: $field_type,)*
+			$($fields)*
 		});
 	};
 
