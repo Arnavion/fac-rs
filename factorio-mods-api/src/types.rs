@@ -1,6 +1,3 @@
-extern crate serde;
-extern crate serde_json;
-
 make_deserializable!(pub struct DateTime(pub String));
 
 make_deserializable!(pub struct RatingCount(pub u64));
@@ -30,7 +27,7 @@ make_deserializable!(pub struct Mod {
 	pub releases: Vec<ModRelease>,
 
 	pub ratings_count: RatingCount,
-	pub current_user_rating: Option<serde_json::Value>,
+	pub current_user_rating: Option<::serde_json::Value>,
 	pub downloads_count: DownloadCount,
 	pub tags: Vec<Tag>,
 });

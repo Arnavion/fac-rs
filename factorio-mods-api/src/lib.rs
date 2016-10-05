@@ -1,3 +1,10 @@
+extern crate backtrace;
+extern crate hyper;
+extern crate itertools;
+extern crate serde;
+extern crate serde_json;
+extern crate url;
+
 #[macro_use]
 mod util;
 
