@@ -49,14 +49,18 @@ make_deserializable!(pub struct SearchResponseMod {
 
 	pub github_path: types::Url,
 	pub homepage: types::Url,
+	pub license_name: types::LicenseName,
+	pub license_url: types::Url,
 
 	pub game_versions: Vec<types::GameVersion>,
 
 	pub created_at: types::DateTime,
+	pub updated_at: types::DateTime,
 	pub latest_release: types::ModRelease,
 
 	pub current_user_rating: Option<::serde_json::Value>,
 	pub downloads_count: types::DownloadCount,
+	pub visits_count: types::VisitCount,
 	pub tags: Vec<types::Tag>,
 });
 

@@ -4,7 +4,13 @@ make_deserializable!(pub struct RatingCount(pub u64));
 
 make_deserializable!(pub struct DownloadCount(pub u64));
 
+make_deserializable!(pub struct VisitCount(pub u64));
+
 make_deserializable!(pub struct GameVersion(pub String));
+
+make_deserializable!(pub struct LicenseName(pub String));
+
+make_deserializable!(pub struct LicenseFlags(pub u64));
 
 make_deserializable!(pub struct Url(pub String));
 
@@ -19,6 +25,9 @@ make_deserializable!(pub struct Mod {
 
 	pub github_path: Url,
 	pub homepage: Url,
+	pub license_name: LicenseName,
+	pub license_url: Url,
+	pub license_flags: LicenseFlags,
 
 	pub game_versions: Vec<GameVersion>,
 
@@ -29,6 +38,7 @@ make_deserializable!(pub struct Mod {
 	pub ratings_count: RatingCount,
 	pub current_user_rating: Option<::serde_json::Value>,
 	pub downloads_count: DownloadCount,
+	pub visits_count: VisitCount,
 	pub tags: Vec<Tag>,
 });
 

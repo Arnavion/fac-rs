@@ -39,7 +39,7 @@ impl util::SubCommand for SubCommand {
 				println!("GitHub page: https://github.com/{}", mod_.github_path.0);
 			}
 
-			// println!("License: {}", mod_.license_name.0);
+			println!("License: {}", mod_.license_name.0);
 
 			println!("Game versions: {}", ::itertools::join(mod_.game_versions.iter().map(|v| &v.0), ", "));
 
