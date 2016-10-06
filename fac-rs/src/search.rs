@@ -9,12 +9,11 @@ impl util::SubCommand for SubCommand {
 			.arg(
 				::clap::Arg::with_name("query")
 					.help("search string")
-					.index(1)
-					.required(true))
+					.index(1))
 	}
 
 	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API) {
-		let query = matches.value_of("query").unwrap();
+		let query = matches.value_of("query").unwrap_or("");
 
 		let max_width = ::term_size::dimensions().map(|(w, _)| w);
 
