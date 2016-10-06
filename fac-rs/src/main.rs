@@ -21,7 +21,8 @@ fn main() {
 		.author(crate_authors!())
 		.version(crate_version!())
 		.about("fac")
-		.setting(clap::AppSettings::SubcommandRequiredElseHelp);
+		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
+		.setting(clap::AppSettings::VersionlessSubcommands);
 
 	let app = subcommands.iter().fold(app, |app, (name, subcommand)| {
 		app.subcommand(
