@@ -20,28 +20,28 @@ impl util::SubCommand for SubCommand {
 		for name in names {
 			let mod_ = api.get(::factorio_mods_api::ModName(name.to_string())).unwrap();
 
-			println!("Name: {}", mod_.name.0);
-			println!("Author: {}", mod_.owner.0.join(", "));
-			println!("Title: {}", mod_.title.0);
-			println!("Summary: {}", mod_.summary.0);
+			println!("Name: {}", mod_.name);
+			println!("Author: {}", mod_.owner);
+			println!("Title: {}", mod_.title);
+			println!("Summary: {}", mod_.summary);
 			println!("Description:");
 			for line in mod_.description.0.lines() {
 				println!("    {}", line);
 			}
 
-			println!("Tags: {}", ::itertools::join(mod_.tags.iter().map(|t| &t.name.0), ", "));
+			println!("Tags: {}", mod_.tags);
 
 			if !mod_.homepage.0.is_empty() {
-				println!("Homepage: {}", mod_.homepage.0);
+				println!("Homepage: {}", mod_.homepage);
 			}
 
 			if !mod_.github_path.0.is_empty() {
-				println!("GitHub page: https://github.com/{}", mod_.github_path.0);
+				println!("GitHub page: https://github.com/{}", mod_.github_path);
 			}
 
-			println!("License: {}", mod_.license_name.0);
+			println!("License: {}", mod_.license_name);
 
-			println!("Game versions: {}", ::itertools::join(mod_.game_versions.iter().map(|v| &v.0), ", "));
+			println!("Game versions: {}", ::itertools::join(mod_.game_versions.iter(), ", "));
 
 			println!("Releases:");
 			if mod_.releases.is_empty() {
@@ -49,7 +49,7 @@ impl util::SubCommand for SubCommand {
 			}
 			else {
 				for release in mod_.releases {
-					println!("    Version: {:-9} Game version: {:-9}", release.version.0, release.factorio_version.0);
+					println!("    Version: {:-9} Game version: {:-9}", release.version, release.factorio_version);
 				}
 			}
 

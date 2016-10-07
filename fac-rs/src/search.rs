@@ -20,14 +20,14 @@ impl util::SubCommand for SubCommand {
 		let iter = api.search(query, &vec![], None, None, None).unwrap();
 		for mod_ in iter {
 			let mod_ = mod_.unwrap();
-			println!("{}", mod_.title.0);
-			println!("    Name: {}", mod_.name.0);
-			println!("    Tags: {}", ::itertools::join(mod_.tags.iter().map(|t| &t.name.0), ", "));
+			println!("{}", mod_.title);
+			println!("    Name: {}", mod_.name);
+			println!("    Tags: {}", mod_.tags);
 			println!("");
 			max_width.map_or_else(|| {
-				println!("    {}", mod_.summary.0);
+				println!("    {}", mod_.summary);
 			}, |max_width| {
-				util::wrapping_println(mod_.summary.0.as_str(), "    ", max_width);
+				util::wrapping_println(&mod_.summary, "    ", max_width);
 			});
 			println!("");
 		}

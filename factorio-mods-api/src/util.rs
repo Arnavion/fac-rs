@@ -298,7 +298,35 @@ macro_rules! impl_deserialize_string {
 	};
 }
 
-macro_rules! impl_deserialize_seq_string {
+macro_rules! impl_deserialize_seq {
+	($struct_name:ident, $wrapped_type:ty) => {
+		impl ::serde::Deserialize for $struct_name {
+			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+				struct Visitor;
+
+				impl ::serde::de::Visitor for Visitor {
+					type Value = $struct_name;
+
+					fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
+						let mut result: Vec<$wrapped_type> = vec![];
+
+						while let Some(value) = try!(visitor.visit()) {
+							result.push(value);
+						}
+
+						try!(visitor.end());
+
+						Ok($struct_name(result))
+					}
+				}
+
+				deserializer.deserialize_string(Visitor)
+			}
+		}
+	};
+}
+
+macro_rules! impl_deserialize_string_or_seq_string {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
 			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
@@ -314,16 +342,8 @@ macro_rules! impl_deserialize_seq_string {
 					fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
 						let mut result: Vec<String> = vec![];
 
-						loop {
-							match try!(visitor.visit()) {
-								Some(value) => {
-									result.push(value);
-								},
-
-								None => {
-									break;
-								},
-							}
+						while let Some(value) = try!(visitor.visit()) {
+							result.push(value);
 						}
 
 						try!(visitor.end());
@@ -373,38 +393,54 @@ macro_rules! make_deserializable {
 		impl_deserialize_u64!($struct_name);
 	};
 
-	(pub struct $struct_name:ident(pub u64)) => {
-		#[derive(Debug)]
-		pub struct $struct_name(pub u64);
-
-		impl_deserialize_u64!($struct_name);
-	};
-
-	(struct $struct_name:ident(String)) => {
-		#[derive(Debug)]
-		struct $struct_name(String);
-
-		impl_deserialize_string!($struct_name);
-	};
-
-	(pub struct $struct_name:ident(pub String)) => {
-		#[derive(Debug)]
-		pub struct $struct_name(pub String);
-
-		impl_deserialize_string!($struct_name);
-	};
-
-	(struct $struct_name:ident(Vec<String>)) => {
-		#[derive(Debug)]
-		struct $struct_name(Vec<String>);
-
-		impl_deserialize_seq_string!($struct_name);
-	};
-
 	(pub struct $struct_name:ident(pub Vec<String>)) => {
 		#[derive(Debug)]
 		pub struct $struct_name(pub Vec<String>);
 
-		impl_deserialize_seq_string!($struct_name);
+		impl_deserialize_string_or_seq_string!($struct_name);
+	};
+
+	(pub struct $struct_name:ident(pub Vec<$wrapped_type:ty>)) => {
+		#[derive(Debug)]
+		pub struct $struct_name(pub Vec<$wrapped_type>);
+
+		impl_deserialize_seq!($struct_name, $wrapped_type);
+	};
+}
+
+macro_rules! make_newtype_displayable {
+	($struct_name:ty) => {
+		impl ::std::fmt::Display for $struct_name {
+			fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+				self.0.fmt(f)
+			}
+		}
+	}
+}
+
+#[macro_export]
+macro_rules! make_newtype {
+	(pub $struct_name:ident(String)) => {
+		#[derive(Debug)]
+		pub struct $struct_name(pub String);
+
+		impl_deserialize_string!($struct_name);
+
+		make_newtype_displayable!($struct_name);
+
+		impl ::std::borrow::Borrow<str> for $struct_name {
+			fn borrow(&self) -> &str {
+				&self.0
+			}
+		}
+	};
+
+	(pub $struct_name:ident(u64)) => {
+		#[derive(Debug)]
+		pub struct $struct_name(pub u64);
+
+		impl_deserialize_u64!($struct_name);
+
+		make_newtype_displayable!($struct_name);
 	};
 }

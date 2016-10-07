@@ -1,6 +1,6 @@
 use types;
 
-make_deserializable!(pub struct PageNumber(pub u64));
+make_newtype!(pub PageNumber(u64));
 
 make_deserializable!(struct ResponseNumber(u64));
 
@@ -61,7 +61,7 @@ make_deserializable!(pub struct SearchResponseMod {
 	pub current_user_rating: Option<::serde_json::Value>,
 	pub downloads_count: types::DownloadCount,
 	pub visits_count: types::VisitCount,
-	pub tags: Vec<types::Tag>,
+	pub tags: types::Tags,
 });
 
 #[derive(Debug)]
@@ -136,7 +136,7 @@ impl API {
 	}
 
 	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&types::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
-		let tags_query = ::itertools::join(tags.iter().map(|t| &t.0), ",");
+		let tags_query = ::itertools::join(tags.iter(), ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
 		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
 		let page = page.unwrap_or_else(|| PageNumber(1));
@@ -242,7 +242,7 @@ fn test_search_by_tag() {
 	let mut iter = api.search("", &vec![&types::TagName("logistics".to_string())], None, None, None).unwrap();
 	let mod_ = iter.next().unwrap().unwrap();
 	println!("{:?}", mod_);
-	let mut tags = mod_.tags.iter().filter(|tag| tag.name.0 == "logistics");
+	let mut tags = mod_.tags.0.iter().filter(|tag| tag.name.0 == "logistics");
 	let tag = tags.next().unwrap();
 	println!("{:?}", tag);
 }
