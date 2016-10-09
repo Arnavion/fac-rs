@@ -25,17 +25,17 @@ impl util::SubCommand for SubCommand {
 			println!("Title: {}", mod_.title);
 			println!("Summary: {}", mod_.summary);
 			println!("Description:");
-			for line in mod_.description.0.lines() {
+			for line in mod_.description.lines() {
 				println!("    {}", line);
 			}
 
 			println!("Tags: {}", mod_.tags);
 
-			if !mod_.homepage.0.is_empty() {
+			if !mod_.homepage.is_empty() {
 				println!("Homepage: {}", mod_.homepage);
 			}
 
-			if !mod_.github_path.0.is_empty() {
+			if !mod_.github_path.is_empty() {
 				println!("GitHub page: https://github.com/{}", mod_.github_path);
 			}
 

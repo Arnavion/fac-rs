@@ -408,6 +408,18 @@ macro_rules! make_deserializable {
 	};
 }
 
+macro_rules! make_newtype_derefable {
+	($struct_name:ty, $wrapped_type:ty) => {
+		impl ::std::ops::Deref for $struct_name {
+			type Target = $wrapped_type;
+
+			fn deref(&self) -> &Self::Target {
+				&self.0
+			}
+		}
+	}
+}
+
 macro_rules! make_newtype_displayable {
 	($struct_name:ty) => {
 		impl ::std::fmt::Display for $struct_name {
@@ -426,13 +438,9 @@ macro_rules! make_newtype {
 
 		impl_deserialize_string!($struct_name);
 
-		make_newtype_displayable!($struct_name);
+		make_newtype_derefable!($struct_name, String);
 
-		impl ::std::borrow::Borrow<str> for $struct_name {
-			fn borrow(&self) -> &str {
-				&self.0
-			}
-		}
+		make_newtype_displayable!($struct_name);
 	};
 
 	(pub $struct_name:ident(u64)) => {
@@ -440,6 +448,8 @@ macro_rules! make_newtype {
 		pub struct $struct_name(pub u64);
 
 		impl_deserialize_u64!($struct_name);
+
+		make_newtype_derefable!($struct_name, u64);
 
 		make_newtype_displayable!($struct_name);
 	};

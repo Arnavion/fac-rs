@@ -96,7 +96,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 			None => {
 				let mut url = self.url.clone();
 
-				url.query_pairs_mut().append_pair("page", self.current_page_number.0.to_string().as_str());
+				url.query_pairs_mut().append_pair("page", &self.current_page_number.to_string());
 
 				match get_object(self.client, url) {
 					Ok(page) => {
@@ -124,7 +124,7 @@ impl API {
 		let base_url = base_url.unwrap_or_else(|| BASE_URL.to_string());
 		let login_url = login_url.unwrap_or_else(|| LOGIN_URL.to_string());
 		let url = base_url.trim_right_matches('/').to_string() + "/mods";
-		let url = try!(::hyper::Url::parse(url.as_str()).map_err(APIError::parse));
+		let url = try!(::hyper::Url::parse(&url).map_err(APIError::parse));
 		let client = client.unwrap_or_else(::hyper::Client::new);
 
 		Ok(API {
@@ -144,9 +144,9 @@ impl API {
 		let mut url = self.url.clone();
 		url.query_pairs_mut()
 			.append_pair("q", query)
-			.append_pair("tags", tags_query.as_str())
-			.append_pair("order", order.as_str())
-			.append_pair("page_size", page_size.as_str());
+			.append_pair("tags", &tags_query)
+			.append_pair("order", &order)
+			.append_pair("page_size", &page_size);
 
 		Ok(SearchResultsIterator {
 			client: &self.client,
@@ -159,7 +159,7 @@ impl API {
 
 	pub fn get(&self, mod_name: types::ModName) -> Result<types::Mod, APIError> {
 		let mut url = self.url.clone();
-		try!(url.path_segments_mut().map_err(|_| APIError::other())).push(mod_name.0.as_str());
+		try!(url.path_segments_mut().map_err(|_| APIError::other())).push(&mod_name);
 		get_object(&self.client, url)
 	}
 }

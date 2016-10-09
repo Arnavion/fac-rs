@@ -3,10 +3,10 @@ pub trait SubCommand {
 	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API);
 }
 
-pub fn wrapping_println<T>(s: &T, indent: &str, max_width: usize) where T: ::std::borrow::Borrow<str> {
+pub fn wrapping_println(s: &str, indent: &str, max_width: usize) {
 	let max_len = max_width - indent.len();
 
-	let graphemes: Vec<&str> = ::unicode_segmentation::UnicodeSegmentation::graphemes(s.borrow(), true).collect();
+	let graphemes: Vec<&str> = ::unicode_segmentation::UnicodeSegmentation::graphemes(s, true).collect();
 	let mut graphemes = &graphemes[..];
 
 	loop {
