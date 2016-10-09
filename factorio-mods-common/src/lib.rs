@@ -1,3 +1,10 @@
+extern crate itertools;
+extern crate serde;
+extern crate serde_json;
+
+#[macro_use]
+mod util;
+
 make_newtype!(pub DateTime(String));
 
 make_newtype!(pub RatingCount(u64));

@@ -1,0 +1,9 @@
+[package]
+name = "factorio-mods-common"
+version = "0.1.0"
+authors = ["Arnavion <arnavion@gmail.com>"]
+
+[dependencies]
+itertools = "0.5.x"
+serde = "0.8.x"
+serde_json = "0.8.x"

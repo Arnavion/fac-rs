@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! impl_deserialize_struct {
 	(struct $struct_name:ident {
 		$($fields:tt)*
@@ -276,6 +277,7 @@ macro_rules! impl_deserialize_struct {
 	(@fields_array) => { };
 }
 
+#[macro_export]
 macro_rules! impl_deserialize_u64 {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
@@ -296,6 +298,7 @@ macro_rules! impl_deserialize_u64 {
 	};
 }
 
+#[macro_export]
 macro_rules! impl_deserialize_string {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
@@ -316,6 +319,7 @@ macro_rules! impl_deserialize_string {
 	};
 }
 
+#[macro_export]
 macro_rules! impl_deserialize_seq {
 	($struct_name:ident, $wrapped_type:ty) => {
 		impl ::serde::Deserialize for $struct_name {
@@ -344,6 +348,7 @@ macro_rules! impl_deserialize_seq {
 	};
 }
 
+#[macro_export]
 macro_rules! impl_deserialize_string_or_seq_string {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
@@ -426,6 +431,7 @@ macro_rules! make_deserializable {
 	};
 }
 
+#[macro_export]
 macro_rules! make_newtype_derefable {
 	($struct_name:ty, $wrapped_type:ty) => {
 		impl ::std::ops::Deref for $struct_name {
@@ -438,6 +444,7 @@ macro_rules! make_newtype_derefable {
 	}
 }
 
+#[macro_export]
 macro_rules! make_newtype_displayable {
 	($struct_name:ty) => {
 		impl ::std::fmt::Display for $struct_name {

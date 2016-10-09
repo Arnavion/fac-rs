@@ -1,5 +1,3 @@
-use types;
-
 make_newtype!(pub PageNumber(u64));
 
 make_deserializable!(struct ResponseNumber(u64));
@@ -40,28 +38,28 @@ pub struct API {
 }
 
 make_deserializable!(pub struct SearchResponseMod {
-	pub id: types::ModId,
+	pub id: ::factorio_mods_common::ModId,
 
-	pub name: types::ModName,
-	pub owner: types::AuthorNames,
-	pub title: types::ModTitle,
-	pub summary: types::ModSummary,
+	pub name: ::factorio_mods_common::ModName,
+	pub owner: ::factorio_mods_common::AuthorNames,
+	pub title: ::factorio_mods_common::ModTitle,
+	pub summary: ::factorio_mods_common::ModSummary,
 
-	pub github_path: types::Url,
-	pub homepage: types::Url,
-	pub license_name: types::LicenseName,
-	pub license_url: types::Url,
+	pub github_path: ::factorio_mods_common::Url,
+	pub homepage: ::factorio_mods_common::Url,
+	pub license_name: ::factorio_mods_common::LicenseName,
+	pub license_url: ::factorio_mods_common::Url,
 
-	pub game_versions: Vec<types::GameVersion>,
+	pub game_versions: Vec<::factorio_mods_common::GameVersion>,
 
-	pub created_at: types::DateTime,
-	pub updated_at: types::DateTime,
-	pub latest_release: types::ModRelease,
+	pub created_at: ::factorio_mods_common::DateTime,
+	pub updated_at: ::factorio_mods_common::DateTime,
+	pub latest_release: ::factorio_mods_common::ModRelease,
 
 	pub current_user_rating: Option<::serde_json::Value>,
-	pub downloads_count: types::DownloadCount,
-	pub visits_count: types::VisitCount,
-	pub tags: types::Tags,
+	pub downloads_count: ::factorio_mods_common::DownloadCount,
+	pub visits_count: ::factorio_mods_common::VisitCount,
+	pub tags: ::factorio_mods_common::Tags,
 });
 
 #[derive(Debug)]
@@ -135,7 +133,7 @@ impl API {
 		})
 	}
 
-	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&types::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
+	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&::factorio_mods_common::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
 		let tags_query = ::itertools::join(tags.iter(), ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
 		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
@@ -157,7 +155,7 @@ impl API {
 		})
 	}
 
-	pub fn get(&self, mod_name: types::ModName) -> Result<types::Mod, APIError> {
+	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> Result<::factorio_mods_common::Mod, APIError> {
 		let mut url = self.url.clone();
 		try!(url.path_segments_mut().map_err(|_| APIError::other())).push(&mod_name);
 		get_object(&self.client, url)
@@ -239,7 +237,7 @@ fn test_search_by_title() {
 fn test_search_by_tag() {
 	let api = API::new(None, None, None).unwrap();
 
-	let mut iter = api.search("", &vec![&types::TagName("logistics".to_string())], None, None, None).unwrap();
+	let mut iter = api.search("", &vec![&::factorio_mods_common::TagName("logistics".to_string())], None, None, None).unwrap();
 	let mod_ = iter.next().unwrap().unwrap();
 	println!("{:?}", mod_);
 	let mut tags = mod_.tags.0.iter().filter(|tag| tag.name.0 == "logistics");
@@ -251,7 +249,7 @@ fn test_search_by_tag() {
 fn test_get() {
 	let api = API::new(None, None, None).unwrap();
 
-	let mod_ = api.get(types::ModName("boblibrary".to_string())).unwrap();
+	let mod_ = api.get(::factorio_mods_common::ModName("boblibrary".to_string())).unwrap();
 	println!("{:?}", mod_);
 	assert!(mod_.title.0 == "Bob's Functions Library mod");
 }

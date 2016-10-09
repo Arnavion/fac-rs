@@ -14,11 +14,11 @@ impl util::SubCommand for SubCommand {
 					.required(true))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API, _: ::factorio_mods_local::Manager) {
 		let names = matches.values_of("mods").unwrap();
 
 		for name in names {
-			let mod_ = api.get(::factorio_mods_api::ModName(name.to_string())).unwrap();
+			let mod_ = api.get(::factorio_mods_common::ModName(name.to_string())).unwrap();
 
 			println!("Name: {}", mod_.name);
 			println!("Author: {}", mod_.owner);

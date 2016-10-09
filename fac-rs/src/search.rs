@@ -12,7 +12,7 @@ impl util::SubCommand for SubCommand {
 					.index(1))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API, _: ::factorio_mods_local::Manager) {
 		let query = matches.value_of("query").unwrap_or("");
 
 		let max_width = ::term_size::dimensions().map(|(w, _)| w);
