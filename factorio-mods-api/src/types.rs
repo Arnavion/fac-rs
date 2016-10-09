@@ -98,7 +98,7 @@ make_deserializable!(pub struct Tag {
 	pub name: TagName,
 	pub title: TagTitle,
 	pub description: TagDescription,
-	/* pub type: TagType, # Can't represent since `type` is a keyword */
+	pub type_name: TagType,
 });
 
 make_deserializable!(pub struct Tags(pub Vec<Tag>));

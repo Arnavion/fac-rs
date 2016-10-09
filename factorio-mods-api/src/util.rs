@@ -91,6 +91,24 @@ macro_rules! impl_deserialize_struct {
 
 	(@match_field match $value:ident {
 		$($existing_case:pat => $existing_block:expr,)*
+	} pub type_name : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_field match $value {
+			$($existing_case => $existing_block,)*
+			"type" => Result::Ok::<Field, E>(Field::type_name),
+		} $($fields)*);
+	};
+
+	(@match_field match $value:ident {
+		$($existing_case:pat => $existing_block:expr,)*
+	} type_name : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_field match $value {
+			$($existing_case => $existing_block,)*
+			"type" => Result::Ok::<Field, E>(Field::type_name),
+		} $($fields)*);
+	};
+
+	(@match_field match $value:ident {
+		$($existing_case:pat => $existing_block:expr,)*
 	} pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
 		impl_deserialize_struct!(@match_field match $value {
 			$($existing_case => $existing_block,)*
