@@ -41,7 +41,7 @@ fn main() {
 	let subcommand = subcommands[subcommand_name];
 
 	let api = factorio_mods_api::API::new(None, None, None).unwrap();
-	let manager = factorio_mods_local::Manager { config: factorio_mods_local::Config::new().unwrap() };
+	let manager = factorio_mods_local::Manager::new(factorio_mods_local::Config::new().unwrap()).unwrap();
 
 	subcommand.run(matches.subcommand_matches(subcommand_name).unwrap(), api, manager);
 }

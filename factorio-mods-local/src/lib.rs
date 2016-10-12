@@ -10,8 +10,10 @@ extern crate serde_json;
 extern crate zip;
 
 mod installed_mod;
+pub use installed_mod::{ InstalledMod, InstalledModIterator, };
 
 mod manager;
-pub use manager::*;
+pub use manager::{ Config, Manager, };
 
 mod types;
+pub use types::{ LocalError, };

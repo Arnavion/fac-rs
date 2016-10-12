@@ -6,21 +6,24 @@ pub enum InstalledMod {
 		name: ::factorio_mods_common::ModName,
 		version: ::factorio_mods_common::ReleaseVersion,
 		game_version: ::factorio_mods_common::GameVersion,
+		enabled: bool,
 	},
 
 	Unpacked {
 		name: ::factorio_mods_common::ModName,
 		version: ::factorio_mods_common::ReleaseVersion,
 		game_version: ::factorio_mods_common::GameVersion,
+		enabled: bool,
 	},
 }
 
 impl InstalledMod {
-	pub fn find<'a>(
+	pub fn find<'a, 'b>(
 		mods_directory: &'a ::std::path::Path,
 		name_pattern: Option<&str>,
 		version: Option<::factorio_mods_common::ReleaseVersion>,
-	) -> Result<InstalledModIterator, types::LocalError> {
+		mod_status: &'b ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	) -> Result<InstalledModIterator<'b>, types::LocalError> {
 		let glob_pattern = mods_directory.join("*.zip");
 
 		let paths = try!(try!(
@@ -39,10 +42,14 @@ impl InstalledMod {
 			paths: paths,
 			name_pattern: name_pattern,
 			version: version,
+			mod_status: mod_status,
 		})
 	}
 
-	pub fn new(path: ::std::path::PathBuf) -> InstalledMod {
+	pub fn new(
+		path: ::std::path::PathBuf,
+		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	) -> InstalledMod {
 		if path.is_file() {
 			if let Some(extension) = path.extension() {
 				if extension == "zip" {
@@ -60,11 +67,14 @@ impl InstalledMod {
 									let info_json_file_path = format!("{}/info.json", toplevel);
 									if let Ok(info_json_file) = zip_file.by_name(&info_json_file_path) {
 										if let Ok(info) = ::serde_json::from_reader::<::zip::read::ZipFile, ModInfo>(info_json_file) {
-											return InstalledMod::Zipped {
-												name: info.name,
-												version: info.version,
-												game_version: info.factorio_version.unwrap_or_else(|| ::factorio_mods_common::GameVersion("0.12".to_string())),
-											};
+											if let Some(enabled) = mod_status.get(&info.name) {
+												return InstalledMod::Zipped {
+													name: info.name,
+													version: info.version,
+													game_version: info.factorio_version.unwrap_or_else(|| ::factorio_mods_common::GameVersion("0.12".to_string())),
+													enabled: *enabled,
+												};
+											}
 										}
 									}
 								}
@@ -98,22 +108,30 @@ impl InstalledMod {
 			&InstalledMod::Unpacked { ref game_version, .. } => game_version,
 		}
 	}
+
+	pub fn enabled(&self) -> &bool {
+		match self {
+			&InstalledMod::Zipped { ref enabled, .. } => enabled,
+			&InstalledMod::Unpacked { ref enabled, .. } => enabled,
+		}
+	}
 }
 
-pub struct InstalledModIterator {
+pub struct InstalledModIterator<'a> {
 	paths: ::glob::Paths,
 	name_pattern: Option<::glob::Pattern>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
+	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 }
 
-impl Iterator for InstalledModIterator {
+impl<'a> Iterator for InstalledModIterator<'a> {
 	type Item = Result<InstalledMod, types::LocalError>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
 			match self.paths.next() {
 				Some(Ok(path)) => {
-					let installed_mod = InstalledMod::new(path);
+					let installed_mod = InstalledMod::new(path, self.mod_status);
 
 					if let Some(ref name_pattern) = self.name_pattern {
 						if !name_pattern.matches(installed_mod.name()) {

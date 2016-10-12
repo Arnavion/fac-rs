@@ -86,11 +86,33 @@ impl Config {
 
 #[derive(Debug)]
 pub struct Manager {
-	pub config: Config,
+	config: Config,
+	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 }
 
 impl Manager {
+	pub fn new(config: Config) -> Result<Manager, types::LocalError> {
+		let mod_list_file_path = config.mods_directory.join("mod-list.json");
+		let mod_list_file = try!(::std::fs::File::open(&mod_list_file_path).map_err(|_| types::LocalError::mod_list(mod_list_file_path.clone())));
+		let mut mod_list: ModList = try!(::serde_json::from_reader(mod_list_file).map_err(|_| types::LocalError::mod_list(mod_list_file_path)));
+		let mod_status = mod_list.mods.drain(..).map(|m| (m.name, m.enabled == "true")).collect();
+
+		Ok(Manager {
+			config: config,
+			mod_status: mod_status,
+		})
+	}
+
 	pub fn installed_mods(&self) -> Result<installed_mod::InstalledModIterator, types::LocalError> {
-		installed_mod::InstalledMod::find(&self.config.mods_directory, None, None)
+		installed_mod::InstalledMod::find(&self.config.mods_directory, None, None, &self.mod_status)
 	}
 }
+
+make_deserializable!(struct ModList {
+	mods: Vec<ModListMod>,
+});
+
+make_deserializable!(struct ModListMod {
+	name: ::factorio_mods_common::ModName,
+	enabled: String,
+});

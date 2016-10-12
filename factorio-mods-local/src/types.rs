@@ -4,6 +4,8 @@ pub enum LocalError {
 	Pattern { error: ::glob::PatternError, backtrace: Option<::backtrace::Backtrace> },
 	Glob { error: ::glob::GlobError, backtrace: Option<::backtrace::Backtrace> },
 	WritePath { backtrace: Option<::backtrace::Backtrace> },
+	ModList { expected_path: ::std::path::PathBuf, backtrace: Option<::backtrace::Backtrace> },
+	BadZippedMod { path: ::std::path::PathBuf, backtrace: Option<::backtrace::Backtrace> },
 	Other { backtrace: Option<::backtrace::Backtrace> },
 }
 
@@ -22,6 +24,14 @@ impl LocalError {
 
 	pub fn write_path() -> LocalError {
 		LocalError::WritePath { backtrace: LocalError::backtrace() }
+	}
+
+	pub fn mod_list(expected_path: ::std::path::PathBuf) -> LocalError {
+		LocalError::ModList { expected_path: expected_path, backtrace: LocalError::backtrace() }
+	}
+
+	pub fn bad_zipped_mod(path: ::std::path::PathBuf) -> LocalError {
+		LocalError::BadZippedMod { path: path, backtrace: LocalError::backtrace() }
 	}
 
 	pub fn other() -> LocalError {
