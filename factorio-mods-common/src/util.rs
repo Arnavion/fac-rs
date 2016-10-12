@@ -458,7 +458,7 @@ macro_rules! make_newtype_displayable {
 #[macro_export]
 macro_rules! make_newtype {
 	(pub $struct_name:ident(String)) => {
-		#[derive(Debug, PartialEq, Eq)]
+		#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 		pub struct $struct_name(pub String);
 
 		impl_deserialize_string!($struct_name);
@@ -469,7 +469,7 @@ macro_rules! make_newtype {
 	};
 
 	(pub $struct_name:ident(u64)) => {
-		#[derive(Debug, PartialEq, Eq)]
+		#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 		pub struct $struct_name(pub u64);
 
 		impl_deserialize_u64!($struct_name);
