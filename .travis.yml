@@ -1,9 +1,13 @@
 language: rust
 rust:
-  - stable
-script:
-  - (cd factorio-mods-common && cargo build --verbose && cargo test --verbose)
-  - (cd factorio-mods-api && cargo build --verbose && cargo test --verbose)
-  - (cd factorio-mods-local && cargo build --verbose && cargo test --verbose)
-  - (cd fac-rs && cargo build --verbose && cargo test --verbose)
+- stable
+
+script: cd $CRATE && cargo build --verbose && cargo test --verbose
+
+env:
+- CRATE=factorio-mods-common
+- CRATE=factorio-mods-api
+- CRATE=factorio-mods-local
+- CRATE=fac-rs
+
 sudo: false
