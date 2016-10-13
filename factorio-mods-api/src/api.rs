@@ -134,7 +134,7 @@ impl API {
 	}
 
 	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&::factorio_mods_common::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
-		let tags_query = ::itertools::join(tags.iter(), ",");
+		let tags_query = ::itertools::join(tags, ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
 		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
 		let page = page.unwrap_or_else(|| PageNumber(1));

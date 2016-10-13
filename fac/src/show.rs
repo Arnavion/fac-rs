@@ -41,7 +41,7 @@ impl util::SubCommand for SubCommand {
 
 			println!("License: {}", mod_.license_name);
 
-			println!("Game versions: {}", ::itertools::join(mod_.game_versions.iter(), ", "));
+			println!("Game versions: {}", ::itertools::join(mod_.game_versions, ", "));
 
 			println!("Releases:");
 			if mod_.releases.is_empty() {
