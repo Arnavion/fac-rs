@@ -213,43 +213,48 @@ fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> Result<T, APIEr
 }
 
 
-#[test]
-fn test_search_list_all_mods() {
-	let api = API::new(None, None, None).unwrap();
+#[cfg(test)]
+mod tests {
+	use super::*;
 
-	let iter = api.search("", &vec![], None, None, None).unwrap();
-	let count = iter.count();
-	println!("Found {} mods", count);
-	assert!(count > 500); // 700+ as of 2016-10-03
-}
+	#[test]
+	fn search_list_all_mods() {
+		let api = API::new(None, None, None).unwrap();
 
-#[test]
-fn test_search_by_title() {
-	let api = API::new(None, None, None).unwrap();
+		let iter = api.search("", &vec![], None, None, None).unwrap();
+		let count = iter.count();
+		println!("Found {} mods", count);
+		assert!(count > 500); // 700+ as of 2016-10-03
+	}
 
-	let mut iter = api.search("bob's functions library mod", &vec![], None, None, None).unwrap();
-	let mod_ = iter.next().unwrap().unwrap();
-	println!("{:?}", mod_);
-	assert!(mod_.title.0 == "Bob's Functions Library mod");
-}
+	#[test]
+	fn search_by_title() {
+		let api = API::new(None, None, None).unwrap();
 
-#[test]
-fn test_search_by_tag() {
-	let api = API::new(None, None, None).unwrap();
+		let mut iter = api.search("bob's functions library mod", &vec![], None, None, None).unwrap();
+		let mod_ = iter.next().unwrap().unwrap();
+		println!("{:?}", mod_);
+		assert!(mod_.title.0 == "Bob's Functions Library mod");
+	}
 
-	let mut iter = api.search("", &vec![&::factorio_mods_common::TagName("logistics".to_string())], None, None, None).unwrap();
-	let mod_ = iter.next().unwrap().unwrap();
-	println!("{:?}", mod_);
-	let mut tags = mod_.tags.0.iter().filter(|tag| tag.name.0 == "logistics");
-	let tag = tags.next().unwrap();
-	println!("{:?}", tag);
-}
+	#[test]
+	fn search_by_tag() {
+		let api = API::new(None, None, None).unwrap();
 
-#[test]
-fn test_get() {
-	let api = API::new(None, None, None).unwrap();
+		let mut iter = api.search("", &vec![&::factorio_mods_common::TagName("logistics".to_string())], None, None, None).unwrap();
+		let mod_ = iter.next().unwrap().unwrap();
+		println!("{:?}", mod_);
+		let mut tags = mod_.tags.0.iter().filter(|tag| tag.name.0 == "logistics");
+		let tag = tags.next().unwrap();
+		println!("{:?}", tag);
+	}
 
-	let mod_ = api.get(::factorio_mods_common::ModName("boblibrary".to_string())).unwrap();
-	println!("{:?}", mod_);
-	assert!(mod_.title.0 == "Bob's Functions Library mod");
+	#[test]
+	fn get() {
+		let api = API::new(None, None, None).unwrap();
+
+		let mod_ = api.get(::factorio_mods_common::ModName("boblibrary".to_string())).unwrap();
+		println!("{:?}", mod_);
+		assert!(mod_.title.0 == "Bob's Functions Library mod");
+	}
 }
