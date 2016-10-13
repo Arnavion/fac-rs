@@ -1,1 +1,1 @@
-A Rust clone of https://github.com/mickael9/fac
+API to interface with the local Factorio installation.
