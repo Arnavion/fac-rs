@@ -4,18 +4,18 @@ macro_rules! impl_deserialize_struct {
 		$($fields:tt)*
 	}) => {
 		impl ::serde::Deserialize for $struct_name {
-			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 				impl_deserialize_struct!(@enum_field enum Field {
 				} $($fields)*);
 
 				impl ::serde::Deserialize for Field {
-					fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+					fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 						struct FieldVisitor;
 
 						impl ::serde::de::Visitor for FieldVisitor {
 							type Value = Field;
 
-							fn visit_str<E>(&mut self, value: &str) -> Result<Field, E> where E: ::serde::Error {
+							fn visit_str<E>(&mut self, value: &str) -> ::std::result::Result<Field, E> where E: ::serde::Error {
 								impl_deserialize_struct!(@match_field match value {
 								} $($fields)*)
 							}
@@ -30,7 +30,7 @@ macro_rules! impl_deserialize_struct {
 				impl ::serde::de::Visitor for Visitor {
 					type Value = $struct_name;
 
-					fn visit_map<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error> where V: ::serde::de::MapVisitor {
+					fn visit_map<V>(&mut self, mut visitor: V) -> ::std::result::Result<Self::Value, V::Error> where V: ::serde::de::MapVisitor {
 						impl_deserialize_struct!(@declare_values $($fields)*);
 
 						while let Some(key) = try!(visitor.visit_key::<Field>()) {
@@ -95,7 +95,7 @@ macro_rules! impl_deserialize_struct {
 	} pub type_name : $field_type:ty, $($fields:tt)*) => {
 		impl_deserialize_struct!(@match_field match $value {
 			$($existing_case => $existing_block,)*
-			"type" => Result::Ok::<Field, E>(Field::type_name),
+			"type" => ::std::result::Result::Ok::<Field, E>(Field::type_name),
 		} $($fields)*);
 	};
 
@@ -104,7 +104,7 @@ macro_rules! impl_deserialize_struct {
 	} type_name : $field_type:ty, $($fields:tt)*) => {
 		impl_deserialize_struct!(@match_field match $value {
 			$($existing_case => $existing_block,)*
-			"type" => Result::Ok::<Field, E>(Field::type_name),
+			"type" => ::std::result::Result::Ok::<Field, E>(Field::type_name),
 		} $($fields)*);
 	};
 
@@ -113,7 +113,7 @@ macro_rules! impl_deserialize_struct {
 	} pub $field_name:ident : $field_type:ty, $($fields:tt)*) => {
 		impl_deserialize_struct!(@match_field match $value {
 			$($existing_case => $existing_block,)*
-			stringify!($field_name) => Result::Ok::<Field, E>(Field::$field_name),
+			stringify!($field_name) => ::std::result::Result::Ok::<Field, E>(Field::$field_name),
 		} $($fields)*);
 	};
 
@@ -122,7 +122,7 @@ macro_rules! impl_deserialize_struct {
 	} $field_name:ident : $field_type:ty, $($fields:tt)*) => {
 		impl_deserialize_struct!(@match_field match $value {
 			$($existing_case => $existing_block,)*
-			stringify!($field_name) => Result::Ok::<Field, E>(Field::$field_name),
+			stringify!($field_name) => ::std::result::Result::Ok::<Field, E>(Field::$field_name),
 		} $($fields)*);
 	};
 
@@ -281,13 +281,13 @@ macro_rules! impl_deserialize_struct {
 macro_rules! impl_deserialize_u64 {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
-			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 				struct Visitor;
 
 				impl ::serde::de::Visitor for Visitor {
 					type Value = $struct_name;
 
-					fn visit_u64<E>(&mut self, v: u64) -> Result<Self::Value, E> where E: ::serde::Error {
+					fn visit_u64<E>(&mut self, v: u64) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
 						Ok($struct_name(v))
 					}
 				}
@@ -302,13 +302,13 @@ macro_rules! impl_deserialize_u64 {
 macro_rules! impl_deserialize_string {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
-			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 				struct Visitor;
 
 				impl ::serde::de::Visitor for Visitor {
 					type Value = $struct_name;
 
-					fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E> where E: ::serde::Error {
+					fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
 						Ok($struct_name(v.to_string()))
 					}
 				}
@@ -323,13 +323,13 @@ macro_rules! impl_deserialize_string {
 macro_rules! impl_deserialize_seq {
 	($struct_name:ident, $wrapped_type:ty) => {
 		impl ::serde::Deserialize for $struct_name {
-			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 				struct Visitor;
 
 				impl ::serde::de::Visitor for Visitor {
 					type Value = $struct_name;
 
-					fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
+					fn visit_seq<V>(&mut self, mut visitor: V) -> ::std::result::Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
 						let mut result: Vec<$wrapped_type> = vec![];
 
 						while let Some(value) = try!(visitor.visit()) {
@@ -352,17 +352,17 @@ macro_rules! impl_deserialize_seq {
 macro_rules! impl_deserialize_string_or_seq_string {
 	($struct_name:ident) => {
 		impl ::serde::Deserialize for $struct_name {
-			fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 				struct Visitor;
 
 				impl ::serde::de::Visitor for Visitor {
 					type Value = $struct_name;
 
-					fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E> where E: ::serde::Error {
+					fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
 						Ok($struct_name(vec![v.to_string()]))
 					}
 
-					fn visit_seq<V>(&mut self, mut visitor: V) -> Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
+					fn visit_seq<V>(&mut self, mut visitor: V) -> ::std::result::Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
 						let mut result: Vec<String> = vec![];
 
 						while let Some(value) = try!(visitor.visit()) {

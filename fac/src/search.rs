@@ -1,8 +1,6 @@
-use util;
-
 pub struct SubCommand;
 
-impl util::SubCommand for SubCommand {
+impl ::util::SubCommand for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		subcommand
 			.about("Search the mods database.")
@@ -27,7 +25,7 @@ impl util::SubCommand for SubCommand {
 			max_width.map_or_else(|| {
 				println!("    {}", mod_.summary);
 			}, |max_width| {
-				util::wrapping_println(&mod_.summary, "    ", max_width);
+				::util::wrapping_println(&mod_.summary, "    ", max_width);
 			});
 			println!("");
 		}

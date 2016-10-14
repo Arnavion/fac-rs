@@ -1,5 +1,3 @@
-use types;
-
 #[derive(Debug)]
 pub enum InstalledMod {
 	Zipped {
@@ -23,16 +21,16 @@ impl InstalledMod {
 		name_pattern: Option<&str>,
 		version: Option<::factorio_mods_common::ReleaseVersion>,
 		mod_status: &'b ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> Result<InstalledModIterator<'b>, types::LocalError> {
+	) -> ::error::Result<InstalledModIterator<'b>> {
 		let glob_pattern = mods_directory.join("*.zip");
 
 		let paths = try!(try!(
 			glob_pattern.to_str()
-				.map(|v| ::glob::glob(v).map_err(types::LocalError::pattern))
-				.ok_or_else(|| types::LocalError::utf8_path(glob_pattern))));
+				.map(|v| ::glob::glob(v))
+				.ok_or_else(|| ::error::ErrorKind::Utf8Path(glob_pattern))));
 
 		let name_pattern = if let Some(name_pattern) = name_pattern {
-			Some(try!(::glob::Pattern::new(&name_pattern).map_err(types::LocalError::pattern)))
+			Some(try!(::glob::Pattern::new(&name_pattern)))
 		}
 		else {
 			None
@@ -125,7 +123,7 @@ pub struct InstalledModIterator<'a> {
 }
 
 impl<'a> Iterator for InstalledModIterator<'a> {
-	type Item = Result<InstalledMod, types::LocalError>;
+	type Item = ::error::Result<InstalledMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
@@ -149,7 +147,7 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 				},
 
 				Some(Err(err)) => {
-					return Some(Err(types::LocalError::glob(err)));
+					return Some(Err(::error::ErrorKind::Glob(err).into()));
 				},
 
 				None => {

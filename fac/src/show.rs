@@ -1,8 +1,6 @@
-use util;
-
 pub struct SubCommand;
 
-impl util::SubCommand for SubCommand {
+impl ::util::SubCommand for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		subcommand
 			.about("Show details about specific mods.")

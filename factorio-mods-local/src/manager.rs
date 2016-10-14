@@ -1,6 +1,3 @@
-use installed_mod;
-use types;
-
 #[derive(Debug)]
 pub struct Config {
 	config_directory:  ::std::path::PathBuf,
@@ -61,7 +58,7 @@ lazy_static! {
 }
 
 impl Config {
-	pub fn new() -> Result<Config, types::LocalError> {
+	pub fn new() -> ::error::Result<Config> {
 		let (config_directory, mods_directory) =
 			try!(FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 				let search_path = ::std::path::Path::new(search_path);
@@ -75,7 +72,7 @@ impl Config {
 				else {
 					None
 				}
-			}).next().ok_or_else(types::LocalError::write_path));
+			}).next().ok_or(::error::ErrorKind::WritePath));
 
 		Ok(Config {
 			config_directory: config_directory,
@@ -91,10 +88,10 @@ pub struct Manager {
 }
 
 impl Manager {
-	pub fn new(config: Config) -> Result<Manager, types::LocalError> {
+	pub fn new(config: Config) -> ::error::Result<Manager> {
 		let mod_list_file_path = config.mods_directory.join("mod-list.json");
-		let mod_list_file = try!(::std::fs::File::open(&mod_list_file_path).map_err(|_| types::LocalError::mod_list(mod_list_file_path.clone())));
-		let mut mod_list: ModList = try!(::serde_json::from_reader(mod_list_file).map_err(|_| types::LocalError::mod_list(mod_list_file_path)));
+		let mod_list_file = try!(::std::fs::File::open(&mod_list_file_path));
+		let mut mod_list: ModList = try!(::serde_json::from_reader(mod_list_file));
 		let mod_status = mod_list.mods.drain(..).map(|m| (m.name, m.enabled == "true")).collect();
 
 		Ok(Manager {
@@ -103,8 +100,8 @@ impl Manager {
 		})
 	}
 
-	pub fn installed_mods(&self) -> Result<installed_mod::InstalledModIterator, types::LocalError> {
-		installed_mod::InstalledMod::find(&self.config.mods_directory, None, None, &self.mod_status)
+	pub fn installed_mods(&self) -> ::error::Result<::installed_mod::InstalledModIterator> {
+		::installed_mod::InstalledMod::find(&self.config.mods_directory, None, None, &self.mod_status)
 	}
 }
 

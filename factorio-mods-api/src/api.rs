@@ -72,7 +72,7 @@ pub struct SearchResultsIterator<'a> {
 }
 
 impl<'a> Iterator for SearchResultsIterator<'a> {
-	type Item = Result<SearchResponseMod, APIError>;
+	type Item = ::error::Result<SearchResponseMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if self.errored {
@@ -102,14 +102,16 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 						return self.next();
 					},
 
-					Err(APIError::StatusCode { status_code: ::hyper::status::StatusCode::NotFound, .. }) => {
-						self.errored = true;
-						return None;
-					},
+					Err(err) => match err.kind() {
+						&::error::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
+							self.errored = true;
+							return None;
+						}
 
-					Err(err) => {
-						self.errored = true;
-						return Some(Err(err));
+						_ => {
+							self.errored = true;
+							return Some(Err(err));
+						}
 					},
 				}
 			}
@@ -118,11 +120,16 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 }
 
 impl API {
-	pub fn new(base_url: Option<String>, login_url: Option<String>, client: Option<::hyper::Client>) -> Result<API, APIError> {
+	pub fn new(base_url: Option<String>, login_url: Option<String>, client: Option<::hyper::Client>) -> ::error::Result<API> {
 		let base_url = base_url.unwrap_or_else(|| BASE_URL.to_string());
 		let login_url = login_url.unwrap_or_else(|| LOGIN_URL.to_string());
+
 		let url = base_url.trim_right_matches('/').to_string() + "/mods";
-		let url = try!(::hyper::Url::parse(&url).map_err(APIError::parse));
+		let url = try!(::hyper::Url::parse(&url));
+		if url.cannot_be_a_base() {
+			return Err(format!("url {} cannot be a base.", url).into());
+		}
+
 		let client = client.unwrap_or_else(::hyper::Client::new);
 
 		Ok(API {
@@ -133,7 +140,7 @@ impl API {
 		})
 	}
 
-	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&::factorio_mods_common::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> Result<SearchResultsIterator<'a>, APIError> {
+	pub fn search<'a>(&'a self, query: &str, tags: &Vec<&::factorio_mods_common::TagName>, order: Option<String>, page_size: Option<PageNumber>, page: Option<PageNumber>) -> ::error::Result<SearchResultsIterator<'a>> {
 		let tags_query = ::itertools::join(tags, ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
 		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
@@ -155,60 +162,24 @@ impl API {
 		})
 	}
 
-	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> Result<::factorio_mods_common::Mod, APIError> {
+	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> ::error::Result<::factorio_mods_common::Mod> {
 		let mut url = self.url.clone();
-		try!(url.path_segments_mut().map_err(|_| APIError::other())).push(&mod_name);
+		url.path_segments_mut().unwrap().push(&mod_name);
 		get_object(&self.client, url)
 	}
 }
 
-#[derive(Debug)]
-pub enum APIError {
-	Hyper { error: ::hyper::Error, backtrace: Option<::backtrace::Backtrace> },
-	Parse { error: ::url::ParseError, backtrace: Option<::backtrace::Backtrace> },
-	StatusCode { status_code: ::hyper::status::StatusCode, backtrace: Option<::backtrace::Backtrace> },
-	JSON { error: ::serde_json::Error, backtrace: Option<::backtrace::Backtrace> },
-	Other { backtrace: Option<::backtrace::Backtrace> },
-}
-
-impl APIError {
-	fn hyper(error: ::hyper::Error) -> APIError {
-		APIError::Hyper { error: error, backtrace: APIError::backtrace() }
-	}
-
-	fn parse(error: ::url::ParseError) -> APIError {
-		APIError::Parse { error: error, backtrace: APIError::backtrace() }
-	}
-
-	fn status_code(status_code: ::hyper::status::StatusCode) -> APIError {
-		APIError::StatusCode { status_code: status_code, backtrace: APIError::backtrace() }
-	}
-
-	fn json(error: ::serde_json::Error) -> APIError {
-		APIError::JSON { error: error, backtrace: APIError::backtrace() }
-	}
-
-	fn other() -> APIError {
-		APIError::Other { backtrace: APIError::backtrace() }
-	}
-
-	fn backtrace() -> Option<::backtrace::Backtrace> {
-		::std::env::var("RUST_BACKTRACE").ok()
-			.and_then(|value| { if value == "1" { Some(::backtrace::Backtrace::new()) } else { None } })
-	}
-}
-
-fn get(client: &::hyper::Client, url: ::hyper::Url) -> Result<::hyper::client::Response, APIError> {
-	let response = try!(client.get(url).send().map_err(APIError::hyper));
+fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result<::hyper::client::Response> {
+	let response = try!(client.get(url).send());
 	match response.status {
 		::hyper::status::StatusCode::Ok => Ok(response),
-		code => Err(APIError::status_code(code))
+		code => Err(::error::ErrorKind::StatusCode(code).into())
 	}
 }
 
-fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> Result<T, APIError> where T: ::serde::Deserialize {
+fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result<T> where T: ::serde::Deserialize {
 	let response = try!(get(client, url));
-	let object = try!(::serde_json::from_reader(response).map_err(APIError::json));
+	let object = try!(::serde_json::from_reader(response));
 	return Ok(object);
 }
 
