@@ -22,7 +22,7 @@ impl InstalledMod {
 		version: Option<::factorio_mods_common::ReleaseVersion>,
 		mod_status: &'b ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::error::Result<InstalledModIterator<'b>> {
-		let glob_pattern = mods_directory.join("*.zip");
+		let glob_pattern = mods_directory.join("*");
 
 		let paths = try!(try!(
 			glob_pattern.to_str()
@@ -41,49 +41,56 @@ impl InstalledMod {
 			name_pattern: name_pattern,
 			version: version,
 			mod_status: mod_status,
+			errored: false,
 		})
 	}
 
 	pub fn new(
 		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> InstalledMod {
-		if path.is_file() {
-			if let Some(extension) = path.extension() {
-				if extension == "zip" {
-					if let Ok(zip_file) = ::std::fs::File::open(&path) {
-						if let Ok(mut zip_file) = ::zip::ZipArchive::new(zip_file) {
-							if zip_file.len() > 0 {
-								let toplevel = if let Ok(first_file) = zip_file.by_index(0) {
-									Some(first_file.name().split('/').next().unwrap().to_string())
-								}
-								else {
-									None
-								};
-
-								if let Some(toplevel) = toplevel {
-									let info_json_file_path = format!("{}/info.json", toplevel);
-									if let Ok(info_json_file) = zip_file.by_name(&info_json_file_path) {
-										if let Ok(info) = ::serde_json::from_reader::<::zip::read::ZipFile, ModInfo>(info_json_file) {
-											if let Some(enabled) = mod_status.get(&info.name) {
-												return InstalledMod::Zipped {
-													name: info.name,
-													version: info.version,
-													game_version: info.factorio_version.unwrap_or_else(|| ::factorio_mods_common::GameVersion("0.12".to_string())),
-													enabled: *enabled,
-												};
-											}
-										}
-									}
-								}
-							}
+	) -> ::error::Result<InstalledMod> {
+		let info: ModInfo =
+			if path.is_file() {
+				match path.extension() {
+					Some(extension) if extension == "zip" => {
+						let zip_file = try!(::std::fs::File::open(&path));
+						let mut zip_file = try!(::zip::ZipArchive::new(zip_file));
+						if zip_file.len() == 0 {
+							return Err(::error::ErrorKind::EmptyZippedMod(path.clone()).into());
 						}
-					}
+
+						let toplevel = {
+							let first_file = try!(zip_file.by_index(0));
+							first_file.name().split('/').next().unwrap().to_string()
+						};
+						let info_json_file_path = format!("{}/info.json", toplevel);
+						let info_json_file = try!(zip_file.by_name(&info_json_file_path));
+						try!(::serde_json::from_reader(info_json_file))
+					},
+
+					_ => return Err(::error::ErrorKind::UnknownModFormat.into()),
 				}
 			}
-		}
+			else {
+				let info_json_file_path = path.join("info.json");
+				let info_json_file =
+					try!(::std::fs::File::open(&info_json_file_path).map_err(|err| {
+						match err.kind() {
+							::std::io::ErrorKind::NotFound => return ::error::ErrorKind::UnknownModFormat.into(),
+							_ => return ::error::Error::from(err),
+						}
+					}));
+				try!(::serde_json::from_reader(info_json_file))
+			};
 
-		unimplemented!();
+		let enabled = mod_status.get(&info.name);
+
+		Ok(InstalledMod::Zipped {
+			name: info.name,
+			version: info.version,
+			game_version: info.factorio_version.unwrap_or_else(|| ::factorio_mods_common::GameVersion("0.12".to_string())),
+			enabled: *enabled.unwrap_or(&true),
+		})
 	}
 
 	pub fn name(&self) -> &::factorio_mods_common::ModName {
@@ -120,16 +127,31 @@ pub struct InstalledModIterator<'a> {
 	name_pattern: Option<::glob::Pattern>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	errored: bool,
 }
 
 impl<'a> Iterator for InstalledModIterator<'a> {
 	type Item = ::error::Result<InstalledMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
+		if self.errored {
+			return None;
+		}
+
 		loop {
 			match self.paths.next() {
 				Some(Ok(path)) => {
-					let installed_mod = InstalledMod::new(path, self.mod_status);
+					let installed_mod = match InstalledMod::new(path, self.mod_status) {
+						Ok(installed_mod) => installed_mod,
+
+						Err(err) => match err.kind() {
+							&::error::ErrorKind::UnknownModFormat => continue,
+							_ => {
+								self.errored = true;
+								return Some(Err(err));
+							}
+						},
+					};
 
 					if let Some(ref name_pattern) = self.name_pattern {
 						if !name_pattern.matches(installed_mod.name()) {
