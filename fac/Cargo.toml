@@ -11,6 +11,3 @@ factorio-mods-local = { version = "0.1.0", path = "../factorio-mods-local" }
 itertools = "0.5.x"
 term_size = "0.2.x"
 unicode-segmentation = "0.1.x"
-
-[replace]
-"openssl:0.7.14" = { git = "https://github.com/Arnavion/rust-openssl", branch = "cfg-comp" }
