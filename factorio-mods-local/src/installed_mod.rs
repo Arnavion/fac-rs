@@ -30,7 +30,7 @@ impl InstalledMod {
 
 		let paths = try!(try!(
 			glob_pattern.to_str()
-				.map(|v| ::glob::glob(v))
+				.map(::glob::glob)
 				.ok_or_else(|| ::error::ErrorKind::Utf8Path(glob_pattern))));
 
 		let name_pattern = if let Some(name_pattern) = name_pattern {
