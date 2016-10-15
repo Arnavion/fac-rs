@@ -1,3 +1,7 @@
+lazy_static! {
+	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::GameVersion = ::factorio_mods_common::GameVersion(::semver::VersionReq::parse("0.12").unwrap());
+}
+
 #[derive(Debug)]
 pub enum InstalledMod {
 	Zipped {
@@ -88,7 +92,7 @@ impl InstalledMod {
 		Ok(InstalledMod::Zipped {
 			name: info.name,
 			version: info.version,
-			game_version: info.factorio_version.unwrap_or_else(|| ::factorio_mods_common::GameVersion("0.12".to_string())),
+			game_version: info.factorio_version.unwrap_or_else(|| DEFAULT_GAME_VERSION.clone()),
 			enabled: *enabled.unwrap_or(&true),
 		})
 	}

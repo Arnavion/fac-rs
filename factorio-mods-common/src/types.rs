@@ -6,7 +6,7 @@ make_newtype!(pub DownloadCount(u64));
 
 make_newtype!(pub VisitCount(u64));
 
-make_newtype!(pub GameVersion(String));
+make_newtype!(pub GameVersion(::semver::VersionReq));
 
 make_newtype!(pub LicenseName(String));
 
@@ -77,7 +77,7 @@ make_deserializable!(pub struct ModRelease {
 
 make_newtype!(pub ReleaseId(u64));
 
-make_newtype!(pub ReleaseVersion(String));
+make_newtype!(pub ReleaseVersion(::semver::Version));
 
 make_newtype!(pub Filename(String));
 
@@ -117,3 +117,52 @@ make_newtype!(pub TagTitle(String));
 make_newtype!(pub TagDescription(String));
 
 make_newtype!(pub TagType(String));
+
+pub fn fixup_version(s: &str) -> String {
+	::itertools::join(s.split('.').enumerate().map(|(i, part)| {
+		let part =
+			if i == 0 && part.len() >= 1 && part.chars().next().unwrap() == '0' {
+				"0".to_string() + part.trim_matches('0')
+			}
+			else {
+				part.trim_matches('0').to_string()
+			};
+
+		let part = if part.is_empty() { "0".to_string() } else { part };
+
+		part
+	}), ".")
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn good_one() {
+		let result = fixup_version("0.2.2");
+		println!("{}", result);
+		assert!(result == "0.2.2");
+	}
+
+	#[test]
+	fn good_two() {
+		let result = fixup_version("0.14.0");
+		println!("{}", result);
+		assert!(result == "0.14.0");
+	}
+
+	#[test]
+	fn bad_one() {
+		let result = fixup_version("0.2.02");
+		println!("{}", result);
+		assert!(result == "0.2.2");
+	}
+
+	#[test]
+	fn bad_two() {
+		let result = fixup_version("0.14.00");
+		println!("{}", result);
+		assert!(result == "0.14.0");
+	}
+}

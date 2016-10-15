@@ -382,6 +382,70 @@ macro_rules! impl_deserialize_string_or_seq_string {
 }
 
 #[macro_export]
+macro_rules! impl_deserialize_semver_version {
+	($struct_name:ident) => {
+		impl ::serde::Deserialize for $struct_name {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
+				struct Visitor;
+
+				impl ::serde::de::Visitor for Visitor {
+					type Value = $struct_name;
+
+					fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
+						let version = try!({
+							match ::semver::Version::parse(v) {
+								Ok(version) => Ok(version),
+								Err(_) => {
+									let fixed_version = fixup_version(v);
+
+									::semver::Version::parse(&fixed_version).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))
+								}
+							}
+						});
+
+						Ok($struct_name(version))
+					}
+				}
+
+				deserializer.deserialize_u64(Visitor)
+			}
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! impl_deserialize_semver_versionreq {
+	($struct_name:ident) => {
+		impl ::serde::Deserialize for $struct_name {
+			fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
+				struct Visitor;
+
+				impl ::serde::de::Visitor for Visitor {
+					type Value = $struct_name;
+
+					fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
+						let version = try!({
+							match ::semver::VersionReq::parse(v) {
+								Ok(version) => Ok(version),
+								Err(_) => {
+									let fixed_version = ::itertools::join(v.split(' ').map(fixup_version), " ");
+
+									::semver::VersionReq::parse(&fixed_version).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))
+								}
+							}
+						});
+
+						Ok($struct_name(version))
+					}
+				}
+
+				deserializer.deserialize_u64(Visitor)
+			}
+		}
+	};
+}
+
+#[macro_export]
 macro_rules! make_deserializable {
 	(struct $struct_name:ident {
 		$($fields:tt)*
@@ -475,6 +539,28 @@ macro_rules! make_newtype {
 		impl_deserialize_u64!($struct_name);
 
 		make_newtype_derefable!($struct_name, u64);
+
+		make_newtype_displayable!($struct_name);
+	};
+
+	(pub $struct_name:ident(::semver::Version)) => {
+		#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
+		pub struct $struct_name(pub ::semver::Version);
+
+		impl_deserialize_semver_version!($struct_name);
+
+		make_newtype_derefable!($struct_name, ::semver::Version);
+
+		make_newtype_displayable!($struct_name);
+	};
+
+	(pub $struct_name:ident(::semver::VersionReq)) => {
+		#[derive(Debug, PartialEq, Clone)]
+		pub struct $struct_name(pub ::semver::VersionReq);
+
+		impl_deserialize_semver_versionreq!($struct_name);
+
+		make_newtype_derefable!($struct_name, ::semver::VersionReq);
 
 		make_newtype_displayable!($struct_name);
 	};

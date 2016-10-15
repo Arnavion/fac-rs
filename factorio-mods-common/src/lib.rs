@@ -1,4 +1,5 @@
 extern crate itertools;
+extern crate semver;
 extern crate serde;
 extern crate serde_json;
 

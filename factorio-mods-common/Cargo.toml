@@ -5,5 +5,6 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
 itertools = "0.5.x"
+semver = "0.5.x"
 serde = "0.8.x"
 serde_json = "0.8.x"
