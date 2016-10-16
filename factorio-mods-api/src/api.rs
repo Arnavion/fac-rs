@@ -193,7 +193,8 @@ mod tests {
 		let api = API::new(None, None, None).unwrap();
 
 		let iter = api.search("", &vec![], None, None, None).unwrap();
-		let count = iter.count();
+		let mods = iter.map(|m| m.unwrap()); // Ensure all are Ok()
+		let count = mods.count();
 		println!("Found {} mods", count);
 		assert!(count > 500); // 700+ as of 2016-10-03
 	}
