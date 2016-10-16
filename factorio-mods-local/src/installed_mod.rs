@@ -20,12 +20,12 @@ pub enum InstalledMod {
 }
 
 impl InstalledMod {
-	pub fn find<'a, 'b>(
-		mods_directory: &'a ::std::path::Path,
+	pub fn find<'a>(
+		mods_directory: &::std::path::Path,
 		name_pattern: Option<&str>,
 		version: Option<::factorio_mods_common::ReleaseVersion>,
-		mod_status: &'b ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> ::error::Result<InstalledModIterator<'b>> {
+		mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	) -> ::error::Result<InstalledModIterator<'a>> {
 		let glob_pattern = mods_directory.join("*");
 
 		let paths = try!(try!(
