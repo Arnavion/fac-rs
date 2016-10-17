@@ -8,6 +8,7 @@ error-chain = "0.5.x"
 hyper = "0.9.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 itertools = "0.5.x"
+lazy_static = "0.2.x"
 serde = "0.8.x"
 serde_json = "0.8.x"
 url = "1.2.x"

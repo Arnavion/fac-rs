@@ -7,5 +7,6 @@ error_chain! {
 
 	errors {
 		StatusCode(status_code: ::hyper::status::StatusCode) { }
+		LoginFailure(message: String) { }
 	}
 }

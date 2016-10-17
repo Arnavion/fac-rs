@@ -564,4 +564,11 @@ macro_rules! make_newtype {
 
 		make_newtype_displayable!($struct_name);
 	};
+
+	($struct_name:ident(Vec<String>)) => {
+		#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
+		struct $struct_name(Vec<String>);
+
+		impl_deserialize_seq!($struct_name, String);
+	};
 }

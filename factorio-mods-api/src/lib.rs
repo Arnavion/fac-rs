@@ -4,12 +4,14 @@ extern crate error_chain;
 extern crate factorio_mods_common;
 extern crate hyper;
 extern crate itertools;
+#[macro_use]
+extern crate lazy_static;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
 
 mod api;
-pub use api::{ API, SearchResultsIterator };
+pub use api::{ API, SearchResultsIterator, UserCredentials };
 
 mod error;
 pub use error::{ Error, ErrorKind, Result };
