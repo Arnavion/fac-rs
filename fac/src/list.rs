@@ -32,7 +32,7 @@ impl ::util::SubCommand for SubCommand {
 				tags.push("unpacked");
 			}
 
-			let tags_string = if !tags.is_empty() { format!(" ({})", tags.join(", ")) } else { "".to_string() };
+			let tags_string = if !tags.is_empty() { format!(" ({})", tags.join(", ")) } else { String::new() };
 
 			println!("    {} {}{}", installed_mod.name(), installed_mod.version(), tags_string);
 		}
