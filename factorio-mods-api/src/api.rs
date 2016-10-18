@@ -1,10 +1,5 @@
 make_newtype!(pub PageNumber(u64));
 
-make_deserializable!(pub struct UserCredentials {
-	username: String,
-	token: String,
-});
-
 #[derive(Debug)]
 pub struct API {
 	base_url: ::hyper::Url,
@@ -71,13 +66,13 @@ impl API {
 		get_object(&self.client, mods_url)
 	}
 
-	pub fn login(&self, username: String, password: &str) -> ::error::Result<UserCredentials> {
+	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::error::Result<::factorio_mods_common::UserCredentials> {
 		let mut serializer = ::url::form_urlencoded::Serializer::new(String::new());
 		serializer.append_pair("username", &username).append_pair("password", password);
 		let response: LoginSuccessResponse = try!(post_object(&self.client, self.login_url.clone(), serializer));
 		let mut token_list = response.0;
 		let token = try!(token_list.drain(..).next().ok_or_else(|| "Malformed login response"));
-		Ok(UserCredentials { username: username, token: token })
+		Ok(::factorio_mods_common::UserCredentials { username: username, token: token })
 	}
 }
 
@@ -237,7 +232,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 	}
 }
 
-make_newtype!(LoginSuccessResponse(Vec<String>));
+make_newtype!(LoginSuccessResponse(Vec<::factorio_mods_common::ServiceToken>));
 
 make_deserializable!(struct LoginFailureResponse {
 	message: String,

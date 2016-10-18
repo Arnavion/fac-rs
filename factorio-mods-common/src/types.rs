@@ -118,6 +118,16 @@ make_newtype!(pub TagDescription(String));
 
 make_newtype!(pub TagType(String));
 
+make_deserializable!(pub struct UserCredentials {
+	pub username: ServiceUsername,
+	pub token: ServiceToken,
+});
+
+make_newtype!(pub ServiceUsername(String));
+
+make_newtype!(pub ServiceToken(String));
+
+
 pub fn fixup_version(s: &str) -> String {
 	::itertools::join(s.split('.').enumerate().map(|(i, part)| {
 		let part =

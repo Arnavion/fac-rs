@@ -101,10 +101,19 @@ macro_rules! impl_deserialize_struct {
 
 	(@match_field match $value:ident {
 		$($existing_case:pat => $existing_block:expr,)*
-	} type_name : $field_type:ty, $($fields:tt)*) => {
+	} service_token : $field_type:ty, $($fields:tt)*) => {
 		impl_deserialize_struct!(@match_field match $value {
 			$($existing_case => $existing_block,)*
-			"type" => ::std::result::Result::Ok::<Field, E>(Field::type_name),
+			"service-token" => ::std::result::Result::Ok::<Field, E>(Field::service_token),
+		} $($fields)*);
+	};
+
+	(@match_field match $value:ident {
+		$($existing_case:pat => $existing_block:expr,)*
+	} service_username : $field_type:ty, $($fields:tt)*) => {
+		impl_deserialize_struct!(@match_field match $value {
+			$($existing_case => $existing_block,)*
+			"service-username" => ::std::result::Result::Ok::<Field, E>(Field::service_username),
 		} $($fields)*);
 	};
 
@@ -565,10 +574,10 @@ macro_rules! make_newtype {
 		make_newtype_displayable!($struct_name);
 	};
 
-	($struct_name:ident(Vec<String>)) => {
+	($struct_name:ident(Vec<$wrapped_type:ty>)) => {
 		#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
-		struct $struct_name(Vec<String>);
+		struct $struct_name(Vec<$wrapped_type>);
 
-		impl_deserialize_seq!($struct_name, String);
+		impl_deserialize_seq!($struct_name, $wrapped_type);
 	};
 }

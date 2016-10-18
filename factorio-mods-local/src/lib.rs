@@ -18,4 +18,4 @@ mod installed_mod;
 pub use installed_mod::{ InstalledMod, InstalledModIterator, };
 
 mod manager;
-pub use manager::{ Config, Manager, };
+pub use manager::{ Manager };
