@@ -247,7 +247,7 @@ mod tests {
 	fn search_list_all_mods() {
 		let api = API::new(None, None, None).unwrap();
 
-		let iter = api.search("", &vec![], None, None, None).unwrap();
+		let iter = api.search("", &[], None, None, None).unwrap();
 		let mods = iter.map(|m| m.unwrap()); // Ensure all are Ok()
 		let count = mods.count();
 		println!("Found {} mods", count);
@@ -258,7 +258,7 @@ mod tests {
 	fn search_by_title() {
 		let api = API::new(None, None, None).unwrap();
 
-		let mut iter = api.search("bob's functions library mod", &vec![], None, None, None).unwrap();
+		let mut iter = api.search("bob's functions library mod", &[], None, None, None).unwrap();
 		let mod_ = iter.next().unwrap().unwrap();
 		println!("{:?}", mod_);
 		assert!(mod_.title.0 == "Bob's Functions Library mod");

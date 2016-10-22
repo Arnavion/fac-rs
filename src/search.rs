@@ -15,7 +15,7 @@ impl ::util::SubCommand for SubCommand {
 
 		let max_width = ::term_size::dimensions().map(|(w, _)| w);
 
-		let iter = api.search(query, &vec![], None, None, None).unwrap();
+		let iter = api.search(query, &[], None, None, None).unwrap();
 		for mod_ in iter {
 			let mod_ = mod_.unwrap();
 			println!("{}", mod_.title);
