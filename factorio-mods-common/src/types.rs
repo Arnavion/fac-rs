@@ -138,9 +138,12 @@ pub fn fixup_version(s: &str) -> String {
 				part.trim_matches('0').to_string()
 			};
 
-		let part = if part.is_empty() { "0".to_string() } else { part };
-
-		part
+		if part.is_empty() {
+			"0".to_string()
+		}
+		else {
+			part
+		}
 	}), ".")
 }
 

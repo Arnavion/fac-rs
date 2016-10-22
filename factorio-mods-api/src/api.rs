@@ -34,7 +34,7 @@ impl API {
 	pub fn search<'a>(
 		&'a self,
 		query: &str,
-		tags: &Vec<&::factorio_mods_common::TagName>,
+		tags: &[&::factorio_mods_common::TagName],
 		order: Option<String>,
 		page_size: Option<PageNumber>,
 		page: Option<PageNumber>
@@ -95,7 +95,7 @@ fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result<::hyper::
 fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result<T> where T: ::serde::Deserialize {
 	let response = try!(get(client, url));
 	let object = try!(::serde_json::from_reader(response));
-	return Ok(object);
+	Ok(object)
 }
 
 fn post(client: &::hyper::Client, url: ::hyper::Url, body: ::url::form_urlencoded::Serializer<String>) -> ::error::Result<::hyper::client::Response> {
@@ -123,7 +123,7 @@ fn post(client: &::hyper::Client, url: ::hyper::Url, body: ::url::form_urlencode
 fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: ::url::form_urlencoded::Serializer<String>) -> ::error::Result<T> where T: ::serde::Deserialize {
 	let response = try!(post(client, url, body));
 	let object = try!(::serde_json::from_reader(response));
-	return Ok(object);
+	Ok(object)
 }
 
 make_deserializable!(struct ResponseNumber(u64));
@@ -195,13 +195,13 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 		match self.current_page {
 			Some(ref mut page) if !page.results.is_empty() => {
 				let result = page.results.remove(0);
-				return Some(Ok(result));
+				Some(Ok(result))
 			}
 
 			Some(_) => {
 				self.current_page_number.0 += 1;
 				self.current_page = None;
-				return self.next()
+				self.next()
 			},
 
 			None => {
@@ -212,18 +212,18 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 				match get_object(self.client, mods_url) {
 					Ok(page) => {
 						self.current_page = Some(page);
-						return self.next();
+						self.next()
 					},
 
-					Err(err) => match err.kind() {
-						&::error::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
+					Err(err) => match *err.kind() {
+						::error::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
 							self.errored = true;
-							return None;
+							None
 						}
 
 						_ => {
 							self.errored = true;
-							return Some(Err(err));
+							Some(Err(err))
 						}
 					},
 				}
