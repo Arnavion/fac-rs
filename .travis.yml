@@ -8,6 +8,6 @@ env:
 - CRATE=factorio-mods-common
 - CRATE=factorio-mods-api
 - CRATE=factorio-mods-local
-- CRATE=fac
+- CRATE=.
 
 sudo: false
