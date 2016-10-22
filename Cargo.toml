@@ -17,7 +17,6 @@ term_size = "0.2.x"
 unicode-segmentation = "0.1.x"
 
 [workspace]
-members = ["factorio-mods-common", "factorio-mods-api", "factorio-mods-local"]
 
 [replace]
 "openssl:0.7.14" = { git = "https://github.com/Arnavion/rust-openssl", branch = "cfg-comp" }
