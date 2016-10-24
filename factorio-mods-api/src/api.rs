@@ -67,9 +67,12 @@ impl API {
 	}
 
 	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::error::Result<::factorio_mods_common::UserCredentials> {
-		let mut serializer = ::url::form_urlencoded::Serializer::new(String::new());
-		serializer.append_pair("username", &username).append_pair("password", password);
-		let response: LoginSuccessResponse = try!(post_object(&self.client, self.login_url.clone(), serializer));
+		let body =
+			::url::form_urlencoded::Serializer::new(String::new())
+			.append_pair("username", &username)
+			.append_pair("password", password)
+			.finish();
+		let response: LoginSuccessResponse = try!(post_object(&self.client, self.login_url.clone(), body));
 		let token = try!(response.0.into_iter().next().ok_or("Malformed login response"));
 		Ok(::factorio_mods_common::UserCredentials { username: username, token: token })
 	}
@@ -97,10 +100,7 @@ fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result
 	Ok(object)
 }
 
-fn post(client: &::hyper::Client, url: ::hyper::Url, body: ::url::form_urlencoded::Serializer<String>) -> ::error::Result<::hyper::client::Response> {
-	let mut body = body;
-	let body = body.finish();
-
+fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::error::Result<::hyper::client::Response> {
 	let response = try!(
 		client.post(url)
 		.header(CONTENT_TYPE_URLENCODED.clone())
@@ -119,7 +119,7 @@ fn post(client: &::hyper::Client, url: ::hyper::Url, body: ::url::form_urlencode
 	}
 }
 
-fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: ::url::form_urlencoded::Serializer<String>) -> ::error::Result<T> where T: ::serde::Deserialize {
+fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::error::Result<T> where T: ::serde::Deserialize {
 	let response = try!(post(client, url, body));
 	let object = try!(::serde_json::from_reader(response));
 	Ok(object)
