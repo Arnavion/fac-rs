@@ -36,7 +36,7 @@ impl Manager {
 		})
 	}
 
-	pub fn mods_directory(&self) -> &::std::path::PathBuf {
+	pub fn mods_directory(&self) -> &::std::path::Path {
 		&self.mods_directory
 	}
 
