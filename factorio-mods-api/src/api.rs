@@ -70,8 +70,7 @@ impl API {
 		let mut serializer = ::url::form_urlencoded::Serializer::new(String::new());
 		serializer.append_pair("username", &username).append_pair("password", password);
 		let response: LoginSuccessResponse = try!(post_object(&self.client, self.login_url.clone(), serializer));
-		let mut token_list = response.0;
-		let token = try!(token_list.drain(..).next().ok_or_else(|| "Malformed login response"));
+		let token = try!(response.0.into_iter().next().ok_or("Malformed login response"));
 		Ok(::factorio_mods_common::UserCredentials { username: username, token: token })
 	}
 }

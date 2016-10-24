@@ -25,8 +25,8 @@ impl Manager {
 
 		let mod_list_file_path = mods_directory.join("mod-list.json");
 		let mod_list_file = try!(::std::fs::File::open(&mod_list_file_path));
-		let mut mod_list: ModList = try!(::serde_json::from_reader(mod_list_file));
-		let mod_status = mod_list.mods.drain(..).map(|m| (m.name, m.enabled == "true")).collect();
+		let mod_list: ModList = try!(::serde_json::from_reader(mod_list_file));
+		let mod_status = mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect();
 
 		Ok(Manager {
 			write_path: write_path,
