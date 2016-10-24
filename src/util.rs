@@ -10,11 +10,11 @@ pub fn wrapping_println(s: &str, indent: &str, max_width: usize) {
 	let mut graphemes = &graphemes[..];
 
 	loop {
-		print!("{}", indent);
-
 		if graphemes.is_empty() {
 			return;
 		}
+
+		print!("{}", indent);
 
 		if graphemes.len() <= max_len {
 			for s in graphemes {
