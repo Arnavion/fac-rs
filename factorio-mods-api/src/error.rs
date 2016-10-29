@@ -9,6 +9,7 @@ error_chain! {
 	errors {
 		StatusCode(status_code: ::hyper::status::StatusCode) { }
 		LoginFailure(message: String) { }
+		MalformedModReleaseFilename(path: ::std::path::PathBuf) { }
 		MalformedModDownloadResponse(message: String) { }
 	}
 }

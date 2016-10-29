@@ -84,6 +84,21 @@ impl API {
 		mods_directory: &::std::path::Path,
 		user_credentials: &::factorio_mods_common::UserCredentials
 	) -> ::Result<()> {
+		let file_name = mods_directory.join(&**release.file_name());
+		if let Some(parent) = file_name.parent() {
+			if let Ok(parent_canonicalized) = parent.canonicalize() {
+				if parent_canonicalized != mods_directory.canonicalize().unwrap() {
+					return Err(::ErrorKind::MalformedModReleaseFilename(file_name.clone()).into());
+				}
+			}
+			else {
+				return Err(::ErrorKind::MalformedModReleaseFilename(file_name.clone()).into());
+			}
+		}
+		else {
+			return Err(::ErrorKind::MalformedModReleaseFilename(file_name.clone()).into());
+		}
+
 		let mut download_url = self.base_url.join(release.download_url())?;
 		download_url.query_pairs_mut()
 			.append_pair("username", user_credentials.username())
@@ -118,7 +133,7 @@ impl API {
 			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, &**release.file_size())).into());
 		}
 
-		let file = ::std::fs::OpenOptions::new().write(true).create_new(true).open(mods_directory.join(&**release.file_name()))?;
+		let file = ::std::fs::OpenOptions::new().write(true).create_new(true).open(file_name)?;
 		let mut reader = ::std::io::BufReader::new(response);
 		let mut writer = ::std::io::BufWriter::new(file);
 		::std::io::copy(&mut reader, &mut writer)?;
