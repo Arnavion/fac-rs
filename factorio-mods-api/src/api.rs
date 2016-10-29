@@ -82,7 +82,8 @@ impl API {
 		&self,
 		release: &::factorio_mods_common::ModRelease,
 		mods_directory: &::std::path::Path,
-		user_credentials: &::factorio_mods_common::UserCredentials
+		user_credentials: &::factorio_mods_common::UserCredentials,
+		overwrite: bool,
 	) -> ::Result<()> {
 		let file_name = mods_directory.join(&**release.file_name());
 		if let Some(parent) = file_name.parent() {
@@ -133,7 +134,9 @@ impl API {
 			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, &**release.file_size())).into());
 		}
 
-		let file = ::std::fs::OpenOptions::new().write(true).create_new(true).open(file_name)?;
+		let mut file = ::std::fs::OpenOptions::new();
+		let mut file = if overwrite { file.create(true).truncate(true) } else { file.create_new(true) };
+		let file = file.write(true).open(file_name)?;
 		let mut reader = ::std::io::BufReader::new(response);
 		let mut writer = ::std::io::BufWriter::new(file);
 		::std::io::copy(&mut reader, &mut writer)?;

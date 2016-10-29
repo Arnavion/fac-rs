@@ -12,6 +12,11 @@ impl ::util::SubCommand for SubCommand {
 		subcommand
 			.about("Install (or update) mods.")
 			.arg(
+				::clap::Arg::with_name("reinstall")
+					.help("allow reinstalling mods")
+					.long("reinstall")
+					.short("R"))
+			.arg(
 				::clap::Arg::with_name("requirements")
 					.help("requirements to install")
 					.index(1)
@@ -20,6 +25,7 @@ impl ::util::SubCommand for SubCommand {
 	}
 
 	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API, manager: ::factorio_mods_local::Manager) {
+		let reinstall = matches.is_present("reinstall");
 		let requirements = matches.values_of("requirements").unwrap();
 
 		let user_credentials = match manager.user_credentials() {
@@ -83,8 +89,21 @@ impl ::util::SubCommand for SubCommand {
 			let best_release = releases.iter().find(|release| requirement.0.matches(release.version()));
 			if let Some(best_release) = best_release {
 				let mods_directory = manager.mods_directory();
-				println!("Saving to: {}", mods_directory.join(&**best_release.file_name()).display());
-				api.download(best_release, mods_directory, &user_credentials).unwrap();
+				let expected_file_name = mods_directory.join(&**best_release.file_name());
+				let expected_file_name = expected_file_name.display();
+				println!("Saving to: {}", expected_file_name);
+				if let Err(err) = api.download(best_release, mods_directory, &user_credentials, reinstall) {
+					match *err.kind() {
+						::factorio_mods_api::ErrorKind::IO(ref err) if err.kind() == ::std::io::ErrorKind::AlreadyExists => {
+							println!("File {} already exists. Use -R to replace it.", expected_file_name);
+							continue;
+						},
+
+						_ => { },
+					}
+
+					panic!(err);
+				}
 			}
 			else {
 				println!("No match found for {}{}", name, requirement_string);
