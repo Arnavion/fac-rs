@@ -7,9 +7,9 @@ pub struct Manager {
 }
 
 impl Manager {
-	pub fn new() -> ::error::Result<Manager> {
+	pub fn new() -> ::Result<Manager> {
 		let (write_path, config_directory, mods_directory) =
-			try!(FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
+			FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 				let search_path = ::std::path::Path::new(search_path);
 
 				let config_directory = search_path.join("config");
@@ -21,11 +21,11 @@ impl Manager {
 				else {
 					None
 				}
-			}).next().ok_or(::error::ErrorKind::WritePath));
+			}).next().ok_or(::ErrorKind::WritePath)?;
 
 		let mod_list_file_path = mods_directory.join("mod-list.json");
-		let mod_list_file = try!(::std::fs::File::open(&mod_list_file_path));
-		let mod_list: ModList = try!(::serde_json::from_reader(mod_list_file));
+		let mod_list_file = ::std::fs::File::open(&mod_list_file_path)?;
+		let mod_list: ModList = ::serde_json::from_reader(mod_list_file)?;
 		let mod_status = mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect();
 
 		Ok(Manager {
@@ -40,18 +40,19 @@ impl Manager {
 		&self.mods_directory
 	}
 
-	pub fn installed_mods(&self) -> ::error::Result<::installed_mod::InstalledModIterator> {
+	pub fn installed_mods(&self) -> ::Result<::installed_mod::InstalledModIterator> {
 		::installed_mod::InstalledMod::find(&self.mods_directory, None, None, &self.mod_status)
 	}
 
-	pub fn user_credentials(&self) -> ::error::Result<Option<::factorio_mods_common::UserCredentials>> {
+	pub fn user_credentials(&self) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let player_data_json_file_path = self.write_path.join("player-data.json");
-		let player_data_json_file = try!(::std::fs::File::open(&player_data_json_file_path));
-		let player_data: PlayerData = try!(::serde_json::from_reader(player_data_json_file));
-		Ok(match (player_data.service_username, player_data.service_token) {
-			(Some(username), Some(token)) => Some(::factorio_mods_common::UserCredentials { username: username, token: token }),
-			_ => None,
-		})
+		let player_data_json_file = ::std::fs::File::open(&player_data_json_file_path)?;
+		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file)?;
+		match (player_data.service_username, player_data.service_token) {
+			(Some(username), Some(token)) => Ok(::factorio_mods_common::UserCredentials::new(username, token)),
+			(Some(username), None) => Err(::ErrorKind::IncompleteUserCredentials(Some(username)).into()),
+			_ => Err(::ErrorKind::IncompleteUserCredentials(None).into()),
+		}
 	}
 }
 
@@ -108,16 +109,18 @@ lazy_static! {
 	};
 }
 
-make_deserializable!(struct ModList {
+make_struct!(struct ModList {
 	mods: Vec<ModListMod>,
 });
 
-make_deserializable!(struct ModListMod {
+make_struct!(struct ModListMod {
 	name: ::factorio_mods_common::ModName,
 	enabled: String,
 });
 
-make_deserializable!(struct PlayerData {
+make_struct!(struct PlayerData {
+	#[serde(rename(deserialize = "service-username"))]
 	service_username: Option<::factorio_mods_common::ServiceUsername>,
+	#[serde(rename(deserialize = "service-token"))]
 	service_token: Option<::factorio_mods_common::ServiceToken>,
 });

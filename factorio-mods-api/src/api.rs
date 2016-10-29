@@ -1,4 +1,4 @@
-make_newtype!(pub PageNumber(u64));
+make_struct!(pub PageNumber(u64));
 
 #[derive(Debug)]
 pub struct API {
@@ -9,14 +9,14 @@ pub struct API {
 }
 
 impl API {
-	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::hyper::Client>) -> ::error::Result<API> {
+	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::hyper::Client>) -> ::Result<API> {
 		let base_url = base_url.unwrap_or_else(|| BASE_URL);
-		let base_url = try!(::hyper::Url::parse(base_url));
+		let base_url = ::hyper::Url::parse(base_url)?;
 
 		let login_url = login_url.unwrap_or_else(|| LOGIN_URL);
-		let login_url = try!(::hyper::Url::parse(login_url));
+		let login_url = ::hyper::Url::parse(login_url)?;
 
-		let mods_url = try!(base_url.join("/api/mods"));
+		let mods_url = base_url.join("/api/mods")?;
 		if mods_url.cannot_be_a_base() {
 			return Err(format!("URL {} cannot be a base.", mods_url).into());
 		}
@@ -38,10 +38,10 @@ impl API {
 		order: Option<String>,
 		page_size: Option<PageNumber>,
 		page: Option<PageNumber>
-	) -> ::error::Result<SearchResultsIterator<'a>> {
+	) -> ::Result<SearchResultsIterator<'a>> {
 		let tags_query = ::itertools::join(tags, ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
-		let page_size = page_size.unwrap_or(DEFAULT_PAGE_SIZE).0.to_string();
+		let page_size = (&page_size.unwrap_or(DEFAULT_PAGE_SIZE)).to_string();
 		let page = page.unwrap_or_else(|| PageNumber(1));
 
 		let mut mods_url = self.mods_url.clone();
@@ -60,21 +60,21 @@ impl API {
 		})
 	}
 
-	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> ::error::Result<::factorio_mods_common::Mod> {
+	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> ::Result<::factorio_mods_common::Mod> {
 		let mut mods_url = self.mods_url.clone();
 		mods_url.path_segments_mut().unwrap().push(&mod_name);
 		get_object(&self.client, mods_url)
 	}
 
-	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::error::Result<::factorio_mods_common::UserCredentials> {
+	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let body =
 			::url::form_urlencoded::Serializer::new(String::new())
 			.append_pair("username", &username)
 			.append_pair("password", password)
 			.finish();
-		let response: LoginSuccessResponse = try!(post_object(&self.client, self.login_url.clone(), body));
-		let token = try!(response.0.into_iter().next().ok_or("Malformed login response"));
-		Ok(::factorio_mods_common::UserCredentials { username: username, token: token })
+		let response: LoginSuccessResponse = post_object(&self.client, self.login_url.clone(), body)?;
+		let token = response.0.into_iter().next().ok_or("Malformed login response")?;
+		Ok(::factorio_mods_common::UserCredentials::new(username, token))
 	}
 }
 
@@ -86,53 +86,53 @@ lazy_static! {
 	static ref CONTENT_TYPE_URLENCODED: ::hyper::header::ContentType = ::hyper::header::ContentType("application/x-www-form-urlencoded".parse().unwrap());
 }
 
-fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result<::hyper::client::Response> {
-	let response = try!(client.get(url).send());
+fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::client::Response> {
+	let response = client.get(url).send()?;
 	match response.status {
 		::hyper::status::StatusCode::Ok => Ok(response),
-		code => Err(::error::ErrorKind::StatusCode(code).into())
+		code => Err(::ErrorKind::StatusCode(code).into()),
 	}
 }
 
-fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::error::Result<T> where T: ::serde::Deserialize {
-	let response = try!(get(client, url));
-	let object = try!(::serde_json::from_reader(response));
+fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<T> where T: ::serde::Deserialize {
+	let response = get(client, url)?;
+	let object = ::serde_json::from_reader(response)?;
 	Ok(object)
 }
 
-fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::error::Result<::hyper::client::Response> {
-	let response = try!(
+fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<::hyper::client::Response> {
+	let response =
 		client.post(url)
 		.header(CONTENT_TYPE_URLENCODED.clone())
 		.body(&body)
-		.send());
+		.send()?;
 
 	match response.status {
 		::hyper::status::StatusCode::Ok => Ok(response),
 
 		::hyper::status::StatusCode::Unauthorized => {
-			let object: LoginFailureResponse = try!(::serde_json::from_reader(response));
-			Err(::error::ErrorKind::LoginFailure(object.message).into())
+			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
+			Err(::ErrorKind::LoginFailure(object.message).into())
 		},
 
-		code => Err(::error::ErrorKind::StatusCode(code).into())
+		code => Err(::ErrorKind::StatusCode(code).into()),
 	}
 }
 
-fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::error::Result<T> where T: ::serde::Deserialize {
-	let response = try!(post(client, url, body));
-	let object = try!(::serde_json::from_reader(response));
+fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<T> where T: ::serde::Deserialize {
+	let response = post(client, url, body)?;
+	let object = ::serde_json::from_reader(response)?;
 	Ok(object)
 }
 
-make_deserializable!(struct ResponseNumber(u64));
+make_struct!(struct ResponseNumber(u64));
 
-make_deserializable!(struct SearchResponse {
+make_struct!(struct SearchResponse {
 	pagination: SearchResponsePagination,
 	results: Vec<SearchResponseMod>,
 });
 
-make_deserializable!(struct SearchResponsePagination {
+make_struct!(struct SearchResponsePagination {
 	page_count: PageNumber,
 	page: PageNumber,
 
@@ -142,36 +142,36 @@ make_deserializable!(struct SearchResponsePagination {
 	links: SearchResponsePaginationLinks,
 });
 
-make_deserializable!(struct SearchResponsePaginationLinks {
+make_struct!(struct SearchResponsePaginationLinks {
 	prev: Option<String>,
 	next: Option<String>,
 	first: Option<String>,
 	last: Option<String>,
 });
 
-make_deserializable!(pub struct SearchResponseMod {
-	pub id: ::factorio_mods_common::ModId,
+make_struct!(pub struct SearchResponseMod {
+	id: ::factorio_mods_common::ModId,
 
-	pub name: ::factorio_mods_common::ModName,
-	pub owner: ::factorio_mods_common::AuthorNames,
-	pub title: ::factorio_mods_common::ModTitle,
-	pub summary: ::factorio_mods_common::ModSummary,
+	name: ::factorio_mods_common::ModName,
+	owner: ::factorio_mods_common::AuthorNames,
+	title: ::factorio_mods_common::ModTitle,
+	summary: ::factorio_mods_common::ModSummary,
 
-	pub github_path: ::factorio_mods_common::Url,
-	pub homepage: ::factorio_mods_common::Url,
-	pub license_name: ::factorio_mods_common::LicenseName,
-	pub license_url: ::factorio_mods_common::Url,
+	github_path: ::factorio_mods_common::Url,
+	homepage: ::factorio_mods_common::Url,
+	license_name: ::factorio_mods_common::LicenseName,
+	license_url: ::factorio_mods_common::Url,
 
-	pub game_versions: Vec<::factorio_mods_common::GameVersion>,
+	game_versions: Vec<::factorio_mods_common::GameVersion>,
 
-	pub created_at: ::factorio_mods_common::DateTime,
-	pub updated_at: ::factorio_mods_common::DateTime,
-	pub latest_release: ::factorio_mods_common::ModRelease,
+	created_at: ::factorio_mods_common::DateTime,
+	updated_at: ::factorio_mods_common::DateTime,
+	latest_release: ::factorio_mods_common::ModRelease,
 
-	pub current_user_rating: Option<::serde_json::Value>,
-	pub downloads_count: ::factorio_mods_common::DownloadCount,
-	pub visits_count: ::factorio_mods_common::VisitCount,
-	pub tags: ::factorio_mods_common::Tags,
+	current_user_rating: Option<::serde_json::Value>,
+	downloads_count: ::factorio_mods_common::DownloadCount,
+	visits_count: ::factorio_mods_common::VisitCount,
+	tags: ::factorio_mods_common::Tags,
 });
 
 #[derive(Debug)]
@@ -184,7 +184,7 @@ pub struct SearchResultsIterator<'a> {
 }
 
 impl<'a> Iterator for SearchResultsIterator<'a> {
-	type Item = ::error::Result<SearchResponseMod>;
+	type Item = ::Result<SearchResponseMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if self.errored {
@@ -198,14 +198,13 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 			}
 
 			Some(_) => {
-				self.current_page_number.0 += 1;
+				*self.current_page_number += 1;
 				self.current_page = None;
 				self.next()
 			},
 
 			None => {
 				let mut mods_url = self.mods_url.clone();
-
 				mods_url.query_pairs_mut().append_pair("page", &self.current_page_number.to_string());
 
 				match get_object(self.client, mods_url) {
@@ -215,7 +214,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 					},
 
 					Err(err) => match *err.kind() {
-						::error::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
+						::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
 							self.errored = true;
 							None
 						}
@@ -231,9 +230,9 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 	}
 }
 
-make_newtype!(LoginSuccessResponse(Vec<::factorio_mods_common::ServiceToken>));
+make_struct!(LoginSuccessResponse(Vec<::factorio_mods_common::ServiceToken>));
 
-make_deserializable!(struct LoginFailureResponse {
+make_struct!(struct LoginFailureResponse {
 	message: String,
 });
 
@@ -260,17 +259,17 @@ mod tests {
 		let mut iter = api.search("bob's functions library mod", &[], None, None, None).unwrap();
 		let mod_ = iter.next().unwrap().unwrap();
 		println!("{:?}", mod_);
-		assert!(mod_.title.0 == "Bob's Functions Library mod");
+		assert!(&**mod_.title() == "Bob's Functions Library mod");
 	}
 
 	#[test]
 	fn search_by_tag() {
 		let api = API::new(None, None, None).unwrap();
 
-		let mut iter = api.search("", &vec![&::factorio_mods_common::TagName("logistics".to_string())], None, None, None).unwrap();
+		let mut iter = api.search("", &vec![&::factorio_mods_common::TagName::new("logistics".to_string())], None, None, None).unwrap();
 		let mod_ = iter.next().unwrap().unwrap();
 		println!("{:?}", mod_);
-		let mut tags = mod_.tags.0.iter().filter(|tag| tag.name.0 == "logistics");
+		let mut tags = mod_.tags().iter().filter(|tag| &**tag.name() == "logistics");
 		let tag = tags.next().unwrap();
 		println!("{:?}", tag);
 	}
@@ -279,8 +278,8 @@ mod tests {
 	fn get() {
 		let api = API::new(None, None, None).unwrap();
 
-		let mod_ = api.get(::factorio_mods_common::ModName("boblibrary".to_string())).unwrap();
+		let mod_ = api.get(::factorio_mods_common::ModName::new("boblibrary".to_string())).unwrap();
 		println!("{:?}", mod_);
-		assert!(mod_.title.0 == "Bob's Functions Library mod");
+		assert!(&**mod_.title() == "Bob's Functions Library mod");
 	}
 }

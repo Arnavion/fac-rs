@@ -16,38 +16,41 @@ impl ::util::SubCommand for SubCommand {
 		let names = matches.values_of("mods").unwrap();
 
 		for name in names {
-			let mod_ = api.get(::factorio_mods_common::ModName(name.to_string())).unwrap();
+			let mod_ = api.get(::factorio_mods_common::ModName::new(name.to_string())).unwrap();
 
-			println!("Name: {}", mod_.name);
-			println!("Author: {}", mod_.owner);
-			println!("Title: {}", mod_.title);
-			println!("Summary: {}", mod_.summary);
+			println!("Name: {}", mod_.name());
+			println!("Author: {}", mod_.owner());
+			println!("Title: {}", mod_.title());
+			println!("Summary: {}", mod_.summary());
 			println!("Description:");
-			for line in mod_.description.lines() {
+			for line in mod_.description().lines() {
 				println!("    {}", line);
 			}
 
-			println!("Tags: {}", mod_.tags);
+			println!("Tags: {}", mod_.tags());
 
-			if !mod_.homepage.is_empty() {
-				println!("Homepage: {}", mod_.homepage);
+			let homepage = mod_.homepage();
+			if !homepage.is_empty() {
+				println!("Homepage: {}", homepage);
 			}
 
-			if !mod_.github_path.is_empty() {
-				println!("GitHub page: https://github.com/{}", mod_.github_path);
+			let github_path = mod_.github_path();
+			if !github_path.is_empty() {
+				println!("GitHub page: https://github.com/{}", github_path);
 			}
 
-			println!("License: {}", mod_.license_name);
+			println!("License: {}", mod_.license_name());
 
-			println!("Game versions: {}", ::itertools::join(mod_.game_versions, ", "));
+			println!("Game versions: {}", ::itertools::join(mod_.game_versions(), ", "));
 
 			println!("Releases:");
-			if mod_.releases.is_empty() {
+			let releases = mod_.releases();
+			if releases.is_empty() {
 				println!("    No releases");
 			}
 			else {
-				for release in mod_.releases {
-					println!("    Version: {:-9} Game version: {:-9}", release.version, release.factorio_version);
+				for release in releases {
+					println!("    Version: {:-9} Game version: {:-9}", release.version(), release.factorio_version());
 				}
 			}
 

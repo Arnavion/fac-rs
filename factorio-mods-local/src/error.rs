@@ -12,5 +12,6 @@ error_chain! {
 		UnknownModFormat { }
 		Utf8Path(glob_pattern: ::std::path::PathBuf) { }
 		WritePath { }
+		IncompleteUserCredentials(username: Option<::factorio_mods_common::ServiceUsername>) { }
 	}
 }
