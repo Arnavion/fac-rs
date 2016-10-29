@@ -21,7 +21,8 @@ impl API {
 			return Err(format!("URL {} cannot be a base.", mods_url).into());
 		}
 
-		let client = client.unwrap_or_else(::hyper::Client::new);
+		let mut client = client.unwrap_or_else(::hyper::Client::new);
+		client.set_redirect_policy(::hyper::client::RedirectPolicy::FollowIf(should_follow_redirect));
 
 		Ok(API {
 			base_url: base_url,
@@ -76,6 +77,51 @@ impl API {
 		let token = response.0.into_iter().next().ok_or("Malformed login response")?;
 		Ok(::factorio_mods_common::UserCredentials::new(username, token))
 	}
+
+	pub fn download(
+		&self,
+		release: &::factorio_mods_common::ModRelease,
+		mods_directory: &::std::path::Path,
+		user_credentials: &::factorio_mods_common::UserCredentials
+	) -> ::Result<()> {
+		let mut download_url = self.base_url.join(release.download_url())?;
+		download_url.query_pairs_mut()
+			.append_pair("username", user_credentials.username())
+			.append_pair("token", user_credentials.token());
+
+		let mut response = get(&self.client, download_url)?;
+
+		let file_size = {
+			let headers = &response.headers;
+
+			let mime =
+				if let Some(&::hyper::header::ContentType(ref mime)) = headers.get() {
+					mime
+				}
+				else {
+					return Err(::ErrorKind::MalformedModDownloadResponse("No Content-Type header".to_string()).into());
+				};
+
+			if mime != &*APPLICATION_ZIP {
+				return Err(::ErrorKind::MalformedModDownloadResponse(format!("Unexpected Content-Type header: {}", mime)).into());
+			}
+
+			if let Some(&::hyper::header::ContentLength(ref file_size)) = headers.get() {
+				*file_size
+			}
+			else {
+				return Err(::ErrorKind::MalformedModDownloadResponse("No Content-Length header".to_string()).into())
+			}
+		};
+
+		if file_size != **release.file_size() {
+			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, &**release.file_size())).into());
+		}
+
+		let mut file = ::std::fs::OpenOptions::new().write(true).create_new(true).open(mods_directory.join(&**release.file_name()))?;
+		::std::io::copy(&mut response, &mut file)?;
+		Ok(())
+	}
 }
 
 const BASE_URL: &'static str = "https://mods.factorio.com/";
@@ -83,13 +129,38 @@ const LOGIN_URL: &'static str = "https://auth.factorio.com/api-login";
 const DEFAULT_PAGE_SIZE: PageNumber = PageNumber(25);
 const DEFAULT_ORDER: &'static str = "top";
 lazy_static! {
-	static ref CONTENT_TYPE_URLENCODED: ::hyper::header::ContentType = ::hyper::header::ContentType("application/x-www-form-urlencoded".parse().unwrap());
+	static ref CONTENT_TYPE_URLENCODED: ::hyper::header::ContentType =
+		::hyper::header::ContentType(
+			::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::WwwFormUrlEncoded, vec![]));
+
+	static ref APPLICATION_ZIP: ::hyper::mime::Mime =
+		::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Ext("zip".to_string()), vec![]);
+}
+
+fn should_follow_redirect(url: &::hyper::Url) -> bool {
+	if let Some(host) = url.host_str() {
+		if host != "mods.factorio.com" {
+			return true;
+		}
+	}
+
+	url.path() != "/login"
 }
 
 fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::client::Response> {
 	let response = client.get(url).send()?;
 	match response.status {
 		::hyper::status::StatusCode::Ok => Ok(response),
+
+		::hyper::status::StatusCode::Unauthorized => {
+			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
+			Err(::ErrorKind::LoginFailure(object.message).into())
+		},
+
+		::hyper::status::StatusCode::Found => {
+			Err(::ErrorKind::LoginFailure("Redirected to login page.".to_string()).into())
+		},
+
 		code => Err(::ErrorKind::StatusCode(code).into()),
 	}
 }
@@ -113,6 +184,10 @@ fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<:
 		::hyper::status::StatusCode::Unauthorized => {
 			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
 			Err(::ErrorKind::LoginFailure(object.message).into())
+		},
+
+		::hyper::status::StatusCode::Found => {
+			Err(::ErrorKind::LoginFailure("Redirected to login page.".to_string()).into())
 		},
 
 		code => Err(::ErrorKind::StatusCode(code).into()),

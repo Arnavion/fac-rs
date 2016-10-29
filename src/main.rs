@@ -5,9 +5,15 @@ extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate hyper;
 extern crate itertools;
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
+extern crate rpassword;
+extern crate semver;
 extern crate term_size;
 extern crate unicode_segmentation;
 
+mod install;
 mod list;
 mod search;
 mod show;
@@ -15,10 +21,12 @@ mod show;
 mod util;
 
 fn main() {
+	let install_subcommand = install::SubCommand;
 	let list_subcommand = list::SubCommand;
 	let search_subcommand = search::SubCommand;
 	let show_subcommand = show::SubCommand;
 	let mut subcommands = std::collections::HashMap::<&str, &util::SubCommand>::new();
+	subcommands.insert("install", &install_subcommand);
 	subcommands.insert("list", &list_subcommand);
 	subcommands.insert("search", &search_subcommand);
 	subcommands.insert("show", &show_subcommand);
