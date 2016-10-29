@@ -89,7 +89,7 @@ impl API {
 			.append_pair("username", user_credentials.username())
 			.append_pair("token", user_credentials.token());
 
-		let mut response = get(&self.client, download_url)?;
+		let response = get(&self.client, download_url)?;
 
 		let file_size = {
 			let headers = &response.headers;
@@ -118,8 +118,10 @@ impl API {
 			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, &**release.file_size())).into());
 		}
 
-		let mut file = ::std::fs::OpenOptions::new().write(true).create_new(true).open(mods_directory.join(&**release.file_name()))?;
-		::std::io::copy(&mut response, &mut file)?;
+		let file = ::std::fs::OpenOptions::new().write(true).create_new(true).open(mods_directory.join(&**release.file_name()))?;
+		let mut reader = ::std::io::BufReader::new(response);
+		let mut writer = ::std::io::BufWriter::new(file);
+		::std::io::copy(&mut reader, &mut writer)?;
 		Ok(())
 	}
 }
