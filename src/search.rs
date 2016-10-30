@@ -1,6 +1,6 @@
 pub struct SubCommand;
 
-impl ::util::SubCommand for SubCommand {
+impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		subcommand
 			.about("Search the mods database.")
@@ -10,7 +10,10 @@ impl ::util::SubCommand for SubCommand {
 					.index(1))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, web_api: ::factorio_mods_web::API, _: ::factorio_mods_local::API) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, _: FL, web_api: FW)
+		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API {
+		let web_api = web_api();
+
 		let query = matches.value_of("query").unwrap_or("");
 
 		let max_width = ::term_size::dimensions().map(|(w, _)| w);

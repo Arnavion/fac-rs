@@ -25,7 +25,7 @@ fn main() {
 	let list_subcommand = list::SubCommand;
 	let search_subcommand = search::SubCommand;
 	let show_subcommand = show::SubCommand;
-	let mut subcommands = std::collections::HashMap::<&str, &util::SubCommand>::new();
+	let mut subcommands = std::collections::HashMap::<_, &util::SubCommand<_, _>>::new();
 	subcommands.insert("install", &install_subcommand);
 	subcommands.insert("list", &list_subcommand);
 	subcommands.insert("search", &search_subcommand);
@@ -63,11 +63,11 @@ fn main() {
 		_ => None,
 	};
 
-	let web_api = factorio_mods_web::API::new(None, None, client).unwrap();
-	let local_api = factorio_mods_local::API::new().unwrap();
-
 	let subcommand_name = matches.subcommand_name().unwrap();
 	let subcommand = subcommands[subcommand_name];
 
-	subcommand.run(matches.subcommand_matches(subcommand_name).unwrap(), web_api, local_api);
+	subcommand.run(
+		matches.subcommand_matches(subcommand_name).unwrap(),
+		|| factorio_mods_local::API::new().unwrap(),
+		|| factorio_mods_web::API::new(None, None, client).unwrap());
 }

@@ -7,7 +7,7 @@ lazy_static! {
 
 pub struct SubCommand;
 
-impl ::util::SubCommand for SubCommand {
+impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		subcommand
 			.about("Install (or update) mods.")
@@ -24,7 +24,11 @@ impl ::util::SubCommand for SubCommand {
 					.required(true))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, web_api: ::factorio_mods_web::API, local_api: ::factorio_mods_local::API) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, local_api: FL, web_api: FW)
+		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API {
+		let web_api = web_api();
+		let local_api = local_api();
+
 		let reinstall = matches.is_present("reinstall");
 		let requirements = matches.values_of("requirements").unwrap();
 

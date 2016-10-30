@@ -1,6 +1,6 @@
 pub struct SubCommand;
 
-impl ::util::SubCommand for SubCommand {
+impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		subcommand
 			.about("Show details about specific mods.")
@@ -12,7 +12,10 @@ impl ::util::SubCommand for SubCommand {
 					.required(true))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, web_api: ::factorio_mods_web::API, _: ::factorio_mods_local::API) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, _: FL, web_api: FW)
+		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API {
+		let web_api = web_api();
+
 		let names = matches.values_of("mods").unwrap();
 
 		for name in names {

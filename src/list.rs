@@ -1,12 +1,15 @@
 pub struct SubCommand;
 
-impl ::util::SubCommand for SubCommand {
+impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		subcommand
 			.about("List installed mods and their status.")
 	}
 
-	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, _: ::factorio_mods_web::API, local_api: ::factorio_mods_local::API) {
+	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, local_api: FL, _: FW)
+		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API {
+		let local_api = local_api();
+
 		let mut installed_mods: Vec<_> = local_api.installed_mods().unwrap().map(Result::unwrap).collect();
 		if installed_mods.is_empty() {
 			println!("No installed mods.");
