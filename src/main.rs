@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate clap;
-extern crate factorio_mods_api;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
+extern crate factorio_mods_web;
 extern crate hyper;
 extern crate itertools;
 #[macro_use]
@@ -63,11 +63,11 @@ fn main() {
 		_ => None,
 	};
 
-	let api = factorio_mods_api::API::new(None, None, client).unwrap();
-	let manager = factorio_mods_local::Manager::new().unwrap();
+	let web_api = factorio_mods_web::API::new(None, None, client).unwrap();
+	let local_api = factorio_mods_local::API::new().unwrap();
 
 	let subcommand_name = matches.subcommand_name().unwrap();
 	let subcommand = subcommands[subcommand_name];
 
-	subcommand.run(matches.subcommand_matches(subcommand_name).unwrap(), api, manager);
+	subcommand.run(matches.subcommand_matches(subcommand_name).unwrap(), web_api, local_api);
 }

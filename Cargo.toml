@@ -5,9 +5,9 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
 clap = "2.13.x"
-factorio-mods-api = { version = "0.1.0", path = "./factorio-mods-api" }
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
+factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
 hyper = "0.9.x"
 itertools = "0.5.x"
 lazy_static = "0.2.x"

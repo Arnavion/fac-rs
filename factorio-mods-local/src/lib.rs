@@ -15,11 +15,11 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate zip;
 
+mod api;
+pub use api::{ API };
+
 mod error;
 pub use error::{ Error, ErrorKind, Result, };
 
 mod installed_mod;
 pub use installed_mod::{ InstalledMod, InstalledModIterator, };
-
-mod manager;
-pub use manager::{ Manager };

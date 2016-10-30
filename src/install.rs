@@ -24,11 +24,11 @@ impl ::util::SubCommand for SubCommand {
 					.required(true))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API, manager: ::factorio_mods_local::Manager) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, web_api: ::factorio_mods_web::API, local_api: ::factorio_mods_local::API) {
 		let reinstall = matches.is_present("reinstall");
 		let requirements = matches.values_of("requirements").unwrap();
 
-		let user_credentials = match manager.user_credentials() {
+		let user_credentials = match local_api.user_credentials() {
 			Ok(user_credentials) => user_credentials,
 
 			Err(err) => || -> ::factorio_mods_common::UserCredentials {
@@ -53,7 +53,7 @@ impl ::util::SubCommand for SubCommand {
 						};
 						let password = ::rpassword::prompt_password_stdout("Password (not shown): ").unwrap();
 
-						match api.login(username.into_owned(), &password) {
+						match web_api.login(username.into_owned(), &password) {
 							Ok(user_credentials) => {
 								println!("Logged in successfully.");
 								return user_credentials;
@@ -61,7 +61,7 @@ impl ::util::SubCommand for SubCommand {
 
 							Err(err) => {
 								match err.kind() {
-									&::factorio_mods_api::ErrorKind::LoginFailure(ref message) => println!("Authentication error: {}", message),
+									&::factorio_mods_web::ErrorKind::LoginFailure(ref message) => println!("Authentication error: {}", message),
 									k => println!("Error: {}", k),
 								}
 
@@ -81,20 +81,20 @@ impl ::util::SubCommand for SubCommand {
 			let requirement_string = captures.at(2).unwrap_or("*");
 			let requirement = ModVersionReq(::semver::VersionReq::parse(requirement_string).unwrap());
 
-			let mod_ = api.get(name.clone()).unwrap();
+			let mod_ = web_api.get(name.clone()).unwrap();
 
 			let mut releases = mod_.releases().to_vec();
 			releases.sort_by(|r1, r2| r2.version().cmp(r1.version()));
 			let releases = releases;
 			let best_release = releases.iter().find(|release| requirement.0.matches(release.version()));
 			if let Some(best_release) = best_release {
-				let mods_directory = manager.mods_directory();
+				let mods_directory = local_api.mods_directory();
 				let expected_file_name = mods_directory.join(&**best_release.file_name());
 				let expected_file_name = expected_file_name.display();
 				println!("Saving to: {}", expected_file_name);
-				if let Err(err) = api.download(best_release, mods_directory, &user_credentials, reinstall) {
+				if let Err(err) = web_api.download(best_release, mods_directory, &user_credentials, reinstall) {
 					match *err.kind() {
-						::factorio_mods_api::ErrorKind::IO(ref err) if err.kind() == ::std::io::ErrorKind::AlreadyExists => {
+						::factorio_mods_web::ErrorKind::IO(ref err) if err.kind() == ::std::io::ErrorKind::AlreadyExists => {
 							println!("File {} already exists. Use -R to replace it.", expected_file_name);
 							continue;
 						},

@@ -6,8 +6,8 @@ impl ::util::SubCommand for SubCommand {
 			.about("List installed mods and their status.")
 	}
 
-	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, _: ::factorio_mods_api::API, manager: ::factorio_mods_local::Manager) {
-		let mut installed_mods: Vec<_> = manager.installed_mods().unwrap().map(Result::unwrap).collect();
+	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, _: ::factorio_mods_web::API, local_api: ::factorio_mods_local::API) {
+		let mut installed_mods: Vec<_> = local_api.installed_mods().unwrap().map(Result::unwrap).collect();
 		if installed_mods.is_empty() {
 			println!("No installed mods.");
 			return;

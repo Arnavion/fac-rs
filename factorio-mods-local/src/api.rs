@@ -1,13 +1,13 @@
 #[derive(Debug)]
-pub struct Manager {
+pub struct API {
 	write_path: ::std::path::PathBuf,
 	config_directory: ::std::path::PathBuf,
 	mods_directory: ::std::path::PathBuf,
 	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 }
 
-impl Manager {
-	pub fn new() -> ::Result<Manager> {
+impl API {
+	pub fn new() -> ::Result<API> {
 		let (write_path, config_directory, mods_directory) =
 			FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 				let search_path = ::std::path::Path::new(search_path);
@@ -28,7 +28,7 @@ impl Manager {
 		let mod_list: ModList = ::serde_json::from_reader(mod_list_file)?;
 		let mod_status = mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect();
 
-		Ok(Manager {
+		Ok(API {
 			write_path: write_path,
 			config_directory: config_directory,
 			mods_directory: mods_directory,

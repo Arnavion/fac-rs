@@ -1,6 +1,6 @@
 pub trait SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a>;
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API, manager: ::factorio_mods_local::Manager);
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, web_api: ::factorio_mods_web::API, local_api: ::factorio_mods_local::API);
 }
 
 pub fn wrapping_println(s: &str, indent: &str, max_width: usize) {

@@ -10,12 +10,12 @@ impl ::util::SubCommand for SubCommand {
 					.index(1))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, api: ::factorio_mods_api::API, _: ::factorio_mods_local::Manager) {
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, web_api: ::factorio_mods_web::API, _: ::factorio_mods_local::API) {
 		let query = matches.value_of("query").unwrap_or("");
 
 		let max_width = ::term_size::dimensions().map(|(w, _)| w);
 
-		let iter = api.search(query, &[], None, None, None).unwrap();
+		let iter = web_api.search(query, &[], None, None, None).unwrap();
 		for mod_ in iter {
 			let mod_ = mod_.unwrap();
 			println!("{}", mod_.title());

@@ -1,5 +1,5 @@
 [package]
-name = "factorio-mods-api"
+name = "factorio-mods-web"
 version = "0.1.0"
 authors = ["Arnavion <arnavion@gmail.com>"]
 
