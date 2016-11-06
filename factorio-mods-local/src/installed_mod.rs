@@ -184,7 +184,7 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 	}
 }
 
-make_struct!(struct ModInfo {
+make_struct!(ModInfo {
 	name: ::factorio_mods_common::ModName,
 	author: ::factorio_mods_common::AuthorNames,
 	title: ::factorio_mods_common::ModTitle,

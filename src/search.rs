@@ -15,7 +15,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 
 		let max_width = ::term_size::dimensions().map(|(w, _)| w);
 
-		let iter = web_api.search(query, &[], None, None, None).unwrap();
+		let iter = web_api.search(query, &[], None, None, None);
 		for mod_ in iter {
 			let mod_ = mod_.unwrap();
 			println!("{}", mod_.title());

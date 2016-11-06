@@ -14,7 +14,7 @@ make_struct!(pub LicenseFlags(u64));
 
 make_struct!(pub Url(String));
 
-make_struct!(pub struct Mod {
+make_struct!(pub Mod {
 	id: ModId,
 
 	name: ModName,
@@ -46,7 +46,7 @@ make_struct!(pub ModId(u64));
 
 make_struct!(pub ModName(String));
 
-make_struct!(pub struct AuthorNames(Vec<String>));
+make_struct!(pub AuthorNames(Vec<String>));
 impl ::std::fmt::Display for AuthorNames {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
 		write!(f, "{}", self.0.join(", "))
@@ -59,7 +59,7 @@ make_struct!(pub ModSummary(String));
 
 make_struct!(pub ModDescription(String));
 
-make_struct!(pub struct ModRelease {
+make_struct!(pub ModRelease {
 	id: ReleaseId,
 	version: ReleaseVersion,
 	factorio_version: GameVersion,
@@ -83,7 +83,7 @@ make_struct!(pub Filename(String));
 
 make_struct!(pub FileSize(u64));
 
-make_struct!(pub struct ReleaseInfo {
+make_struct!(pub ReleaseInfo {
 	author: AuthorNames,
 	description: Option<ModDescription>,
 	factorio_version: GameVersion,
@@ -93,7 +93,7 @@ make_struct!(pub struct ReleaseInfo {
 	version: ReleaseVersion,
 });
 
-make_struct!(pub struct Tag {
+make_struct!(pub Tag {
 	id: TagId,
 	name: TagName,
 	title: TagTitle,
@@ -102,7 +102,7 @@ make_struct!(pub struct Tag {
 	type_name: TagType,
 });
 
-make_struct!(pub struct Tags(Vec<Tag>));
+make_struct!(pub Tags(Vec<Tag>));
 impl ::std::fmt::Display for Tags {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
 		write!(f, "{}", ::itertools::join(self.0.iter().map(|t| &t.name), ", "))
@@ -119,7 +119,7 @@ make_struct!(pub TagDescription(String));
 
 make_struct!(pub TagType(String));
 
-make_struct!(pub struct UserCredentials {
+make_struct!(pub UserCredentials {
 	username: ServiceUsername,
 	token: ServiceToken,
 });

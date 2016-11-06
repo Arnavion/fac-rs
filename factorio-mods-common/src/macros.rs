@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! make_struct {
-	(pub struct $struct_name:ident {
+	(pub $struct_name:ident {
 		$($fields:tt)*
 	}) => {
 		#[derive(Clone, Debug, Deserialize, new)]
@@ -13,7 +13,7 @@ macro_rules! make_struct {
 		}
 	};
 
-	(struct $struct_name:ident {
+	($struct_name:ident {
 		$($fields:tt)*
 	}) => {
 		#[derive(Clone, Debug, Deserialize)]
@@ -40,12 +40,12 @@ macro_rules! make_struct {
 		impl_newtype_display!($struct_name);
 	};
 
-	(struct $struct_name:ident(u64)) => {
+	($struct_name:ident(u64)) => {
 		#[derive(Clone, Debug, Deserialize)]
 		struct $struct_name(u64);
 	};
 
-	(pub struct $struct_name:ident(Vec<String>)) => {
+	(pub $struct_name:ident(Vec<String>)) => {
 		#[derive(Clone, Debug, new)]
 		pub struct $struct_name(Vec<String>);
 
@@ -54,7 +54,7 @@ macro_rules! make_struct {
 		impl_newtype_deref!($struct_name, [String]);
 	};
 
-	(pub struct $struct_name:ident(Vec<$wrapped_type:ty>)) => {
+	(pub $struct_name:ident(Vec<$wrapped_type:ty>)) => {
 		#[derive(Clone, Debug, Deserialize, new)]
 		pub struct $struct_name(Vec<$wrapped_type>);
 

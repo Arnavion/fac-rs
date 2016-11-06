@@ -17,7 +17,12 @@ extern crate serde_json;
 extern crate url;
 
 mod api;
-pub use api::{ API, SearchResultsIterator };
+pub use api::{ API };
 
 mod error;
 pub use error::{ Error, ErrorKind, Result };
+
+mod search;
+pub use search::{ PageNumber, ResponseNumber, SearchResultsIterator };
+
+mod util;

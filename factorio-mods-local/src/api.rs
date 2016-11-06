@@ -40,8 +40,8 @@ impl API {
 		&self.mods_directory
 	}
 
-	pub fn installed_mods(&self) -> ::Result<::installed_mod::InstalledModIterator> {
-		::installed_mod::InstalledMod::find(&self.mods_directory, None, None, &self.mod_status)
+	pub fn installed_mods(&self) -> ::Result<::InstalledModIterator> {
+		::InstalledMod::find(&self.mods_directory, None, None, &self.mod_status)
 	}
 
 	pub fn user_credentials(&self) -> ::Result<::factorio_mods_common::UserCredentials> {
@@ -109,16 +109,16 @@ lazy_static! {
 	};
 }
 
-make_struct!(struct ModList {
+make_struct!(ModList {
 	mods: Vec<ModListMod>,
 });
 
-make_struct!(struct ModListMod {
+make_struct!(ModListMod {
 	name: ::factorio_mods_common::ModName,
 	enabled: String,
 });
 
-make_struct!(struct PlayerData {
+make_struct!(PlayerData {
 	#[serde(rename(deserialize = "service-username"))]
 	service_username: Option<::factorio_mods_common::ServiceUsername>,
 	#[serde(rename(deserialize = "service-token"))]
