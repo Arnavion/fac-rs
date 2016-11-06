@@ -2,14 +2,9 @@ pub struct SubCommand;
 
 impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
-		subcommand
-			.about("Show details about specific mods.")
-			.arg(
-				::clap::Arg::with_name("mods")
-					.help("mods to show")
-					.index(1)
-					.multiple(true)
-					.required(true))
+		clap_app!(@app (subcommand)
+			(about: "Show details about specific mods.")
+			(@arg mods: ... +required index(1) "mods to show"))
 	}
 
 	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, _: FL, web_api: FW)

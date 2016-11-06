@@ -32,17 +32,18 @@ fn main() {
 	subcommands.insert("show", &show_subcommand);
 	let subcommands = subcommands;
 
-	let app = clap::App::new("fac")
-		.author(crate_authors!())
-		.version(crate_version!())
-		.about("fac")
-		.setting(clap::AppSettings::SubcommandRequiredElseHelp)
-		.setting(clap::AppSettings::VersionlessSubcommands)
+	let app = clap_app!(fac =>
+		(author: crate_authors!())
+		(version: crate_version!())
+		(about: "fac")
+		(@setting SubcommandRequiredElseHelp)
+		(@setting VersionlessSubcommands))
 		.arg(
 			::clap::Arg::with_name("proxy-hostname")
 				.long("proxy-hostname")
 				.takes_value(true)
-				.help("HTTP proxy hostname"))
+				.help("HTTP proxy hostname")
+				.requires("proxy-port"))
 		.arg(
 			::clap::Arg::with_name("proxy-port")
 				.long("proxy-port")

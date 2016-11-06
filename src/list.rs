@@ -2,8 +2,8 @@ pub struct SubCommand;
 
 impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
-		subcommand
-			.about("List installed mods and their status.")
+		clap_app!(@app (subcommand)
+			(about: "List installed mods and their status."))
 	}
 
 	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, local_api: FL, _: FW)

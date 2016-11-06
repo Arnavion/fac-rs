@@ -9,19 +9,10 @@ pub struct SubCommand;
 
 impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
-		subcommand
-			.about("Install (or update) mods.")
-			.arg(
-				::clap::Arg::with_name("reinstall")
-					.help("allow reinstalling mods")
-					.long("reinstall")
-					.short("R"))
-			.arg(
-				::clap::Arg::with_name("requirements")
-					.help("requirements to install")
-					.index(1)
-					.multiple(true)
-					.required(true))
+		clap_app!(@app (subcommand)
+			(about: "Install (or update) mods.")
+			(@arg reinstall: -R --reinstall "allow reinstalling mods")
+			(@arg requirements: ... +required index(1) "requirements to install"))
 	}
 
 	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, local_api: FL, web_api: FW)

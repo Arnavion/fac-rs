@@ -2,12 +2,9 @@ pub struct SubCommand;
 
 impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
-		subcommand
-			.about("Search the mods database.")
-			.arg(
-				::clap::Arg::with_name("query")
-					.help("search string")
-					.index(1))
+		clap_app!(@app (subcommand)
+			(about: "Search the mods database.")
+			(@arg query: index(1) "search string"))
 	}
 
 	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, _: FL, web_api: FW)
