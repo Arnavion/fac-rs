@@ -77,7 +77,7 @@ impl API {
 		user_credentials: &::factorio_mods_common::UserCredentials,
 		overwrite: bool,
 	) -> ::Result<()> {
-		let file_name = mods_directory.join(&**release.file_name());
+		let file_name = mods_directory.join(release.file_name());
 		if let Some(parent) = file_name.parent() {
 			if let Ok(parent_canonicalized) = parent.canonicalize() {
 				if parent_canonicalized != mods_directory.canonicalize().unwrap() {
@@ -123,7 +123,7 @@ impl API {
 		};
 
 		if file_size != **release.file_size() {
-			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, &**release.file_size())).into());
+			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, release.file_size())).into());
 		}
 
 		let mut file = ::std::fs::OpenOptions::new();

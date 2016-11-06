@@ -29,6 +29,12 @@ macro_rules! make_struct {
 		impl_newtype_deref!($struct_name, str);
 
 		impl_newtype_display!($struct_name);
+
+		impl<T: ?Sized> AsRef<T> for $struct_name where str: AsRef<T> {
+			fn as_ref(&self) -> &T {
+				(&self.0 as &str).as_ref()
+			}
+		}
 	};
 
 	(pub $struct_name:ident(u64)) => {
