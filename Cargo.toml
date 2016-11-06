@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
-clap = "2.13.x"
+clap = "2.18.x"
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
