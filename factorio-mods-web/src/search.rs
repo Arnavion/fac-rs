@@ -1,9 +1,11 @@
-make_struct!(pub PageNumber(u64));
+#[derive(newtype)]
+pub struct PageNumber(u64);
 
-make_struct!(pub ResponseNumber(u64));
+#[derive(newtype)]
+pub struct ResponseNumber(u64);
 
-
-make_struct!(pub SearchResponseMod {
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct SearchResponseMod {
 	id: ::factorio_mods_common::ModId,
 
 	name: ::factorio_mods_common::ModName,
@@ -26,7 +28,7 @@ make_struct!(pub SearchResponseMod {
 	downloads_count: ::factorio_mods_common::DownloadCount,
 	visits_count: ::factorio_mods_common::VisitCount,
 	tags: ::factorio_mods_common::Tags,
-});
+}
 
 #[derive(Debug)]
 pub struct SearchResultsIterator<'a> {
@@ -100,12 +102,14 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 	}
 }
 
-make_struct!(SearchResponse {
+#[derive(Debug, Deserialize)]
+struct SearchResponse {
 	pagination: SearchResponsePagination,
 	results: Vec<SearchResponseMod>,
-});
+}
 
-make_struct!(SearchResponsePagination {
+#[derive(Debug, Deserialize)]
+struct SearchResponsePagination {
 	page_count: PageNumber,
 	page: PageNumber,
 
@@ -113,11 +117,12 @@ make_struct!(SearchResponsePagination {
 	count: ResponseNumber,
 
 	links: SearchResponsePaginationLinks,
-});
+}
 
-make_struct!(SearchResponsePaginationLinks {
+#[derive(Debug, Deserialize)]
+struct SearchResponsePaginationLinks {
 	prev: Option<String>,
 	next: Option<String>,
 	first: Option<String>,
 	last: Option<String>,
-});
+}

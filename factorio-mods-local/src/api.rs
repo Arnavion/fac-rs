@@ -109,18 +109,21 @@ lazy_static! {
 	};
 }
 
-make_struct!(ModList {
+#[derive(Debug, Deserialize)]
+struct ModList {
 	mods: Vec<ModListMod>,
-});
+}
 
-make_struct!(ModListMod {
+#[derive(Debug, Deserialize)]
+struct ModListMod {
 	name: ::factorio_mods_common::ModName,
 	enabled: String,
-});
+}
 
-make_struct!(PlayerData {
+#[derive(Debug, Deserialize)]
+struct PlayerData {
 	#[serde(rename(deserialize = "service-username"))]
 	service_username: Option<::factorio_mods_common::ServiceUsername>,
 	#[serde(rename(deserialize = "service-token"))]
 	service_token: Option<::factorio_mods_common::ServiceToken>,
-});
+}

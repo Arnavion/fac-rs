@@ -57,6 +57,7 @@ lazy_static! {
 			::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::WwwFormUrlEncoded, vec![]));
 }
 
-make_struct!(LoginFailureResponse {
+#[derive(Debug, Deserialize)]
+struct LoginFailureResponse {
 	message: String,
-});
+}

@@ -188,7 +188,8 @@ fn default_game_version() -> ::factorio_mods_common::GameVersion {
 	DEFAULT_GAME_VERSION.clone()
 }
 
-make_struct!(ModInfo {
+#[derive(Debug, Deserialize)]
+struct ModInfo {
 	name: ::factorio_mods_common::ModName,
 	author: ::factorio_mods_common::AuthorNames,
 	title: ::factorio_mods_common::ModTitle,
@@ -199,4 +200,4 @@ make_struct!(ModInfo {
 	factorio_version: ::factorio_mods_common::GameVersion,
 
 	homepage: Option<::factorio_mods_common::Url>,
-});
+}

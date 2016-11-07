@@ -1,20 +1,29 @@
-make_struct!(pub DateTime(String));
+#[derive(newtype)]
+pub struct DateTime(String);
 
-make_struct!(pub RatingCount(u64));
+#[derive(newtype)]
+pub struct RatingCount(u64);
 
-make_struct!(pub DownloadCount(u64));
+#[derive(newtype)]
+pub struct DownloadCount(u64);
 
-make_struct!(pub VisitCount(u64));
+#[derive(newtype)]
+pub struct VisitCount(u64);
 
-make_struct!(pub GameVersion(::semver::VersionReq));
+#[derive(newtype)]
+pub struct GameVersion(::semver::VersionReq);
 
-make_struct!(pub LicenseName(String));
+#[derive(newtype)]
+pub struct LicenseName(String);
 
-make_struct!(pub LicenseFlags(u64));
+#[derive(newtype)]
+pub struct LicenseFlags(u64);
 
-make_struct!(pub Url(String));
+#[derive(newtype)]
+pub struct Url(String);
 
-make_struct!(pub Mod {
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct Mod {
 	id: ModId,
 
 	name: ModName,
@@ -40,26 +49,33 @@ make_struct!(pub Mod {
 	downloads_count: DownloadCount,
 	visits_count: VisitCount,
 	tags: Tags,
-});
+}
 
-make_struct!(pub ModId(u64));
+#[derive(newtype)]
+pub struct ModId(u64);
 
-make_struct!(pub ModName(String));
+#[derive(newtype)]
+pub struct ModName(String);
 
-make_struct!(pub AuthorNames(Vec<String>));
+#[derive(newtype)]
+pub struct AuthorNames(Vec<String>);
 impl ::std::fmt::Display for AuthorNames {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
 		write!(f, "{}", self.0.join(", "))
 	}
 }
 
-make_struct!(pub ModTitle(String));
+#[derive(newtype)]
+pub struct ModTitle(String);
 
-make_struct!(pub ModSummary(String));
+#[derive(newtype)]
+pub struct ModSummary(String);
 
-make_struct!(pub ModDescription(String));
+#[derive(newtype)]
+pub struct ModDescription(String);
 
-make_struct!(pub ModRelease {
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct ModRelease {
 	id: ReleaseId,
 	version: ReleaseVersion,
 	factorio_version: GameVersion,
@@ -73,17 +89,22 @@ make_struct!(pub ModRelease {
 	downloads_count: DownloadCount,
 
 	info_json: ReleaseInfo,
-});
+}
 
-make_struct!(pub ReleaseId(u64));
+#[derive(newtype)]
+pub struct ReleaseId(u64);
 
-make_struct!(pub ReleaseVersion(::semver::Version));
+#[derive(newtype)]
+pub struct ReleaseVersion(::semver::Version);
 
-make_struct!(pub Filename(String));
+#[derive(newtype)]
+pub struct Filename(String);
 
-make_struct!(pub FileSize(u64));
+#[derive(newtype)]
+pub struct FileSize(u64);
 
-make_struct!(pub ReleaseInfo {
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct ReleaseInfo {
 	author: AuthorNames,
 	description: Option<ModDescription>,
 	factorio_version: GameVersion,
@@ -91,42 +112,52 @@ make_struct!(pub ReleaseInfo {
 	name: ModName,
 	title: ModTitle,
 	version: ReleaseVersion,
-});
+}
 
-make_struct!(pub Tag {
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct Tag {
 	id: TagId,
 	name: TagName,
 	title: TagTitle,
 	description: TagDescription,
 	#[serde(rename(deserialize = "type"))]
 	type_name: TagType,
-});
+}
 
-make_struct!(pub Tags(Vec<Tag>));
+#[derive(newtype)]
+pub struct Tags(Vec<Tag>);
 impl ::std::fmt::Display for Tags {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
 		write!(f, "{}", ::itertools::join(self.0.iter().map(|t| &t.name), ", "))
 	}
 }
 
-make_struct!(pub TagId(u64));
+#[derive(newtype)]
+pub struct TagId(u64);
 
-make_struct!(pub TagName(String));
+#[derive(newtype)]
+pub struct TagName(String);
 
-make_struct!(pub TagTitle(String));
+#[derive(newtype)]
+pub struct TagTitle(String);
 
-make_struct!(pub TagDescription(String));
+#[derive(newtype)]
+pub struct TagDescription(String);
 
-make_struct!(pub TagType(String));
+#[derive(newtype)]
+pub struct TagType(String);
 
-make_struct!(pub UserCredentials {
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct UserCredentials {
 	username: ServiceUsername,
 	token: ServiceToken,
-});
+}
 
-make_struct!(pub ServiceUsername(String));
+#[derive(newtype)]
+pub struct ServiceUsername(String);
 
-make_struct!(pub ServiceToken(String));
+#[derive(newtype)]
+pub struct ServiceToken(String);
 
 
 pub fn fixup_version(s: &str) -> String {
