@@ -1,5 +1,7 @@
+/// An installed mod object.
 #[derive(Debug)]
 pub enum InstalledMod {
+	/// A zipped mod.
 	Zipped {
 		name: ::factorio_mods_common::ModName,
 		version: ::factorio_mods_common::ReleaseVersion,
@@ -7,6 +9,7 @@ pub enum InstalledMod {
 		enabled: bool,
 	},
 
+	/// An unpacked mod.
 	Unpacked {
 		name: ::factorio_mods_common::ModName,
 		version: ::factorio_mods_common::ReleaseVersion,
@@ -16,6 +19,7 @@ pub enum InstalledMod {
 }
 
 impl InstalledMod {
+	/// Returns an iterator over all the locally installed mods.
 	pub fn find<'a>(
 		mods_directory: &::std::path::Path,
 		name_pattern: Option<&str>,
@@ -45,6 +49,7 @@ impl InstalledMod {
 		})
 	}
 
+	/// Parses the installed mod at the given location.
 	pub fn new(
 		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
@@ -93,6 +98,7 @@ impl InstalledMod {
 		})
 	}
 
+	/// Returns the name of the installed mod.
 	pub fn name(&self) -> &::factorio_mods_common::ModName {
 		match *self {
 			InstalledMod::Zipped { ref name, .. } |
@@ -100,6 +106,7 @@ impl InstalledMod {
 		}
 	}
 
+	/// Returns the version of the installed mod.
 	pub fn version(&self) -> &::factorio_mods_common::ReleaseVersion {
 		match *self {
 			InstalledMod::Zipped { ref version, .. } |
@@ -107,6 +114,7 @@ impl InstalledMod {
 		}
 	}
 
+	/// Returns the game version of the installed mod.
 	pub fn game_version(&self) -> &::factorio_mods_common::GameVersion {
 		match *self {
 			InstalledMod::Zipped { ref game_version, .. } |
@@ -114,6 +122,7 @@ impl InstalledMod {
 		}
 	}
 
+	/// Returns whether the installed mod is enabled or not in mod-list.json
 	pub fn enabled(&self) -> &bool {
 		match *self {
 			InstalledMod::Zipped { ref enabled, .. } |
@@ -122,6 +131,7 @@ impl InstalledMod {
 	}
 }
 
+/// An iterator over all the locally installed mods.
 pub struct InstalledModIterator<'a> {
 	paths: ::glob::Paths,
 	name_pattern: Option<::glob::Pattern>,
@@ -188,6 +198,7 @@ fn default_game_version() -> ::factorio_mods_common::GameVersion {
 	DEFAULT_GAME_VERSION.clone()
 }
 
+/// Represents the contents of info.json of an installed mod.
 #[derive(Debug, Deserialize)]
 struct ModInfo {
 	name: ::factorio_mods_common::ModName,

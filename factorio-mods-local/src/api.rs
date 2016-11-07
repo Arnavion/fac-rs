@@ -1,3 +1,4 @@
+/// Entry-point to the local Factorio API
 #[derive(Debug)]
 pub struct API {
 	write_path: ::std::path::PathBuf,
@@ -7,6 +8,7 @@ pub struct API {
 }
 
 impl API {
+	/// Constructs an API object. Tries to detect the local Factorio install in some well-defined locations.
 	pub fn new() -> ::Result<API> {
 		let (write_path, config_directory, mods_directory) =
 			FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
@@ -36,14 +38,17 @@ impl API {
 		})
 	}
 
+	/// Returns the directory where mods should be installed.
 	pub fn mods_directory(&self) -> &::std::path::Path {
 		&self.mods_directory
 	}
 
+	/// Returns an iterator over all the locally installed mods.
 	pub fn installed_mods(&self) -> ::Result<::InstalledModIterator> {
 		::InstalledMod::find(&self.mods_directory, None, None, &self.mod_status)
 	}
 
+	/// Fetches the locally saved user credentials, if any.
 	pub fn user_credentials(&self) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let player_data_json_file_path = self.write_path.join("player-data.json");
 		let player_data_json_file = ::std::fs::File::open(&player_data_json_file_path)?;
@@ -109,17 +114,20 @@ lazy_static! {
 	};
 }
 
+/// Represents the contents of mod-list.json
 #[derive(Debug, Deserialize)]
 struct ModList {
 	mods: Vec<ModListMod>,
 }
 
+/// A mod entry in the mod list
 #[derive(Debug, Deserialize)]
 struct ModListMod {
 	name: ::factorio_mods_common::ModName,
 	enabled: String,
 }
 
+/// Represents the contents of player-data.json
 #[derive(Debug, Deserialize)]
 struct PlayerData {
 	#[serde(rename(deserialize = "service-username"))]

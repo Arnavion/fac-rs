@@ -1,35 +1,39 @@
+/// The page number of one page of a search response.
 #[derive(newtype)]
 pub struct PageNumber(u64);
 
+/// The response number within a page of a search response.
 #[derive(newtype)]
 pub struct ResponseNumber(u64);
 
+/// A mod object returned by `API::search`.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct SearchResponseMod {
-	id: ::factorio_mods_common::ModId,
+	id: ::ModId,
 
 	name: ::factorio_mods_common::ModName,
 	owner: ::factorio_mods_common::AuthorNames,
 	title: ::factorio_mods_common::ModTitle,
-	summary: ::factorio_mods_common::ModSummary,
+	summary: ::ModSummary,
 
 	github_path: ::factorio_mods_common::Url,
 	homepage: ::factorio_mods_common::Url,
-	license_name: ::factorio_mods_common::LicenseName,
+	license_name: ::LicenseName,
 	license_url: ::factorio_mods_common::Url,
 
 	game_versions: Vec<::factorio_mods_common::GameVersion>,
 
-	created_at: ::factorio_mods_common::DateTime,
-	updated_at: ::factorio_mods_common::DateTime,
-	latest_release: ::factorio_mods_common::ModRelease,
+	created_at: ::DateTime,
+	updated_at: ::DateTime,
+	latest_release: ::ModRelease,
 
 	current_user_rating: Option<::serde_json::Value>,
-	downloads_count: ::factorio_mods_common::DownloadCount,
-	visits_count: ::factorio_mods_common::VisitCount,
-	tags: ::factorio_mods_common::Tags,
+	downloads_count: ::DownloadCount,
+	visits_count: ::VisitCount,
+	tags: ::Tags,
 }
 
+/// An iterator of search results.
 #[derive(Debug)]
 pub struct SearchResultsIterator<'a> {
 	client: &'a ::hyper::Client,
@@ -40,6 +44,7 @@ pub struct SearchResultsIterator<'a> {
 }
 
 impl<'a> SearchResultsIterator<'a> {
+	/// Constructs an iterator of search results.
 	pub fn new(
 		client: &'a ::hyper::Client,
 		mods_url: ::hyper::Url,
@@ -102,12 +107,14 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 	}
 }
 
+/// A single search response.
 #[derive(Debug, Deserialize)]
 struct SearchResponse {
 	pagination: SearchResponsePagination,
 	results: Vec<SearchResponseMod>,
 }
 
+/// Pagination information in a search response.
 #[derive(Debug, Deserialize)]
 struct SearchResponsePagination {
 	page_count: PageNumber,
@@ -119,6 +126,7 @@ struct SearchResponsePagination {
 	links: SearchResponsePaginationLinks,
 }
 
+/// Pagination link information in a search response.
 #[derive(Debug, Deserialize)]
 struct SearchResponsePaginationLinks {
 	prev: Option<String>,

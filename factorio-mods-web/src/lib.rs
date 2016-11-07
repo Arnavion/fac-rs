@@ -1,5 +1,7 @@
 #![feature(proc_macro)]
 
+//! API to interface with https://mods.factorio.com/
+
 #[macro_use]
 extern crate derive_new;
 #[macro_use]
@@ -25,5 +27,8 @@ pub use error::{ Error, ErrorKind, Result };
 
 mod search;
 pub use search::{ PageNumber, ResponseNumber, SearchResultsIterator };
+
+mod types;
+pub use types::*;
 
 mod util;

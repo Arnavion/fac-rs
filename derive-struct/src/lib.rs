@@ -2,6 +2,8 @@
 #![feature(proc_macro, proc_macro_lib, slice_patterns)]
 #![recursion_limit = "200"]
 
+//! A helper crate for easily deriving structs.
+
 #[macro_use]
 extern crate lazy_static;
 extern crate proc_macro;
@@ -9,6 +11,7 @@ extern crate proc_macro;
 extern crate quote;
 extern crate syn;
 
+/// Generates getters for every field of a non-tuple struct.
 #[proc_macro_derive(getters)]
 pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let source = input.to_string();
@@ -61,6 +64,7 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 	).to_string().parse().unwrap()
 }
 
+/// Derives various traits on a tuple struct based on its wrapped type.
 #[proc_macro_derive(newtype)]
 pub fn derive_newtype(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let source = input.to_string();
@@ -117,6 +121,7 @@ pub fn derive_newtype(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 	quote!(#result).to_string().parse().unwrap()
 }
 
+/// Derives `std::ops::Deref` and `std::ops::DerefMut` on the newtype.
 #[proc_macro_derive(newtype_deref)]
 pub fn derive_newtype_deref(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	fn generate(struct_name: &syn::Ident, wrapped_type: quote::Tokens) -> quote::Tokens {
@@ -162,6 +167,7 @@ pub fn derive_newtype_deref(input: proc_macro::TokenStream) -> proc_macro::Token
 	quote!(#ast #result).to_string().parse().unwrap()
 }
 
+/// Derives `serde::Deserialize` on the newtype.
 #[proc_macro_derive(newtype_deserialize)]
 pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	fn generate_semver(struct_name: &syn::Ident, semver_type: &syn::Ty) -> quote::Tokens {
@@ -260,6 +266,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 	quote!(#result).to_string().parse().unwrap()
 }
 
+/// Derives `std::fmt::Display` on the newtype.
 #[proc_macro_derive(newtype_display)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	fn generate(struct_name: &syn::Ident) -> quote::Tokens {
@@ -296,6 +303,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 	quote!(#ast #result).to_string().parse().unwrap()
 }
 
+/// Derives a constructor function named `new` on the newtype if it has public visibility.
 #[proc_macro_derive(newtype_new_if_public)]
 pub fn derive_newtype_new_if_public(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let source = input.to_string();

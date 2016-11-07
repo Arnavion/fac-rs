@@ -1,3 +1,5 @@
+//! An API and manager for Factorio mods.
+
 #[macro_use]
 extern crate clap;
 extern crate factorio_mods_common;

@@ -1,5 +1,7 @@
 #![feature(proc_macro)]
 
+//! Common types and functionality used by the other factorio-mods crates.
+
 #[macro_use]
 extern crate derive_new;
 extern crate itertools;

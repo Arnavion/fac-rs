@@ -1,3 +1,4 @@
+/// Entry-point to the https://mods.factorio.com API
 #[derive(Debug)]
 pub struct API {
 	base_url: ::hyper::Url,
@@ -7,6 +8,7 @@ pub struct API {
 }
 
 impl API {
+	/// Constructs an API object with the given parameters.
 	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::hyper::Client>) -> ::Result<API> {
 		let base_url = base_url.unwrap_or_else(|| BASE_URL);
 		let base_url = ::hyper::Url::parse(base_url)?;
@@ -30,10 +32,11 @@ impl API {
 		})
 	}
 
+	/// Searches for mods matching the given criteria.
 	pub fn search<'a>(
 		&'a self,
 		query: &str,
-		tags: &[&::factorio_mods_common::TagName],
+		tags: &[&::TagName],
 		order: Option<String>,
 		page_size: Option<::ResponseNumber>,
 		page: Option<::PageNumber>
@@ -53,12 +56,14 @@ impl API {
 		::SearchResultsIterator::new(&self.client, mods_url, page)
 	}
 
-	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> ::Result<::factorio_mods_common::Mod> {
+	/// Gets information about the specified mod.
+	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> ::Result<::Mod> {
 		let mut mods_url = self.mods_url.clone();
 		mods_url.path_segments_mut().unwrap().push(&mod_name);
 		::util::get_object(&self.client, mods_url)
 	}
 
+	/// Logs in to the web API using the given username and password and returns a credentials object.
 	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let body =
 			::url::form_urlencoded::Serializer::new(String::new())
@@ -70,9 +75,10 @@ impl API {
 		Ok(::factorio_mods_common::UserCredentials::new(username, token))
 	}
 
+	/// Downloads the file for the specified mod release to the given target directory.
 	pub fn download(
 		&self,
-		release: &::factorio_mods_common::ModRelease,
+		release: &::ModRelease,
 		mods_directory: &::std::path::Path,
 		user_credentials: &::factorio_mods_common::UserCredentials,
 		overwrite: bool,
@@ -188,7 +194,7 @@ mod tests {
 	fn search_by_tag() {
 		let api = API::new(None, None, None).unwrap();
 
-		let mut iter = api.search("", &vec![&::factorio_mods_common::TagName::new("logistics".to_string())], None, None, None);
+		let mut iter = api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None);
 		let mod_ = iter.next().unwrap().unwrap();
 		println!("{:?}", mod_);
 		let mut tags = mod_.tags().iter().filter(|tag| &**tag.name() == "logistics");

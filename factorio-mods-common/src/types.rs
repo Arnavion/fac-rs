@@ -1,62 +1,16 @@
-#[derive(newtype)]
-pub struct DateTime(String);
-
-#[derive(newtype)]
-pub struct RatingCount(u64);
-
-#[derive(newtype)]
-pub struct DownloadCount(u64);
-
-#[derive(newtype)]
-pub struct VisitCount(u64);
-
+/// The required game version.
 #[derive(newtype)]
 pub struct GameVersion(::semver::VersionReq);
 
-#[derive(newtype)]
-pub struct LicenseName(String);
-
-#[derive(newtype)]
-pub struct LicenseFlags(u64);
-
+/// A URL.
 #[derive(newtype)]
 pub struct Url(String);
 
-#[derive(Clone, Debug, Deserialize, new, getters)]
-pub struct Mod {
-	id: ModId,
-
-	name: ModName,
-	owner: AuthorNames,
-	title: ModTitle,
-	summary: ModSummary,
-	description: ModDescription,
-
-	github_path: Url,
-	homepage: Url,
-	license_name: LicenseName,
-	license_url: Url,
-	license_flags: LicenseFlags,
-
-	game_versions: Vec<GameVersion>,
-
-	created_at: DateTime,
-	updated_at: DateTime,
-	releases: Vec<ModRelease>,
-
-	ratings_count: RatingCount,
-	// current_user_rating: ???, # Unknown type
-	downloads_count: DownloadCount,
-	visits_count: VisitCount,
-	tags: Tags,
-}
-
-#[derive(newtype)]
-pub struct ModId(u64);
-
+/// The name of a mod.
 #[derive(newtype)]
 pub struct ModName(String);
 
+/// The names of the authors of a mod.
 #[derive(newtype)]
 pub struct AuthorNames(Vec<String>);
 impl ::std::fmt::Display for AuthorNames {
@@ -65,101 +19,34 @@ impl ::std::fmt::Display for AuthorNames {
 	}
 }
 
+/// The title of a mod.
 #[derive(newtype)]
 pub struct ModTitle(String);
 
-#[derive(newtype)]
-pub struct ModSummary(String);
-
+/// The description of a mod.
 #[derive(newtype)]
 pub struct ModDescription(String);
 
-#[derive(Clone, Debug, Deserialize, new, getters)]
-pub struct ModRelease {
-	id: ReleaseId,
-	version: ReleaseVersion,
-	factorio_version: GameVersion,
-	game_version: GameVersion,
-
-	download_url: Url,
-	file_name: Filename,
-	file_size: FileSize,
-	released_at: DateTime,
-
-	downloads_count: DownloadCount,
-
-	info_json: ReleaseInfo,
-}
-
-#[derive(newtype)]
-pub struct ReleaseId(u64);
-
+/// The version of a mod release.
 #[derive(newtype)]
 pub struct ReleaseVersion(::semver::Version);
 
-#[derive(newtype)]
-pub struct Filename(String);
-
-#[derive(newtype)]
-pub struct FileSize(u64);
-
-#[derive(Clone, Debug, Deserialize, new, getters)]
-pub struct ReleaseInfo {
-	author: AuthorNames,
-	description: Option<ModDescription>,
-	factorio_version: GameVersion,
-	homepage: Option<Url>,
-	name: ModName,
-	title: ModTitle,
-	version: ReleaseVersion,
-}
-
-#[derive(Clone, Debug, Deserialize, new, getters)]
-pub struct Tag {
-	id: TagId,
-	name: TagName,
-	title: TagTitle,
-	description: TagDescription,
-	#[serde(rename(deserialize = "type"))]
-	type_name: TagType,
-}
-
-#[derive(newtype)]
-pub struct Tags(Vec<Tag>);
-impl ::std::fmt::Display for Tags {
-	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-		write!(f, "{}", ::itertools::join(self.0.iter().map(|t| &t.name), ", "))
-	}
-}
-
-#[derive(newtype)]
-pub struct TagId(u64);
-
-#[derive(newtype)]
-pub struct TagName(String);
-
-#[derive(newtype)]
-pub struct TagTitle(String);
-
-#[derive(newtype)]
-pub struct TagDescription(String);
-
-#[derive(newtype)]
-pub struct TagType(String);
-
+/// A username and token used with the parts of the web API that require authentication.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct UserCredentials {
 	username: ServiceUsername,
 	token: ServiceToken,
 }
 
+/// A username used with the parts of the web API that require authentication.
 #[derive(newtype)]
 pub struct ServiceUsername(String);
 
+/// A token used with the parts of the web API that require authentication.
 #[derive(newtype)]
 pub struct ServiceToken(String);
 
-
+/// Fixes up some bad version strings returned by the web API into something valid for the `semver` crate.
 pub fn fixup_version(s: &str) -> String {
 	::itertools::join(s.split('.').enumerate().map(|(i, part)| {
 		let part =

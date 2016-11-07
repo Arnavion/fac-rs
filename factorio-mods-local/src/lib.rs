@@ -1,5 +1,7 @@
 #![feature(proc_macro)]
 
+///! API to interface with the local Factorio installation.
+
 extern crate appdirs;
 #[macro_use]
 extern crate error_chain;
