@@ -99,7 +99,7 @@ macro_rules! make_struct {
 macro_rules! impl_struct_getters {
 	() => { };
 
-	(#[serde(rename(deserialize = $str:expr))] $($fields:tt)*) => {
+	(#[serde($($attr:tt)*)] $($fields:tt)*) => {
 		impl_struct_getters!($($fields)*);
 	};
 

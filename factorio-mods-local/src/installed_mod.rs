@@ -1,7 +1,3 @@
-lazy_static! {
-	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::GameVersion = ::factorio_mods_common::GameVersion::new(::semver::VersionReq::parse("0.12").unwrap());
-}
-
 #[derive(Debug)]
 pub enum InstalledMod {
 	Zipped {
@@ -92,8 +88,8 @@ impl InstalledMod {
 		Ok(InstalledMod::Zipped {
 			name: info.name,
 			version: info.version,
-			game_version: info.factorio_version.unwrap_or_else(|| DEFAULT_GAME_VERSION.clone()),
-			enabled: *enabled.unwrap_or(&true),
+			game_version: info.factorio_version,
+			enabled: enabled.cloned().unwrap_or(true),
 		})
 	}
 
@@ -184,6 +180,14 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 	}
 }
 
+lazy_static! {
+	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::GameVersion = ::factorio_mods_common::GameVersion::new(::semver::VersionReq::parse("0.12").unwrap());
+}
+
+fn default_game_version() -> ::factorio_mods_common::GameVersion {
+	DEFAULT_GAME_VERSION.clone()
+}
+
 make_struct!(ModInfo {
 	name: ::factorio_mods_common::ModName,
 	author: ::factorio_mods_common::AuthorNames,
@@ -191,7 +195,8 @@ make_struct!(ModInfo {
 	description: ::factorio_mods_common::ModDescription,
 
 	version: ::factorio_mods_common::ReleaseVersion,
-	factorio_version: Option<::factorio_mods_common::GameVersion>,
+	#[serde(default = "default_game_version")]
+	factorio_version: ::factorio_mods_common::GameVersion,
 
 	homepage: Option<::factorio_mods_common::Url>,
 });
