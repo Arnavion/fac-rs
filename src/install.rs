@@ -84,7 +84,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			let best_release = releases.iter().find(|release| requirement.0.matches(release.version()));
 			if let Some(best_release) = best_release {
 				let mods_directory = local_api.mods_directory();
-				let filename = mods_directory.join(best_release.file_name());
+				let filename = mods_directory.join(best_release.filename());
 				let displayable_filename = filename.display().to_string();
 
 				println!("Saving to: {}", displayable_filename);

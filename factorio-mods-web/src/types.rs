@@ -69,7 +69,8 @@ pub struct ModRelease {
 	game_version: ::factorio_mods_common::GameVersion,
 
 	download_url: ::factorio_mods_common::Url,
-	file_name: Filename,
+	#[serde(rename(deserialize = "file_name"))]
+	filename: Filename,
 	file_size: FileSize,
 	released_at: DateTime,
 
