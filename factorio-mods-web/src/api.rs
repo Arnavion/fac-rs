@@ -37,13 +37,13 @@ impl API {
 		&'a self,
 		query: &str,
 		tags: &[&::TagName],
-		order: Option<SearchOrder>,
-		page_size: Option<::ResponseNumber>,
+		order: Option<&SearchOrder>,
+		page_size: Option<&::ResponseNumber>,
 		page: Option<::PageNumber>
 	) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
 		let tags_query = ::itertools::join(tags, ",");
-		let order = order.as_ref().unwrap_or(&DEFAULT_ORDER).to_query_parameter();
-		let page_size = (page_size.as_ref().unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
+		let order = order.unwrap_or(&DEFAULT_ORDER).to_query_parameter();
+		let page_size = (page_size.unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
 		let page = page.unwrap_or_else(|| ::PageNumber::new(1));
 
 		let mut mods_url = self.mods_url.clone();
