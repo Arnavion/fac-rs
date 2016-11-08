@@ -72,7 +72,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 			Some(ref mut page) if !page.results.is_empty() => {
 				let result = page.results.remove(0);
 				Some(Ok(result))
-			}
+			},
 
 			Some(_) => {
 				*self.current_page_number += 1;
@@ -94,15 +94,15 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 						::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
 							self.errored = true;
 							None
-						}
+						},
 
 						_ => {
 							self.errored = true;
 							Some(Err(err))
-						}
+						},
 					},
 				}
-			}
+			},
 		}
 	}
 }
