@@ -84,21 +84,40 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			let best_release = releases.iter().find(|release| requirement.0.matches(release.version()));
 			if let Some(best_release) = best_release {
 				let mods_directory = local_api.mods_directory();
-				let expected_file_name = mods_directory.join(&**best_release.file_name());
-				let expected_file_name = expected_file_name.display();
-				println!("Saving to: {}", expected_file_name);
-				if let Err(err) = web_api.download(best_release, mods_directory, &user_credentials, reinstall) {
-					match *err.kind() {
-						::factorio_mods_web::ErrorKind::IO(ref err) if err.kind() == ::std::io::ErrorKind::AlreadyExists => {
-							println!("File {} already exists. Use -R to replace it.", expected_file_name);
-							continue;
-						},
+				let filename = mods_directory.join(best_release.file_name());
+				let displayable_filename = filename.display().to_string();
 
-						_ => { },
+				println!("Saving to: {}", displayable_filename);
+
+				if let Some(parent) = filename.parent() {
+					if let Ok(parent_canonicalized) = parent.canonicalize() {
+						if parent_canonicalized != mods_directory.canonicalize().unwrap() {
+							panic!("Filename is malformed.");
+						}
 					}
-
-					panic!(err);
+					else {
+						panic!("Filename is malformed.");
+					}
 				}
+				else {
+					panic!("Filename is malformed.");
+				}
+
+				let mut reader = web_api.download(best_release, &user_credentials).unwrap();
+
+				let mut file = ::std::fs::OpenOptions::new();
+				let mut file = if reinstall { file.create(true).truncate(true) } else { file.create_new(true) };
+				let file = match file.write(true).open(filename) {
+					Ok(file) => file,
+					Err(ref err) if err.kind() == ::std::io::ErrorKind::AlreadyExists => {
+						println!("File {} already exists. Use -R to replace it.", displayable_filename);
+						continue;
+					},
+					Err(err) => panic!(err),
+				};
+
+				let mut writer = ::std::io::BufWriter::new(file);
+				::std::io::copy(&mut reader, &mut writer).unwrap();
 			}
 			else {
 				println!("No match found for {}{}", name, requirement_string);
