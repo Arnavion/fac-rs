@@ -44,8 +44,8 @@ impl API {
 	}
 
 	/// Returns an iterator over all the locally installed mods.
-	pub fn installed_mods(&self) -> ::Result<::InstalledModIterator> {
-		::InstalledMod::find(&self.mods_directory, None, None, &self.mod_status)
+	pub fn installed_mods<'a>(&'a self) -> ::Result<impl Iterator<Item = ::Result<::InstalledMod>> + 'a> {
+		::installed_mod::InstalledModIterator::new(&self.mods_directory, None, None, &self.mod_status)
 	}
 
 	/// Fetches the locally saved user credentials, if any.

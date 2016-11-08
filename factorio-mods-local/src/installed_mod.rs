@@ -19,36 +19,6 @@ pub enum InstalledMod {
 }
 
 impl InstalledMod {
-	/// Returns an iterator over all the locally installed mods.
-	pub fn find<'a>(
-		mods_directory: &::std::path::Path,
-		name_pattern: Option<&str>,
-		version: Option<::factorio_mods_common::ReleaseVersion>,
-		mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> ::Result<InstalledModIterator<'a>> {
-		let glob_pattern = mods_directory.join("*");
-
-		let paths =
-			glob_pattern.to_str()
-				.map(::glob::glob)
-				.ok_or_else(|| ::ErrorKind::Utf8Path(glob_pattern))??;
-
-		let name_pattern = if let Some(name_pattern) = name_pattern {
-			Some(::glob::Pattern::new(name_pattern)?)
-		}
-		else {
-			None
-		};
-
-		Ok(InstalledModIterator {
-			paths: paths,
-			name_pattern: name_pattern,
-			version: version,
-			mod_status: mod_status,
-			errored: false,
-		})
-	}
-
 	/// Parses the installed mod at the given location.
 	pub fn new(
 		path: ::std::path::PathBuf,
@@ -138,6 +108,38 @@ pub struct InstalledModIterator<'a> {
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	errored: bool,
+}
+
+impl<'a> InstalledModIterator<'a> {
+	/// Constructs an iterator over all the locally installed mods.
+	pub fn new(
+		mods_directory: &::std::path::Path,
+		name_pattern: Option<&str>,
+		version: Option<::factorio_mods_common::ReleaseVersion>,
+		mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'a> {
+		let glob_pattern = mods_directory.join("*");
+
+		let paths =
+			glob_pattern.to_str()
+				.map(::glob::glob)
+				.ok_or_else(|| ::ErrorKind::Utf8Path(glob_pattern))??;
+
+		let name_pattern = if let Some(name_pattern) = name_pattern {
+			Some(::glob::Pattern::new(name_pattern)?)
+		}
+		else {
+			None
+		};
+
+		Ok(InstalledModIterator {
+			paths: paths,
+			name_pattern: name_pattern,
+			version: version,
+			mod_status: mod_status,
+			errored: false,
+		})
+	}
 }
 
 impl<'a> Iterator for InstalledModIterator<'a> {

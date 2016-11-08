@@ -1,4 +1,4 @@
-#![feature(proc_macro)]
+#![feature(conservative_impl_trait, proc_macro)]
 
 ///! API to interface with the local Factorio installation.
 
@@ -25,4 +25,4 @@ mod error;
 pub use error::{ Error, ErrorKind, Result, };
 
 mod installed_mod;
-pub use installed_mod::{ InstalledMod, InstalledModIterator, };
+pub use installed_mod::{ InstalledMod, };

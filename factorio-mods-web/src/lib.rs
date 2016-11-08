@@ -1,4 +1,4 @@
-#![feature(proc_macro)]
+#![feature(conservative_impl_trait, proc_macro)]
 
 //! API to interface with https://mods.factorio.com/
 
@@ -26,7 +26,7 @@ mod error;
 pub use error::{ Error, ErrorKind, Result };
 
 mod search;
-pub use search::{ PageNumber, ResponseNumber, SearchResultsIterator };
+pub use search::{ PageNumber, ResponseNumber, SearchResponseMod };
 
 mod types;
 pub use types::*;

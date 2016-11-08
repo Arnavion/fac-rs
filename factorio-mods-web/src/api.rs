@@ -40,7 +40,7 @@ impl API {
 		order: Option<String>,
 		page_size: Option<::ResponseNumber>,
 		page: Option<::PageNumber>
-	) -> ::SearchResultsIterator<'a> {
+	) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
 		let tags_query = ::itertools::join(tags, ",");
 		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
 		let page_size = (page_size.as_ref().unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
@@ -53,7 +53,7 @@ impl API {
 			.append_pair("order", &order)
 			.append_pair("page_size", &page_size);
 
-		::SearchResultsIterator::new(&self.client, mods_url, page)
+		::search::SearchResultsIterator::new(&self.client, mods_url, page)
 	}
 
 	/// Gets information about the specified mod.
