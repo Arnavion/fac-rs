@@ -20,7 +20,7 @@ extern crate serde_json;
 extern crate url;
 
 mod api;
-pub use api::{ API };
+pub use api::{ API, SearchOrder };
 
 mod error;
 pub use error::{ Error, ErrorKind, Result };

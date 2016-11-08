@@ -37,12 +37,12 @@ impl API {
 		&'a self,
 		query: &str,
 		tags: &[&::TagName],
-		order: Option<String>,
+		order: Option<SearchOrder>,
 		page_size: Option<::ResponseNumber>,
 		page: Option<::PageNumber>
 	) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
 		let tags_query = ::itertools::join(tags, ",");
-		let order = order.unwrap_or_else(|| DEFAULT_ORDER.to_string());
+		let order = order.as_ref().unwrap_or(&DEFAULT_ORDER).to_query_parameter();
 		let page_size = (page_size.as_ref().unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
 		let page = page.unwrap_or_else(|| ::PageNumber::new(1));
 
@@ -50,7 +50,7 @@ impl API {
 		mods_url.query_pairs_mut()
 			.append_pair("q", query)
 			.append_pair("tags", &tags_query)
-			.append_pair("order", &order)
+			.append_pair("order", order)
 			.append_pair("page_size", &page_size);
 
 		::search::SearchResultsIterator::new(&self.client, mods_url, page)
@@ -142,9 +142,32 @@ impl API {
 	}
 }
 
+/// Search order
+pub enum SearchOrder {
+	/// A to Z
+	Alphabetically,
+
+	/// Most to least
+	MostDownloaded,
+
+	/// Newest to oldest
+	RecentlyUpdated,
+}
+
+impl SearchOrder {
+	/// Converts the SearchOrder to a string that can be ised in the search URL's querystring
+	fn to_query_parameter(&self) -> &'static str {
+		match *self {
+			SearchOrder::Alphabetically => "alpha",
+			SearchOrder::MostDownloaded => "top",
+			SearchOrder::RecentlyUpdated => "updated",
+		}
+	}
+}
+
 const BASE_URL: &'static str = "https://mods.factorio.com/";
 const LOGIN_URL: &'static str = "https://auth.factorio.com/api-login";
-const DEFAULT_ORDER: &'static str = "top";
+const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
 	static ref APPLICATION_ZIP: ::hyper::mime::Mime =
