@@ -62,7 +62,7 @@ pub struct ModInfo {
 	title: ModTitle,
 
 	/// A longer description of the mod release.
-	description: ModDescription,
+	description: Option<ModDescription>,
 
 	/// The version of the mod release.
 	version: ReleaseVersion,
