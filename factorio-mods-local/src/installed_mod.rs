@@ -1,37 +1,46 @@
 /// An installed mod object.
-#[derive(Debug)]
-pub enum InstalledMod {
+#[derive(Clone, Debug, new, getters)]
+pub struct InstalledMod {
+	/// The name of the installed mod.
+	name: ::factorio_mods_common::ModName,
+
+	/// The version of the installed mod.
+	version: ::factorio_mods_common::ReleaseVersion,
+
+	/// The game version of the installed mod.
+	game_version: ::factorio_mods_common::GameVersion,
+
+	/// Whether the installed mod is enabled or not in `mod-list.json`
+	enabled: bool,
+
+	/// Whether the installed mod is zipped or unpacked.
+	mod_type: InstalledModType,
+}
+
+/// The type of an installed mod.
+#[derive(Clone, Debug)]
+pub enum InstalledModType {
 	/// A zipped mod.
-	Zipped {
-		name: ::factorio_mods_common::ModName,
-		version: ::factorio_mods_common::ReleaseVersion,
-		game_version: ::factorio_mods_common::GameVersion,
-		enabled: bool,
-	},
+	Zipped,
 
 	/// An unpacked mod.
-	Unpacked {
-		name: ::factorio_mods_common::ModName,
-		version: ::factorio_mods_common::ReleaseVersion,
-		game_version: ::factorio_mods_common::GameVersion,
-		enabled: bool,
-	},
+	Unpacked,
 }
 
 impl InstalledMod {
 	/// Parses the installed mod at the given location.
-	pub fn new(
-		path: ::std::path::PathBuf,
+	pub fn parse(
+		path: &::std::path::Path,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::Result<InstalledMod> {
-		let info: ::factorio_mods_common::ModInfo =
+		let (info, mod_type): (::factorio_mods_common::ModInfo, _) =
 			if path.is_file() {
 				match path.extension() {
 					Some(extension) if extension == "zip" => {
-						let zip_file = ::std::fs::File::open(&path)?;
+						let zip_file = ::std::fs::File::open(path)?;
 						let mut zip_file = ::zip::ZipArchive::new(zip_file)?;
 						if zip_file.len() == 0 {
-							return Err(::ErrorKind::EmptyZippedMod(path.clone()).into());
+							return Err(::ErrorKind::EmptyZippedMod(path.into()).into());
 						}
 
 						let toplevel = {
@@ -40,7 +49,7 @@ impl InstalledMod {
 						};
 						let info_json_file_path = format!("{}/info.json", toplevel);
 						let info_json_file = zip_file.by_name(&info_json_file_path)?;
-						::serde_json::from_reader(info_json_file)?
+						(::serde_json::from_reader(info_json_file)?, InstalledModType::Zipped)
 					},
 
 					_ => return Err(::ErrorKind::UnknownModFormat.into()),
@@ -55,91 +64,57 @@ impl InstalledMod {
 							_ => ::Error::from(err),
 						}
 					})?;
-				::serde_json::from_reader(info_json_file)?
+				(::serde_json::from_reader(info_json_file)?, InstalledModType::Unpacked)
 			};
 
 		let enabled = mod_status.get(info.name());
 
-		Ok(InstalledMod::Zipped {
-			name: info.name().clone(),
-			version: info.version().clone(),
-			game_version: info.factorio_version().clone(),
-			enabled: enabled.cloned().unwrap_or(true),
-		})
-	}
-
-	/// Returns the name of the installed mod.
-	pub fn name(&self) -> &::factorio_mods_common::ModName {
-		match *self {
-			InstalledMod::Zipped { ref name, .. } |
-			InstalledMod::Unpacked { ref name, .. } => name,
-		}
-	}
-
-	/// Returns the version of the installed mod.
-	pub fn version(&self) -> &::factorio_mods_common::ReleaseVersion {
-		match *self {
-			InstalledMod::Zipped { ref version, .. } |
-			InstalledMod::Unpacked { ref version, .. }=> version,
-		}
-	}
-
-	/// Returns the game version of the installed mod.
-	pub fn game_version(&self) -> &::factorio_mods_common::GameVersion {
-		match *self {
-			InstalledMod::Zipped { ref game_version, .. } |
-			InstalledMod::Unpacked { ref game_version, .. } => game_version,
-		}
-	}
-
-	/// Returns whether the installed mod is enabled or not in `mod-list.json`
-	pub fn enabled(&self) -> &bool {
-		match *self {
-			InstalledMod::Zipped { ref enabled, .. } |
-			InstalledMod::Unpacked { ref enabled, .. } => enabled,
-		}
+		Ok(InstalledMod::new(
+			info.name().clone(),
+			info.version().clone(),
+			info.factorio_version().clone(),
+			enabled.cloned().unwrap_or(true),
+			mod_type))
 	}
 }
 
+/// Constructs an iterator over all the locally installed mods.
+pub fn find<'a>(
+	mods_directory: &::std::path::Path,
+	name_pattern: Option<&str>,
+	version: Option<::factorio_mods_common::ReleaseVersion>,
+	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'a> {
+	let glob_pattern = mods_directory.join("*");
+
+	let paths =
+		glob_pattern.to_str()
+			.map(::glob::glob)
+			.ok_or_else(|| ::ErrorKind::Utf8Path(glob_pattern))??;
+
+	let name_pattern = if let Some(name_pattern) = name_pattern {
+		Some(::glob::Pattern::new(name_pattern)?)
+	}
+	else {
+		None
+	};
+
+	Ok(InstalledModIterator {
+		paths: paths,
+		name_pattern: name_pattern,
+		version: version,
+		mod_status: mod_status,
+		errored: false,
+	})
+}
+
 /// An iterator over all the locally installed mods.
-pub struct InstalledModIterator<'a> {
+struct InstalledModIterator<'a> {
 	paths: ::glob::Paths,
 	name_pattern: Option<::glob::Pattern>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	errored: bool,
-}
-
-impl<'a> InstalledModIterator<'a> {
-	/// Constructs an iterator over all the locally installed mods.
-	pub fn new(
-		mods_directory: &::std::path::Path,
-		name_pattern: Option<&str>,
-		version: Option<::factorio_mods_common::ReleaseVersion>,
-		mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'a> {
-		let glob_pattern = mods_directory.join("*");
-
-		let paths =
-			glob_pattern.to_str()
-				.map(::glob::glob)
-				.ok_or_else(|| ::ErrorKind::Utf8Path(glob_pattern))??;
-
-		let name_pattern = if let Some(name_pattern) = name_pattern {
-			Some(::glob::Pattern::new(name_pattern)?)
-		}
-		else {
-			None
-		};
-
-		Ok(InstalledModIterator {
-			paths: paths,
-			name_pattern: name_pattern,
-			version: version,
-			mod_status: mod_status,
-			errored: false,
-		})
-	}
 }
 
 impl<'a> Iterator for InstalledModIterator<'a> {
@@ -153,7 +128,7 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 		loop {
 			match self.paths.next() {
 				Some(Ok(path)) => {
-					let installed_mod = match InstalledMod::new(path, self.mod_status) {
+					let installed_mod = match InstalledMod::parse(&path, self.mod_status) {
 						Ok(installed_mod) => installed_mod,
 
 						Err(err) => match *err.kind() {

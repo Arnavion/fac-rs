@@ -27,4 +27,4 @@ mod error;
 pub use error::{ Error, ErrorKind, Result, };
 
 mod installed_mod;
-pub use installed_mod::{ InstalledMod, };
+pub use installed_mod::{ InstalledMod, InstalledModType };
