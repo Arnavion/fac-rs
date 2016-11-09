@@ -30,7 +30,7 @@ error_chain! {
 		// The local Factorio installation could not be found.
 		WritePath { }
 
-		// The credentials stored in player-data.json do not have both username and service token.
+		// The credentials stored in `player-data.json` do not have both username and service token.
 		IncompleteUserCredentials(username: Option<::factorio_mods_common::ServiceUsername>) { }
 	}
 }

@@ -1,8 +1,10 @@
 #![feature(conservative_impl_trait, proc_macro)]
 
-///! API to interface with the local Factorio installation.
+//! API to interface with the local Factorio installation.
 
 extern crate appdirs;
+#[macro_use]
+extern crate derive_new;
 #[macro_use]
 extern crate error_chain;
 extern crate factorio_mods_common;

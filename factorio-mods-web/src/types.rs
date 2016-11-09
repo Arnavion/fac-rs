@@ -17,30 +17,63 @@ pub struct VisitCount(u64);
 /// A mod object returned by `API::get`.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct Mod {
+	/// The mod ID.
 	id: ModId,
 
+	/// The name of the mod.
 	name: ::factorio_mods_common::ModName,
+
+	/// The authors of the mod.
 	owner: ::factorio_mods_common::AuthorNames,
+
+	/// The title of the mod.
 	title: ::factorio_mods_common::ModTitle,
+
+	/// A short summary of the mod.
 	summary: ModSummary,
+
+	/// A longer description of the mod.
 	description: ::factorio_mods_common::ModDescription,
 
+	/// The URL of the GitHub repository of the mod.
 	github_path: ::factorio_mods_common::Url,
+
+	/// The URL of the homepage of the mod.
 	homepage: ::factorio_mods_common::Url,
+
+	/// The name of the mod's license.
 	license_name: LicenseName,
+
+	/// The URL of the mod's license.
 	license_url: ::factorio_mods_common::Url,
+
+	/// The flags of the mod's license.
 	license_flags: LicenseFlags,
 
+	/// The versions of the game supported by the mod.
 	game_versions: Vec<::factorio_mods_common::GameVersion>,
 
+	/// The date and time at which the mod was created.
 	created_at: DateTime,
+
+	/// The date and time at which the mod was last updated.
 	updated_at: DateTime,
+
+	/// All the releases of the mod.
 	releases: Vec<ModRelease>,
 
+	/// The number of user ratings the mod has received.
 	ratings_count: RatingCount,
+
 	// current_user_rating: ???, # Unknown type
+
+	/// The number of times the mod has been downloaded.
 	downloads_count: DownloadCount,
+
+	/// The number of times the mod page has been visited.
 	visits_count: VisitCount,
+
+	/// The tags of the mod.
 	tags: Tags,
 }
 
@@ -52,7 +85,7 @@ pub struct ModId(u64);
 #[derive(newtype)]
 pub struct ModSummary(String);
 
-/// The name of the license.
+/// The name of a mod's license.
 #[derive(newtype)]
 pub struct LicenseName(String);
 
@@ -63,20 +96,36 @@ pub struct LicenseFlags(u64);
 /// A single mod release.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct ModRelease {
+	/// The ID of the mod release.
 	id: ReleaseId,
+
+	/// The version of the mod release.
 	version: ::factorio_mods_common::ReleaseVersion,
+
+	/// The versions of the game supported by the mod release.
 	factorio_version: ::factorio_mods_common::GameVersion,
+
+	/// The versions of the game supported by the mod release.
 	game_version: ::factorio_mods_common::GameVersion,
 
+	/// The URL to download the mod release.
 	download_url: ::factorio_mods_common::Url,
+
+	/// The filename of the mod release.
 	#[serde(rename(deserialize = "file_name"))]
 	filename: Filename,
+
+	/// The file size of the mod release.
 	file_size: FileSize,
+
+	/// The date and time at which the mod release was created.
 	released_at: DateTime,
 
+	/// The number of times the mod release has been downloaded.
 	downloads_count: DownloadCount,
 
-	info_json: ReleaseInfo,
+	/// The `info.json` of the mod release.
+	info_json: ::factorio_mods_common::ModInfo,
 }
 
 /// The ID of a mod release.
@@ -91,25 +140,22 @@ pub struct Filename(String);
 #[derive(newtype)]
 pub struct FileSize(u64);
 
-/// Detailed information of a mod release.
-#[derive(Clone, Debug, Deserialize, new, getters)]
-pub struct ReleaseInfo {
-	author: ::factorio_mods_common::AuthorNames,
-	description: Option<::factorio_mods_common::ModDescription>,
-	factorio_version: ::factorio_mods_common::GameVersion,
-	homepage: Option<::factorio_mods_common::Url>,
-	name: ::factorio_mods_common::ModName,
-	title: ::factorio_mods_common::ModTitle,
-	version: ::factorio_mods_common::ReleaseVersion,
-}
-
 /// A tag.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct Tag {
+	/// The ID of the tag.
 	id: TagId,
+
+	/// The name of the tag.
 	name: TagName,
+
+	/// The title of the tag.
 	title: TagTitle,
+
+	/// The description of the tag.
 	description: TagDescription,
+
+	/// The type of the tag.
 	#[serde(rename(deserialize = "type"))]
 	type_name: TagType,
 }

@@ -5,6 +5,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
 appdirs = "0.2.x"
+derive-new = { git = "https://github.com/nrc/derive-new", rev = "24e584908a783986a5fe079aca55c00526318142" }
 error-chain = "0.5.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 glob = "0.2.x"

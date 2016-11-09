@@ -9,27 +9,54 @@ pub struct ResponseNumber(u64);
 /// A mod object returned by `API::search`.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct SearchResponseMod {
+	/// The mod ID.
 	id: ::ModId,
 
+	/// The name of the mod.
 	name: ::factorio_mods_common::ModName,
+
+	/// The authors of the mod.
 	owner: ::factorio_mods_common::AuthorNames,
+
+	/// The title of the mod.
 	title: ::factorio_mods_common::ModTitle,
+
+	/// A short summary of the mod.
 	summary: ::ModSummary,
 
+	/// The URL of the GitHub repository of the mod.
 	github_path: ::factorio_mods_common::Url,
+
+	/// The URL of the homepage of the mod.
 	homepage: ::factorio_mods_common::Url,
+
+	/// The name of the mod's license.
 	license_name: ::LicenseName,
+
+	/// The URL of the mod's license.
 	license_url: ::factorio_mods_common::Url,
 
+	/// The versions of the game supported by the mod.
 	game_versions: Vec<::factorio_mods_common::GameVersion>,
 
+	/// The date and time at which the mod was created.
 	created_at: ::DateTime,
+
+	/// The date and time at which the mod was last updated.
 	updated_at: ::DateTime,
+
+	/// The latest release of the mod.
 	latest_release: ::ModRelease,
 
-	current_user_rating: Option<::serde_json::Value>,
+	// current_user_rating: ???, # Unknown type
+
+	/// The number of times the mod has been downloaded.
 	downloads_count: ::DownloadCount,
+
+	/// The number of times the mod page has been visited.
 	visits_count: ::VisitCount,
+
+	/// The tags of the mod.
 	tags: ::Tags,
 }
 

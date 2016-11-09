@@ -34,7 +34,10 @@ pub struct ReleaseVersion(::semver::Version);
 /// A username and token used with the parts of the web API that require authentication.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct UserCredentials {
+	/// The username.
 	username: ServiceUsername,
+
+	/// The token.
 	token: ServiceToken,
 }
 
@@ -45,6 +48,43 @@ pub struct ServiceUsername(String);
 /// A token used with the parts of the web API that require authentication.
 #[derive(newtype)]
 pub struct ServiceToken(String);
+
+/// Represents the contents of `info.json` of a mod release.
+#[derive(Clone, Debug, Deserialize, new, getters)]
+pub struct ModInfo {
+	/// The name of the mod release.
+	name: ModName,
+
+	/// The authors of the mod release.
+	author: AuthorNames,
+
+	/// The title of the mod release.
+	title: ModTitle,
+
+	/// A longer description of the mod release.
+	description: ModDescription,
+
+	/// The version of the mod release.
+	version: ReleaseVersion,
+
+	/// The versions of the game supported by the mod release.
+	#[serde(default = "default_game_version")]
+	factorio_version: GameVersion,
+
+	/// The URL of the homepage of the mod release.
+	homepage: Option<Url>,
+}
+
+lazy_static! {
+	static ref DEFAULT_GAME_VERSION: GameVersion = GameVersion::new(::semver::VersionReq::parse("0.12").unwrap());
+}
+
+/// Generates a copy of the default game version.
+///
+/// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
+fn default_game_version() -> GameVersion {
+	DEFAULT_GAME_VERSION.clone()
+}
 
 /// Fixes up some bad version strings returned by the web API into something valid for the `semver` crate.
 pub fn fixup_version(s: &str) -> String {

@@ -24,7 +24,7 @@ impl InstalledMod {
 		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::Result<InstalledMod> {
-		let info: ModInfo =
+		let info: ::factorio_mods_common::ModInfo =
 			if path.is_file() {
 				match path.extension() {
 					Some(extension) if extension == "zip" => {
@@ -58,12 +58,12 @@ impl InstalledMod {
 				::serde_json::from_reader(info_json_file)?
 			};
 
-		let enabled = mod_status.get(&info.name);
+		let enabled = mod_status.get(info.name());
 
 		Ok(InstalledMod::Zipped {
-			name: info.name,
-			version: info.version,
-			game_version: info.factorio_version,
+			name: info.name().clone(),
+			version: info.version().clone(),
+			game_version: info.factorio_version().clone(),
 			enabled: enabled.cloned().unwrap_or(true),
 		})
 	}
@@ -92,7 +92,7 @@ impl InstalledMod {
 		}
 	}
 
-	/// Returns whether the installed mod is enabled or not in mod-list.json
+	/// Returns whether the installed mod is enabled or not in `mod-list.json`
 	pub fn enabled(&self) -> &bool {
 		match *self {
 			InstalledMod::Zipped { ref enabled, .. } |
@@ -190,27 +190,4 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 			}
 		}
 	}
-}
-
-lazy_static! {
-	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::GameVersion = ::factorio_mods_common::GameVersion::new(::semver::VersionReq::parse("0.12").unwrap());
-}
-
-fn default_game_version() -> ::factorio_mods_common::GameVersion {
-	DEFAULT_GAME_VERSION.clone()
-}
-
-/// Represents the contents of info.json of an installed mod.
-#[derive(Debug, Deserialize)]
-struct ModInfo {
-	name: ::factorio_mods_common::ModName,
-	author: ::factorio_mods_common::AuthorNames,
-	title: ::factorio_mods_common::ModTitle,
-	description: ::factorio_mods_common::ModDescription,
-
-	version: ::factorio_mods_common::ReleaseVersion,
-	#[serde(default = "default_game_version")]
-	factorio_version: ::factorio_mods_common::GameVersion,
-
-	homepage: Option<::factorio_mods_common::Url>,
 }

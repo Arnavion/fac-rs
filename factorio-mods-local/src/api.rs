@@ -114,7 +114,7 @@ lazy_static! {
 	};
 }
 
-/// Represents the contents of mod-list.json
+/// Represents the contents of `mod-list.json`
 #[derive(Debug, Deserialize)]
 struct ModList {
 	mods: Vec<ModListMod>,
@@ -127,7 +127,7 @@ struct ModListMod {
 	enabled: String,
 }
 
-/// Represents the contents of player-data.json
+/// Represents the contents of `player-data.json`
 #[derive(Debug, Deserialize)]
 struct PlayerData {
 	#[serde(rename(deserialize = "service-username"))]
