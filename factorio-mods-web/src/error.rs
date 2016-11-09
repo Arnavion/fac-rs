@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 // Error type for errors returned by this crate.
 error_chain! {
 	foreign_links {

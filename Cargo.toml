@@ -20,4 +20,5 @@ unicode-segmentation = "0.1.x"
 [workspace]
 
 [replace]
+"derive-new:0.2.0" = { git = "https://github.com/Arnavion/derive-new", branch = "fix-7" }
 "openssl:0.7.14" = { git = "https://github.com/Arnavion/rust-openssl", branch = "cfg-comp" }

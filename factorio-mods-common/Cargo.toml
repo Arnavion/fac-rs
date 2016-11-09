@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
-derive-new = { git = "https://github.com/nrc/derive-new", rev = "24e584908a783986a5fe079aca55c00526318142" }
+derive-new = "0.2.x"
 itertools = "0.5.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 lazy_static = "0.2.x"

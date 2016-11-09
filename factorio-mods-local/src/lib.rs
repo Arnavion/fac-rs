@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 #![feature(conservative_impl_trait, proc_macro)]
 
 //! API to interface with the local Factorio installation.
