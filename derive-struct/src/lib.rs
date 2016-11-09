@@ -32,6 +32,20 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				}).next();
 
 				match identify_type(field_ty) {
+					Ok(Type::OptionString) => quote! {
+						#field_doc_attr
+						pub fn #field_name(&self) -> Option<&str> {
+							self.#field_name.as_ref()
+						}
+					},
+
+					Ok(Type::Option { ty }) => quote! {
+						#field_doc_attr
+						pub fn #field_name(&self) -> Option<&#ty> {
+							self.#field_name.as_ref()
+						}
+					},
+
 					Ok(Type::String) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> &str {
@@ -123,6 +137,8 @@ pub fn derive_newtype(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 					#[derive(Clone, Debug, Deserialize, newtype_deref, newtype_new_if_public)]
 					#ast
 				},
+
+				_ => panic!("#[derive(newtype)] cannot be used for tuple structs with this wrapped type: {:?}", ty),
 			}
 		},
 
@@ -169,6 +185,7 @@ pub fn derive_newtype_deref(input: proc_macro::TokenStream) -> proc_macro::Token
 				Type::U64 => generate(struct_name, quote!(u64)),
 				Type::VecString => generate(struct_name, quote!([String])),
 				Type::Vec { ty } => generate(struct_name, quote!([#ty])),
+				_ => panic!("#[derive(newtype_deref)] cannot be used for tuple structs with this wrapped type: {:?}", ty),
 			}
 		},
 
@@ -339,6 +356,8 @@ lazy_static! {
 
 #[derive(Debug)]
 enum Type<'a> {
+	OptionString,
+	Option { ty: &'a syn::Ty },
 	SemverVersion,
 	SemverVersionReq,
 	String,
@@ -366,21 +385,30 @@ fn identify_type<'a>(ty: &'a syn::Ty) -> Result<Type<'a>, ()> {
 		}
 
 		let syn::PathSegment { ref ident, ref parameters } = segments[0];
-		if ident.to_string() != "Vec" {
-			return Err(())
-		}
-
 		if let syn::PathParameters::AngleBracketed(syn::AngleBracketedParameterData { ref types, .. }) = *parameters {
+			let ident = ident.to_string();
+			if ident != "Option" && ident != "Vec" {
+				return Err(());
+			}
+
 			let wrapped_ty = &types[0];
 			if wrapped_ty == &*TY_STRING {
-				Ok(Type::VecString)
+				match ident.as_ref() {
+					"Option" => Ok(Type::OptionString),
+					"Vec" => Ok(Type::VecString),
+					_ => Err(()),
+				}
 			}
 			else {
-				Ok(Type::Vec { ty: &types[0] })
+				match ident.as_ref() {
+					"Option" => Ok(Type::Option { ty: wrapped_ty }),
+					"Vec" => Ok(Type::Vec { ty: wrapped_ty }),
+					_ => Err(()),
+				}
 			}
 		}
 		else {
-			unreachable!();
+			Err(())
 		}
 	}
 	else {
