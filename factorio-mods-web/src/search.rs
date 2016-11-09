@@ -60,31 +60,29 @@ pub struct SearchResponseMod {
 	tags: ::Tags,
 }
 
+/// Constructs an iterator of search results.
+pub fn search<'a>(
+	client: &'a ::hyper::Client,
+	mods_url: ::hyper::Url,
+	starting_page_number: ::PageNumber,
+) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
+	SearchResultsIterator {
+		client: client,
+		mods_url: mods_url,
+		current_page_number: starting_page_number,
+		current_page: None,
+		errored: false,
+	}
+}
+
 /// An iterator of search results.
 #[derive(Debug)]
-pub struct SearchResultsIterator<'a> {
+struct SearchResultsIterator<'a> {
 	client: &'a ::hyper::Client,
 	mods_url: ::hyper::Url,
 	current_page_number: PageNumber,
 	current_page: Option<SearchResponse>,
 	errored: bool,
-}
-
-impl<'a> SearchResultsIterator<'a> {
-	/// Constructs an iterator of search results.
-	pub fn new(
-		client: &'a ::hyper::Client,
-		mods_url: ::hyper::Url,
-		starting_page_number: ::PageNumber,
-	) -> SearchResultsIterator<'a> {
-		SearchResultsIterator {
-			client: client,
-			mods_url: mods_url,
-			current_page_number: starting_page_number,
-			current_page: None,
-			errored: false,
-		}
-	}
 }
 
 impl<'a> Iterator for SearchResultsIterator<'a> {

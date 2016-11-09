@@ -53,7 +53,7 @@ impl API {
 			.append_pair("order", order)
 			.append_pair("page_size", &page_size);
 
-		::search::SearchResultsIterator::new(&self.client, mods_url, page)
+		::search::search(&self.client, mods_url, page)
 	}
 
 	/// Gets information about the specified mod.
