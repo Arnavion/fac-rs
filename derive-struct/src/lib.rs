@@ -24,26 +24,37 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				let field_name = &field.ident;
 				let field_ty = &field.ty;
 
+				let field_doc_attr = field.attrs.iter().filter_map(|attr| {
+					match (&attr.value, &attr.is_sugared_doc) {
+						(&syn::MetaItem::NameValue(ref ident, _), &true) if ident.to_string() == "doc" => Some(attr),
+						_ => None,
+					}
+				}).next();
+
 				match identify_type(field_ty) {
 					Ok(Type::String) => quote! {
+						#field_doc_attr
 						pub fn #field_name(&self) -> &str {
 							&self.#field_name
 						}
 					},
 
 					Ok(Type::VecString) => quote! {
+						#field_doc_attr
 						pub fn #field_name(&self) -> &[str] {
 							&self.#field_name
 						}
 					},
 
 					Ok(Type::Vec { ty }) => quote! {
+						#field_doc_attr
 						pub fn #field_name(&self) -> &[#ty] {
 							&self.#field_name
 						}
 					},
 
 					_ => quote! {
+						#field_doc_attr
 						pub fn #field_name(&self) -> &#field_ty {
 							&self.#field_name
 						}
