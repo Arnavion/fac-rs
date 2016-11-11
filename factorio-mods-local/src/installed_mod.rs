@@ -131,12 +131,11 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 					let installed_mod = match InstalledMod::parse(&path, self.mod_status) {
 						Ok(installed_mod) => installed_mod,
 
-						Err(err) => match *err.kind() {
-							::ErrorKind::UnknownModFormat => continue,
-							_ => {
-								self.errored = true;
-								return Some(Err(err));
-							}
+						Err(::Error(::ErrorKind::UnknownModFormat, _)) => continue,
+
+						Err(err) => {
+							self.errored = true;
+							return Some(Err(err));
 						},
 					};
 

@@ -115,16 +115,14 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 						self.next()
 					},
 
-					Err(err) => match *err.kind() {
-						::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound) => {
-							self.errored = true;
-							None
-						},
+					Err(::Error(::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound), _)) => {
+						self.errored = true;
+						None
+					},
 
-						_ => {
-							self.errored = true;
-							Some(Err(err))
-						},
+					Err(err) => {
+						self.errored = true;
+						Some(Err(err))
 					},
 				}
 			},
