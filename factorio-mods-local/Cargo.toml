@@ -5,8 +5,9 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
 appdirs = "0.2.x"
+backtrace = "0.2.x"
+derive-error-chain = "0.1.x"
 derive-new = "0.2.x"
-error-chain = "0.5.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 glob = "0.2.x"
 lazy_static = "0.2.x"

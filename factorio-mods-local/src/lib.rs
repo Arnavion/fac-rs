@@ -4,10 +4,11 @@
 //! API to interface with the local Factorio installation.
 
 extern crate appdirs;
+extern crate backtrace;
+#[macro_use]
+extern crate derive_error_chain;
 #[macro_use]
 extern crate derive_new;
-#[macro_use]
-extern crate error_chain;
 extern crate factorio_mods_common;
 extern crate glob;
 #[macro_use]

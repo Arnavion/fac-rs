@@ -1,38 +1,43 @@
-#![allow(missing_docs)]
+/// Error kinds for errors returned by this crate.
+#[derive(Debug, error_chain)]
+pub enum ErrorKind {
+	/// An error encountered while iterating over a glob result
+	#[error_chain(foreign)]
+	Glob(::glob::GlobError),
 
-// Error type for errors returned by this crate.
-error_chain! {
-	foreign_links {
-		// An error encountered while iterating over a glob result
-		::glob::GlobError, Glob;
+	/// An IO error
+	#[error_chain(foreign)]
+	IO(::std::io::Error),
 
-		// An IO error
-		::std::io::Error, IO;
+	/// Deserializing some JSON failed
+	#[error_chain(foreign)]
+	JSON(::serde_json::Error),
 
-		// Deserializing some JSON failed
-		::serde_json::Error, Json;
+	/// Generating a glob from a pattern failed
+	#[error_chain(foreign)]
+	Pattern(::glob::PatternError),
 
-		// Generating a glob from a pattern failed
-		::glob::PatternError, Pattern;
+	/// An error encountered while working with a .zip file
+	#[error_chain(foreign)]
+	Zip(::zip::result::ZipError),
 
-		// An error encountered while working with a .zip file
-		::zip::result::ZipError, Zip;
-	}
+	/// A zipped mod has no files and is thus malformed
+	#[error_chain(custom)]
+	EmptyZippedMod(::std::path::PathBuf),
 
-	errors {
-		// A zipped mod has no files and is thus malformed
-		EmptyZippedMod(path: ::std::path::PathBuf) { }
+	/// The file or directory is not recognized as a valid mod format
+	#[error_chain(custom)]
+	UnknownModFormat,
 
-		// The file or directory is not recognized as a valid mod format
-		UnknownModFormat { }
+	/// The glob cannot be constructed because the pattern is not UTF-8
+	#[error_chain(custom)]
+	Utf8Path(::std::path::PathBuf),
 
-		// The glob cannot be constructed because the pattern is not UTF-8
-		Utf8Path(glob_pattern: ::std::path::PathBuf) { }
+	/// The local Factorio installation could not be found.
+	#[error_chain(custom)]
+	WritePath,
 
-		// The local Factorio installation could not be found.
-		WritePath { }
-
-		// The credentials stored in `player-data.json` do not have both username and service token.
-		IncompleteUserCredentials(username: Option<::factorio_mods_common::ServiceUsername>) { }
-	}
+	/// The credentials stored in `player-data.json` do not have both username and service token.
+	#[error_chain(custom)]
+	IncompleteUserCredentials(Option<::factorio_mods_common::ServiceUsername>),
 }

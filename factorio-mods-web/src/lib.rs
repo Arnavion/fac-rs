@@ -3,10 +3,11 @@
 
 //! API to interface with https://mods.factorio.com/
 
+extern crate backtrace;
+#[macro_use]
+extern crate derive_error_chain;
 #[macro_use]
 extern crate derive_new;
-#[macro_use]
-extern crate error_chain;
 extern crate factorio_mods_common;
 extern crate hyper;
 extern crate itertools;
