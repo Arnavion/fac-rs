@@ -1,17 +1,17 @@
 /// The required game version.
-#[derive(newtype)]
+#[derive(Clone, Debug, PartialEq, new, newtype_deserialize, newtype_display, newtype_ref)]
 pub struct GameVersion(::semver::VersionReq);
 
 /// A URL.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct Url(String);
 
 /// The name of a mod.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModName(String);
 
 /// The names of the authors of a mod.
-#[derive(newtype)]
+#[derive(Clone, Debug, new, newtype_deserialize, newtype_ref)]
 pub struct AuthorNames(Vec<String>);
 impl ::std::fmt::Display for AuthorNames {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -20,15 +20,15 @@ impl ::std::fmt::Display for AuthorNames {
 }
 
 /// The title of a mod.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModTitle(String);
 
 /// The description of a mod.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModDescription(String);
 
 /// The version of a mod release.
-#[derive(newtype)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_deserialize, newtype_display, newtype_ref)]
 pub struct ReleaseVersion(::semver::Version);
 
 /// A username and token used with the parts of the web API that require authentication.
@@ -42,11 +42,11 @@ pub struct UserCredentials {
 }
 
 /// A username used with the parts of the web API that require authentication.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ServiceUsername(String);
 
 /// A token used with the parts of the web API that require authentication.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ServiceToken(String);
 
 /// Represents the contents of `info.json` of a mod release.

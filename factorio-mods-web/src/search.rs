@@ -1,9 +1,9 @@
 /// The page number of one page of a search response.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct PageNumber(u64);
 
 /// The response number within a page of a search response.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ResponseNumber(u64);
 
 /// A mod object returned by `API::search`.

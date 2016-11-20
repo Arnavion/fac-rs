@@ -161,7 +161,7 @@ fn should_follow_redirect(url: &::hyper::Url) -> bool {
 	url.path() != "/login"
 }
 
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, newtype_ref)]
 struct LoginSuccessResponse(Vec<::factorio_mods_common::ServiceToken>);
 
 

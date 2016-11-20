@@ -1,5 +1,5 @@
 #![crate_type = "proc-macro"]
-#![feature(proc_macro, proc_macro_lib, slice_patterns)]
+#![feature(proc_macro, proc_macro_lib)]
 #![recursion_limit = "200"]
 
 //! A helper crate for easily deriving structs.
@@ -81,118 +81,10 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 	};
 
 	quote!(
-		#ast
-
 		impl #struct_name {
 			#(#getters)*
 		}
 	).to_string().parse().unwrap()
-}
-
-/// Derives various traits on a tuple struct based on its wrapped type.
-#[proc_macro_derive(newtype)]
-pub fn derive_newtype(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
-
-	let result = match ast.body {
-		syn::Body::Struct(syn::VariantData::Tuple(ref fields)) if fields.len() == 1 => {
-			let struct_name = &ast.ident;
-			let field = &fields[0];
-			let ty = &field.ty;
-
-			match identify_type(ty).map_err(|_| format!("#[derive(newtype)] cannot be used for tuple structs with this wrapped type: {:?}", ty)).unwrap() {
-				Type::SemverVersion => quote! {
-					#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, newtype_deref, newtype_deserialize, newtype_display, newtype_new_if_public)]
-					#ast
-				},
-
-				Type::SemverVersionReq => quote! {
-					#[derive(Clone, Debug, PartialEq, newtype_deref, newtype_deserialize, newtype_display, newtype_new_if_public)]
-					#ast
-				},
-
-				Type::String => quote! {
-					#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, newtype_deref, newtype_deserialize, newtype_display, newtype_new_if_public)]
-					#ast
-
-					impl<T: ?Sized> AsRef<T> for #struct_name where str: AsRef<T> {
-						fn as_ref(&self) -> &T {
-							(&self.0 as &str).as_ref()
-						}
-					}
-				},
-
-				Type::U64 => quote! {
-					#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, newtype_deref, newtype_deserialize, newtype_display, newtype_new_if_public)]
-					#ast
-				},
-
-				Type::VecString => quote! {
-					#[derive(Clone, Debug, newtype_deref, newtype_deserialize, newtype_new_if_public)]
-					#ast
-				},
-
-				Type::Vec { .. } => quote! {
-					#[derive(Clone, Debug, Deserialize, newtype_deref, newtype_new_if_public)]
-					#ast
-				},
-
-				_ => panic!("#[derive(newtype)] cannot be used for tuple structs with this wrapped type: {:?}", ty),
-			}
-		},
-
-		_ => panic!("#[derive(newtype)] can only be used with tuple structs of one field."),
-	};
-
-	quote!(#result).to_string().parse().unwrap()
-}
-
-/// Derives `std::ops::Deref` and `std::ops::DerefMut` on the newtype.
-#[proc_macro_derive(newtype_deref)]
-pub fn derive_newtype_deref(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	fn generate(struct_name: &syn::Ident, wrapped_type: quote::Tokens) -> quote::Tokens {
-		quote! {
-			impl ::std::ops::Deref for #struct_name {
-				type Target = #wrapped_type;
-
-				fn deref(&self) -> &Self::Target {
-					&self.0
-				}
-			}
-
-			impl ::std::ops::DerefMut for #struct_name {
-				fn deref_mut(&mut self) -> &mut Self::Target {
-					&mut self.0
-				}
-			}
-		}
-	}
-
-	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
-
-	let result = match ast.body {
-		syn::Body::Struct(syn::VariantData::Tuple(ref fields)) if fields.len() == 1 => {
-			let struct_name = &ast.ident;
-			let field = &fields[0];
-			let ty = &field.ty;
-
-			match identify_type(ty).map_err(|_| format!("#[derive(newtype_deref)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
-				Type::SemverVersion => generate(struct_name, quote!(::semver::Version)),
-				Type::SemverVersionReq => generate(struct_name, quote!(::semver::VersionReq)),
-				Type::String => generate(struct_name, quote!(str)),
-				Type::U64 => generate(struct_name, quote!(u64)),
-				Type::VecString => generate(struct_name, quote!([String])),
-				Type::Vec { ty } => generate(struct_name, quote!([#ty])),
-				_ => panic!("#[derive(newtype_deref)] cannot be used for tuple structs with this wrapped type: {:?}", ty),
-			}
-		},
-
-		_ => panic!("#[derive(newtype_deref)] can only be used with tuple structs of one field."),
-	};
-
-	quote!(#ast #result).to_string().parse().unwrap()
 }
 
 /// Derives `serde::Deserialize` on the newtype.
@@ -221,7 +113,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 						}
 					}
 
-					deserializer.deserialize_u64(Visitor)
+					deserializer.deserialize(Visitor)
 				}
 			}
 		}
@@ -253,7 +145,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 						}
 					}
 
-					deserializer.deserialize_string(Visitor)
+					deserializer.deserialize(Visitor)
 				}
 			}
 		}
@@ -262,46 +154,80 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 	let source = input.to_string();
 	let ast = syn::parse_macro_input(&source).unwrap();
 
-	let result = match ast.body {
-		syn::Body::Struct(syn::VariantData::Tuple(ref fields)) if fields.len() == 1 => {
+	let result = match as_newtype(&ast) {
+		Some(ty) => {
 			let struct_name = &ast.ident;
-			let field = &fields[0];
-			let ty = &field.ty;
 
 			match identify_type(ty).map_err(|_| format!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
 				Type::SemverVersion => {
-					let result = generate_semver(struct_name, &TY_SEMVER_VERSION);
-					quote!(#ast #result)
+					generate_semver(struct_name, &TY_SEMVER_VERSION)
 				},
 
 				Type::SemverVersionReq => {
-					let result = generate_semver(struct_name, &TY_SEMVER_VERSIONREQ);
-					quote!(#ast #result)
+					generate_semver(struct_name, &TY_SEMVER_VERSIONREQ)
 				},
 
 				Type::VecString => {
-					let result = generate_string_or_seq_string(struct_name);
-					quote!(#ast #result)
+					generate_string_or_seq_string(struct_name)
 				},
 
-				_ => quote!(#[derive(Deserialize)] #ast),
+				_ => panic!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty),
 			}
 		},
 
-		_ => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field."),
+		None => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field."),
 	};
 
-	quote!(#result).to_string().parse().unwrap()
+	result.to_string().parse().unwrap()
 }
 
 /// Derives `std::fmt::Display` on the newtype.
 #[proc_macro_derive(newtype_display)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	fn generate(struct_name: &syn::Ident) -> quote::Tokens {
+	let source = input.to_string();
+	let ast = syn::parse_macro_input(&source).unwrap();
+
+	let result = match as_newtype(&ast) {
+		Some(ty) => {
+			let struct_name = &ast.ident;
+
+			match identify_type(ty).map_err(|_| format!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+				Type::SemverVersion |
+				Type::SemverVersionReq |
+				Type::String |
+				Type::U64 => quote! {
+					impl ::std::fmt::Display for #struct_name {
+						fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+							self.0.fmt(f)
+						}
+					}
+				},
+				_ => panic!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty),
+			}
+		},
+
+		None => panic!("#[derive(newtype_display)] can only be used with tuple structs of one field."),
+	};
+
+	result.to_string().parse().unwrap()
+}
+
+/// Derives `std::ops::Deref` and `std::ops::DerefMut` on the newtype.
+#[proc_macro_derive(newtype_ref)]
+pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	fn generate(struct_name: &syn::Ident, wrapped_type: quote::Tokens) -> quote::Tokens {
 		quote! {
-			impl ::std::fmt::Display for #struct_name {
-				fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-					self.0.fmt(f)
+			impl ::std::ops::Deref for #struct_name {
+				type Target = #wrapped_type;
+
+				fn deref(&self) -> &Self::Target {
+					&self.0
+				}
+			}
+
+			impl ::std::ops::DerefMut for #struct_name {
+				fn deref_mut(&mut self) -> &mut Self::Target {
+					&mut self.0
 				}
 			}
 		}
@@ -310,41 +236,37 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 	let source = input.to_string();
 	let ast = syn::parse_macro_input(&source).unwrap();
 
-	let result = match ast.body {
-		syn::Body::Struct(syn::VariantData::Tuple(ref fields)) if fields.len() == 1 => {
+	let result = match as_newtype(&ast) {
+		Some(ty) => {
 			let struct_name = &ast.ident;
-			let field = &fields[0];
-			let ty = &field.ty;
 
-			match identify_type(ty).map_err(|_| format!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
-				Type::SemverVersion => generate(struct_name),
-				Type::SemverVersionReq => generate(struct_name),
-				Type::String => generate(struct_name),
-				Type::U64 => generate(struct_name),
-				_ => quote!(),
+			match identify_type(ty).map_err(|_| format!("#[derive(newtype_ref)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+				Type::SemverVersion => generate(struct_name, quote!(::semver::Version)),
+				Type::SemverVersionReq => generate(struct_name, quote!(::semver::VersionReq)),
+				Type::String => {
+					let deref = generate(struct_name, quote!(str));
+
+					quote! {
+						#deref
+
+						impl<T: ?Sized> AsRef<T> for #struct_name where str: AsRef<T> {
+							fn as_ref(&self) -> &T {
+								(&self.0 as &str).as_ref()
+							}
+						}
+					}
+				},
+				Type::U64 => generate(struct_name, quote!(u64)),
+				Type::VecString => generate(struct_name, quote!([String])),
+				Type::Vec { ty } => generate(struct_name, quote!([#ty])),
+				_ => panic!("#[derive(newtype_ref)] cannot be used for tuple structs with this wrapped type: {:?}", ty),
 			}
 		},
 
-		_ => panic!("#[derive(newtype_display)] can only be used with tuple structs of one field."),
+		None => panic!("#[derive(newtype_ref)] can only be used with tuple structs of one field."),
 	};
 
-	quote!(#ast #result).to_string().parse().unwrap()
-}
-
-/// Derives a constructor function named `new` on the newtype if it has public visibility.
-#[proc_macro_derive(newtype_new_if_public)]
-pub fn derive_newtype_new_if_public(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
-
-	let result = if ast.vis == syn::Visibility::Public {
-		quote!(#[derive(new)] #ast)
-	}
-	else {
-		quote!(#ast)
-	};
-
-	quote!(#result).to_string().parse().unwrap()
+	result.to_string().parse().unwrap()
 }
 
 lazy_static! {
@@ -352,6 +274,13 @@ lazy_static! {
 	static ref TY_SEMVER_VERSIONREQ: ::syn::Ty = syn::parse_type("::semver::VersionReq").unwrap();
 	static ref TY_STRING: ::syn::Ty = syn::parse_type("String").unwrap();
 	static ref TY_U64: ::syn::Ty = syn::parse_type("u64").unwrap();
+}
+
+fn as_newtype(ast: &syn::MacroInput) -> Option<&syn::Ty> {
+	match ast.body {
+		syn::Body::Struct(syn::VariantData::Tuple(ref fields)) if fields.len() == 1 => Some(&fields[0].ty),
+		_ => None,
+	}
 }
 
 #[derive(Debug)]

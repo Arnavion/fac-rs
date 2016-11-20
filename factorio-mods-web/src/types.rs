@@ -1,17 +1,17 @@
 /// A date and time string.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct DateTime(String);
 
 /// Number of ratings.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct RatingCount(u64);
 
 /// Number of downloads.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct DownloadCount(u64);
 
 /// Number of visits.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct VisitCount(u64);
 
 /// A mod object returned by `API::get`.
@@ -78,19 +78,19 @@ pub struct Mod {
 }
 
 /// A mod ID.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModId(u64);
 
 /// The summary of a mod.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModSummary(String);
 
 /// The name of a mod's license.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct LicenseName(String);
 
 /// License flags.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct LicenseFlags(u64);
 
 /// A single mod release.
@@ -129,15 +129,15 @@ pub struct ModRelease {
 }
 
 /// The ID of a mod release.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ReleaseId(u64);
 
 /// The filename of a mod release.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct Filename(String);
 
 /// The file size of a mod release.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct FileSize(u64);
 
 /// A tag.
@@ -161,7 +161,7 @@ pub struct Tag {
 }
 
 /// A collection of tags.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, new, newtype_ref)]
 pub struct Tags(Vec<Tag>);
 impl ::std::fmt::Display for Tags {
 	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -170,21 +170,21 @@ impl ::std::fmt::Display for Tags {
 }
 
 /// The ID of a tag.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct TagId(u64);
 
 /// The name of a tag.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct TagName(String);
 
 /// The title of a tag.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct TagTitle(String);
 
 /// The description of a tag.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct TagDescription(String);
 
 /// The type of a tag.
-#[derive(newtype)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct TagType(String);

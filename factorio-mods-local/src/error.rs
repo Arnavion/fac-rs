@@ -1,6 +1,9 @@
 /// Error kinds for errors returned by this crate.
 #[derive(Debug, error_chain)]
 pub enum ErrorKind {
+	/// A generic error message
+	Msg(String),
+
 	/// An error encountered while iterating over a glob result
 	#[error_chain(foreign)]
 	Glob(::glob::GlobError),

@@ -20,5 +20,4 @@ unicode-segmentation = "0.1.x"
 [workspace]
 
 [replace]
-"derive-new:0.2.0" = { git = "https://github.com/nrc/derive-new", rev = "526e3b3559c8f7bfbe2fe7434def612b7cc49ace" }
 "openssl:0.7.14" = { git = "https://github.com/Arnavion/rust-openssl", branch = "cfg-comp" }

@@ -1,6 +1,9 @@
 /// Error kinds for errors returned by this crate.
 #[derive(Debug, error_chain)]
 pub enum ErrorKind {
+	/// A generic error message
+	Msg(String),
+
 	/// An error from `hyper`
 	#[error_chain(foreign)]
 	Hyper(::hyper::Error),
