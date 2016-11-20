@@ -1,4 +1,4 @@
-//! An API and manager for Factorio mods.
+//! A CLI tool to manage Factorio mods.
 
 #[macro_use]
 extern crate clap;
