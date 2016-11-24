@@ -28,7 +28,7 @@ pub fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<T>
 pub fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<::hyper::client::Response> {
 	let response =
 		client.post(url)
-		.header(CONTENT_TYPE_URLENCODED.clone())
+		.header(::hyper::header::ContentType::form_url_encoded())
 		.body(&body)
 		.send()?;
 
@@ -53,12 +53,6 @@ pub fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String)
 	let response = post(client, url, body)?;
 	let object = ::serde_json::from_reader(response)?;
 	Ok(object)
-}
-
-lazy_static! {
-	static ref CONTENT_TYPE_URLENCODED: ::hyper::header::ContentType =
-		::hyper::header::ContentType(
-			::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::WwwFormUrlEncoded, vec![]));
 }
 
 /// A login failure response.
