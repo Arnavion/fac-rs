@@ -5,8 +5,9 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
 backtrace = "0.3.x"
-derive-error-chain = "0.1.2"
+derive-error-chain = "0.7.x"
 derive-new = "0.3.x"
+error-chain = "0.7.x"
 hyper = "0.9.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 itertools = "0.5.x"
