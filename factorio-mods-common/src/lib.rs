@@ -5,9 +5,9 @@
 
 #[macro_use]
 extern crate derive_new;
-extern crate itertools;
 #[macro_use]
 extern crate derive_struct;
+extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 extern crate semver;

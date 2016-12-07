@@ -9,12 +9,12 @@ extern crate backtrace;
 extern crate derive_error_chain;
 #[macro_use]
 extern crate derive_new;
+#[macro_use]
+extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate glob;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate derive_struct;
 extern crate semver;
 extern crate serde;
 #[macro_use]
