@@ -68,9 +68,9 @@ fn json<T>(response: ::hyper::client::response::Response) -> ::Result<T> where T
 		Some(&::hyper::header::ContentType(::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Json, _))) =>
 			(),
 		Some(&::hyper::header::ContentType(ref mime)) =>
-			bail!(::ErrorKind::MalformedJsonResponse(format!("Unexpected Content-Type header: {}", mime))),
+			bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
 		None =>
-			bail!(::ErrorKind::MalformedJsonResponse("No Content-Type header".to_string())),
+			bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
 	}
 
 	let object = ::serde_json::from_reader(response)?;

@@ -95,21 +95,21 @@ impl API {
 				Some(&::hyper::header::ContentType(::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
 					(),
 				Some(&::hyper::header::ContentType(ref mime)) =>
-					bail!(::ErrorKind::MalformedModDownloadResponse(format!("Unexpected Content-Type header: {}", mime))),
+					bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
 				None =>
-					bail!(::ErrorKind::MalformedModDownloadResponse("No Content-Type header".to_string())),
+					bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
 			}
 
 			if let Some(&::hyper::header::ContentLength(ref file_size)) = headers.get() {
 				*file_size
 			}
 			else {
-				bail!(::ErrorKind::MalformedModDownloadResponse("No Content-Length header".to_string()));
+				bail!(::ErrorKind::MalformedResponse("No Content-Length header".to_string()));
 			}
 		};
 
 		if file_size != **release.file_size() {
-			bail!(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, release.file_size())));
+			bail!(::ErrorKind::MalformedResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, release.file_size())));
 		}
 
 		Ok(::std::io::BufReader::new(response))
