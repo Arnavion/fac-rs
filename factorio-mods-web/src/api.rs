@@ -91,16 +91,13 @@ impl API {
 		let file_size = {
 			let headers = &response.headers;
 
-			let mime =
-				if let Some(&::hyper::header::ContentType(ref mime)) = headers.get() {
-					mime
-				}
-				else {
-					bail!(::ErrorKind::MalformedModDownloadResponse("No Content-Type header".to_string()));
-				};
-
-			if mime != &*APPLICATION_ZIP {
-				bail!(::ErrorKind::MalformedModDownloadResponse(format!("Unexpected Content-Type header: {}", mime)));
+			match headers.get() {
+				Some(&::hyper::header::ContentType(::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
+					(),
+				Some(&::hyper::header::ContentType(ref mime)) =>
+					bail!(::ErrorKind::MalformedModDownloadResponse(format!("Unexpected Content-Type header: {}", mime))),
+				None =>
+					bail!(::ErrorKind::MalformedModDownloadResponse("No Content-Type header".to_string())),
 			}
 
 			if let Some(&::hyper::header::ContentLength(ref file_size)) = headers.get() {
@@ -147,8 +144,6 @@ const LOGIN_URL: &'static str = "https://auth.factorio.com/api-login";
 const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
-	static ref APPLICATION_ZIP: ::hyper::mime::Mime =
-		::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Ext("zip".to_string()), vec![]);
 }
 
 fn should_follow_redirect(url: &::hyper::Url) -> bool {
