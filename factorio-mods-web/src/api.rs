@@ -71,7 +71,7 @@ impl API {
 			.append_pair("password", password)
 			.finish();
 		let response: LoginSuccessResponse = ::util::post_object(&self.client, self.login_url.clone(), body)?;
-		let token = response.0.into_iter().next().ok_or("Malformed login response")?;
+		let token = response.0.into_iter().next().ok_or("No service token found in login response")?;
 		Ok(::factorio_mods_common::UserCredentials::new(username, token))
 	}
 
