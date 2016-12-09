@@ -24,6 +24,10 @@ pub enum ErrorKind {
 	#[error_chain(custom)]
 	LoginFailure(String),
 
+	/// Expected a JSON response but didn't get one
+	#[error_chain(custom)]
+	MalformedJsonResponse(String),
+
 	/// Trying to download a mod from the mods portal returned a malformed response
 	#[error_chain(custom)]
 	MalformedModDownloadResponse(String),

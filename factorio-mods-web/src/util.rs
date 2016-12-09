@@ -6,7 +6,7 @@ pub fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::cli
 			response,
 
 		::hyper::status::StatusCode::Unauthorized => {
-			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
+			let object: LoginFailureResponse = json(response)?;
 			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
@@ -21,7 +21,7 @@ pub fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::cli
 /// GETs the given URL using the given client, and deserializes the response as a JSON object.
 pub fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<T> where T: ::serde::Deserialize {
 	let response = get(client, url)?;
-	let object = ::serde_json::from_reader(response)?;
+	let object = json(response)?;
 	Ok(object)
 }
 
@@ -38,7 +38,7 @@ pub fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Resu
 			response,
 
 		::hyper::status::StatusCode::Unauthorized => {
-			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
+			let object: LoginFailureResponse = json(response)?;
 			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
@@ -53,7 +53,7 @@ pub fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Resu
 /// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
 pub fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<T> where T: ::serde::Deserialize {
 	let response = post(client, url, body)?;
-	let object = ::serde_json::from_reader(response)?;
+	let object = json(response)?;
 	Ok(object)
 }
 
@@ -61,4 +61,19 @@ pub fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String)
 #[derive(Debug, Deserialize)]
 struct LoginFailureResponse {
 	message: String,
+}
+
+fn json<T>(response: ::hyper::client::response::Response) -> ::Result<T> where T: ::serde::Deserialize {
+	match (&response.headers).get() {
+		Some(&::hyper::header::ContentType(::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Json, _))) =>
+			(),
+		Some(&::hyper::header::ContentType(ref mime)) =>
+			bail!(::ErrorKind::MalformedJsonResponse(format!("Unexpected Content-Type header: {}", mime))),
+		None =>
+			bail!(::ErrorKind::MalformedJsonResponse("No Content-Type header".to_string())),
+	}
+
+	let object = ::serde_json::from_reader(response)?;
+
+	Ok(object)
 }
