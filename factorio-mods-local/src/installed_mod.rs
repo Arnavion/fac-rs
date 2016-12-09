@@ -40,7 +40,7 @@ impl InstalledMod {
 						let zip_file = ::std::fs::File::open(path)?;
 						let mut zip_file = ::zip::ZipArchive::new(zip_file)?;
 						if zip_file.len() == 0 {
-							return Err(::ErrorKind::EmptyZippedMod(path.into()).into());
+							bail!(::ErrorKind::EmptyZippedMod(path.into()));
 						}
 
 						let toplevel = {
@@ -52,7 +52,7 @@ impl InstalledMod {
 						(::serde_json::from_reader(info_json_file)?, InstalledModType::Zipped)
 					},
 
-					_ => return Err(::ErrorKind::UnknownModFormat.into()),
+					_ => bail!(::ErrorKind::UnknownModFormat),
 				}
 			}
 			else {

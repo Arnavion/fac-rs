@@ -1,20 +1,21 @@
 /// GETs the given URL using the given client, and returns the raw response.
 pub fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::client::Response> {
 	let response = client.get(url).send()?;
-	match response.status {
-		::hyper::status::StatusCode::Ok => Ok(response),
+	Ok(match response.status {
+		::hyper::status::StatusCode::Ok =>
+			response,
 
 		::hyper::status::StatusCode::Unauthorized => {
 			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
-			Err(::ErrorKind::LoginFailure(object.message).into())
+			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
-		::hyper::status::StatusCode::Found => {
-			Err(::ErrorKind::LoginFailure("Redirected to login page.".to_string()).into())
-		},
+		::hyper::status::StatusCode::Found =>
+			bail!(::ErrorKind::LoginFailure("Redirected to login page.".to_string())),
 
-		code => Err(::ErrorKind::StatusCode(code).into()),
-	}
+		code =>
+			bail!(::ErrorKind::StatusCode(code)),
+	})
 }
 
 /// GETs the given URL using the given client, and deserializes the response as a JSON object.
@@ -32,20 +33,21 @@ pub fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Resu
 		.body(&body)
 		.send()?;
 
-	match response.status {
-		::hyper::status::StatusCode::Ok => Ok(response),
+	Ok(match response.status {
+		::hyper::status::StatusCode::Ok =>
+			response,
 
 		::hyper::status::StatusCode::Unauthorized => {
 			let object: LoginFailureResponse = ::serde_json::from_reader(response)?;
-			Err(::ErrorKind::LoginFailure(object.message).into())
+			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
-		::hyper::status::StatusCode::Found => {
-			Err(::ErrorKind::LoginFailure("Redirected to login page.".to_string()).into())
-		},
+		::hyper::status::StatusCode::Found =>
+			bail!(::ErrorKind::LoginFailure("Redirected to login page.".to_string())),
 
-		code => Err(::ErrorKind::StatusCode(code).into()),
-	}
+		code =>
+			bail!(::ErrorKind::StatusCode(code)),
+	})
 }
 
 /// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.

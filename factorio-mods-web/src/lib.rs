@@ -5,6 +5,8 @@
 
 extern crate backtrace;
 #[macro_use]
+extern crate error_chain;
+#[macro_use]
 extern crate derive_error_chain;
 #[macro_use]
 extern crate derive_new;

@@ -18,7 +18,7 @@ impl API {
 
 		let mods_url = base_url.join("/api/mods")?;
 		if mods_url.cannot_be_a_base() {
-			return Err(format!("URL {} cannot be a base.", mods_url).into());
+			bail!("URL {} cannot be a base.", mods_url);
 		}
 
 		let mut client = client.unwrap_or_else(::hyper::Client::new);
@@ -96,23 +96,23 @@ impl API {
 					mime
 				}
 				else {
-					return Err(::ErrorKind::MalformedModDownloadResponse("No Content-Type header".to_string()).into());
+					bail!(::ErrorKind::MalformedModDownloadResponse("No Content-Type header".to_string()));
 				};
 
 			if mime != &*APPLICATION_ZIP {
-				return Err(::ErrorKind::MalformedModDownloadResponse(format!("Unexpected Content-Type header: {}", mime)).into());
+				bail!(::ErrorKind::MalformedModDownloadResponse(format!("Unexpected Content-Type header: {}", mime)));
 			}
 
 			if let Some(&::hyper::header::ContentLength(ref file_size)) = headers.get() {
 				*file_size
 			}
 			else {
-				return Err(::ErrorKind::MalformedModDownloadResponse("No Content-Length header".to_string()).into())
+				bail!(::ErrorKind::MalformedModDownloadResponse("No Content-Length header".to_string()));
 			}
 		};
 
 		if file_size != **release.file_size() {
-			return Err(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, release.file_size())).into());
+			bail!(::ErrorKind::MalformedModDownloadResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, release.file_size())));
 		}
 
 		Ok(::std::io::BufReader::new(response))
