@@ -26,7 +26,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 		let user_credentials = match local_api.user_credentials() {
 			Ok(user_credentials) => user_credentials,
 
-			Err(err) => || -> ::factorio_mods_common::UserCredentials {
+			Err(err) => (|| {
 				if let ::factorio_mods_local::ErrorKind::IncompleteUserCredentials(ref existing_username) = *err.kind() {
 					loop {
 						println!("You need a Factorio account to download mods.");
@@ -67,7 +67,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 				}
 
 				panic!(err);
-			}(),
+			})(),
 		};
 
 		for requirement in requirements {
