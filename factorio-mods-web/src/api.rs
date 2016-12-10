@@ -10,11 +10,15 @@ pub struct API {
 impl API {
 	/// Constructs an API object with the given parameters.
 	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::hyper::Client>) -> ::Result<API> {
-		let base_url = base_url.unwrap_or_else(|| BASE_URL);
-		let base_url = ::hyper::Url::parse(base_url)?;
+		let base_url = match base_url {
+			Some(base_url) => ::hyper::Url::parse(base_url)?,
+			None => BASE_URL.clone(),
+		};
 
-		let login_url = login_url.unwrap_or_else(|| LOGIN_URL);
-		let login_url = ::hyper::Url::parse(login_url)?;
+		let login_url = match login_url {
+			Some(login_url) => ::hyper::Url::parse(login_url)?,
+			None => LOGIN_URL.clone(),
+		};
 
 		let mods_url = base_url.join("/api/mods")?;
 		if mods_url.cannot_be_a_base() {
@@ -140,10 +144,10 @@ impl SearchOrder {
 	}
 }
 
-const BASE_URL: &'static str = "https://mods.factorio.com/";
-const LOGIN_URL: &'static str = "https://auth.factorio.com/api-login";
 const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
+	static ref BASE_URL: ::hyper::Url = ::hyper::Url::parse("https://mods.factorio.com/").unwrap();
+	static ref LOGIN_URL: ::hyper::Url = ::hyper::Url::parse("https://auth.factorio.com/api-login").unwrap();
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
 }
 
