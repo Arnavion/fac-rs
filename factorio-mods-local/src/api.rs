@@ -53,11 +53,10 @@ impl API {
 		let player_data_json_file_path = self.write_path.join("player-data.json");
 		let player_data_json_file = ::std::fs::File::open(&player_data_json_file_path)?;
 		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file)?;
-		match (player_data.service_username, player_data.service_token) {
-			(Some(username), Some(token)) => Ok(::factorio_mods_common::UserCredentials::new(username, token)),
-			(Some(username), None) => Err(::ErrorKind::IncompleteUserCredentials(Some(username)).into()),
-			_ => Err(::ErrorKind::IncompleteUserCredentials(None).into()),
-		}
+		Ok(match (player_data.service_username, player_data.service_token) {
+			(Some(username), Some(token)) => ::factorio_mods_common::UserCredentials::new(username, token),
+			(username, _) => bail!(::ErrorKind::IncompleteUserCredentials(username)),
+		})
 	}
 }
 
