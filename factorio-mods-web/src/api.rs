@@ -108,8 +108,9 @@ impl API {
 			}
 		};
 
-		if file_size != **release.file_size() {
-			bail!(::ErrorKind::MalformedResponse(format!("Downloaded file has incorrect size ({}), expected {}.", file_size, release.file_size())));
+		let expected_file_size = **release.file_size();
+		if file_size != expected_file_size {
+			bail!(::ErrorKind::MalformedResponse(format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 		}
 
 		Ok(::std::io::BufReader::new(response))
