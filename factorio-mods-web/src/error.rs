@@ -14,7 +14,7 @@ pub enum ErrorKind {
 
 	/// Parsing a URL failed
 	#[error_chain(foreign)]
-	Parse(::url::ParseError),
+	Parse(::hyper::error::ParseError),
 
 	/// An HTTP request did not have a successful status code
 	#[error_chain(custom)]
