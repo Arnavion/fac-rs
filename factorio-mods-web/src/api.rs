@@ -84,7 +84,7 @@ impl API {
 		&self,
 		release: &::ModRelease,
 		user_credentials: &::factorio_mods_common::UserCredentials,
-	) -> ::Result<::std::io::BufReader<::hyper::client::Response>> {
+	) -> ::Result<impl ::std::io::Read> {
 		let mut download_url = self.base_url.join(release.download_url())?;
 		download_url.query_pairs_mut()
 			.append_pair("username", user_credentials.username())
@@ -117,7 +117,7 @@ impl API {
 			bail!(::ErrorKind::MalformedResponse(format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 		}
 
-		Ok(::std::io::BufReader::new(response))
+		Ok(response)
 	}
 }
 

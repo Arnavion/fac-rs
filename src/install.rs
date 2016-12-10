@@ -103,7 +103,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 					panic!("Filename is malformed.");
 				}
 
-				let mut reader = web_api.download(best_release, &user_credentials).unwrap();
+				let mut reader = ::std::io::BufReader::new(web_api.download(best_release, &user_credentials).unwrap());
 
 				let mut file = ::std::fs::OpenOptions::new();
 				let mut file = if reinstall { file.create(true).truncate(true) } else { file.create_new(true) };
