@@ -128,31 +128,17 @@ pub fn fixup_version(s: &str) -> String {
 mod tests {
 	use super::*;
 
-	#[test]
-	fn good_one() {
-		let result = fixup_version("0.2.2");
-		println!("{}", result);
-		assert!(result == "0.2.2");
+	fn test_fixup_version_inner(s: &str, expected: &str) {
+		let actual = fixup_version(s);
+		assert_eq!(actual, expected);
 	}
 
 	#[test]
-	fn good_two() {
-		let result = fixup_version("0.14.0");
-		println!("{}", result);
-		assert!(result == "0.14.0");
+	fn test_fixup_version() {
+		test_fixup_version_inner("0.2.2", "0.2.2");
+		test_fixup_version_inner("0.14.0", "0.14.0");
+		test_fixup_version_inner("0.2.02", "0.2.2");
+		test_fixup_version_inner("0.14.00", "0.14.0");
 	}
 
-	#[test]
-	fn bad_one() {
-		let result = fixup_version("0.2.02");
-		println!("{}", result);
-		assert!(result == "0.2.2");
-	}
-
-	#[test]
-	fn bad_two() {
-		let result = fixup_version("0.14.00");
-		println!("{}", result);
-		assert!(result == "0.14.0");
-	}
 }
