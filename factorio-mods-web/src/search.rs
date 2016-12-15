@@ -62,8 +62,8 @@ pub struct SearchResponseMod {
 
 /// Constructs an iterator of search results.
 pub fn search<'a>(
-	client: &'a ::hyper::Client,
-	mods_url: ::hyper::Url,
+	client: &'a ::reqwest::Client,
+	mods_url: ::reqwest::Url,
 	starting_page_number: ::PageNumber,
 ) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
 	SearchResultsIterator {
@@ -78,8 +78,8 @@ pub fn search<'a>(
 /// An iterator of search results.
 #[derive(Debug)]
 struct SearchResultsIterator<'a> {
-	client: &'a ::hyper::Client,
-	mods_url: ::hyper::Url,
+	client: &'a ::reqwest::Client,
+	mods_url: ::reqwest::Url,
 	current_page_number: PageNumber,
 	current_page: Option<SearchResponse>,
 	errored: bool,
@@ -115,7 +115,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 						self.next()
 					},
 
-					Err(::Error(::ErrorKind::StatusCode(::hyper::status::StatusCode::NotFound), _)) => {
+					Err(::Error(::ErrorKind::StatusCode(::reqwest::StatusCode::NotFound), _)) => {
 						self.errored = true;
 						None
 					},

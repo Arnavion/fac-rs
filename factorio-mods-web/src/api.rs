@@ -1,22 +1,22 @@
 /// Entry-point to the https://mods.factorio.com API
 #[derive(Debug)]
 pub struct API {
-	base_url: ::hyper::Url,
-	login_url: ::hyper::Url,
-	mods_url: ::hyper::Url,
-	client: ::hyper::Client,
+	base_url: ::reqwest::Url,
+	login_url: ::reqwest::Url,
+	mods_url: ::reqwest::Url,
+	client: ::reqwest::Client,
 }
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::hyper::Client>) -> ::Result<API> {
+	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::reqwest::Client>) -> ::Result<API> {
 		let base_url = match base_url {
-			Some(base_url) => ::hyper::Url::parse(base_url)?,
+			Some(base_url) => ::reqwest::Url::parse(base_url)?,
 			None => BASE_URL.clone(),
 		};
 
 		let login_url = match login_url {
-			Some(login_url) => ::hyper::Url::parse(login_url)?,
+			Some(login_url) => ::reqwest::Url::parse(login_url)?,
 			None => LOGIN_URL.clone(),
 		};
 
@@ -25,8 +25,21 @@ impl API {
 			bail!("URL {} cannot be a base.", mods_url);
 		}
 
-		let mut client = client.unwrap_or_else(::hyper::Client::new);
-		client.set_redirect_policy(::hyper::client::RedirectPolicy::FollowIf(should_follow_redirect));
+		let mut client = match client {
+			Some(client) => client,
+			None => ::reqwest::Client::new()?,
+		};
+
+		let base_url_host = base_url.host_str().ok_or_else(|| format!("URL {} does not have a hostname.", base_url))?.to_string();
+		client.redirect(::reqwest::RedirectPolicy::custom(move |url, _| {
+			if let Some(host) = url.host_str() {
+				if host != base_url_host {
+					return Ok(true);
+				}
+			}
+
+			Ok(url.path() != "/login")
+		}));
 
 		Ok(API {
 			base_url: base_url,
@@ -69,13 +82,10 @@ impl API {
 
 	/// Logs in to the web API using the given username and password and returns a credentials object.
 	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::Result<::factorio_mods_common::UserCredentials> {
-		let body =
-			::url::form_urlencoded::Serializer::new(String::new())
-			.append_pair("username", &username)
-			.append_pair("password", password)
-			.finish();
-		let response: LoginSuccessResponse = ::util::post_object(&self.client, self.login_url.clone(), body)?;
-		let token = response.0.into_iter().next().ok_or("No service token found in login response")?;
+		let token = {
+			let response: LoginSuccessResponse = ::util::post_object(&self.client, self.login_url.clone(), &[("username", &*username), ("password", password)])?;
+			response.0.into_iter().next().ok_or("No service token found in login response")?
+		};
 		Ok(::factorio_mods_common::UserCredentials::new(username, token))
 	}
 
@@ -93,18 +103,18 @@ impl API {
 		let response = ::util::get(&self.client, download_url)?;
 
 		let file_size = {
-			let headers = &response.headers;
+			let headers = response.headers();
 
 			match headers.get() {
-				Some(&::hyper::header::ContentType(::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
+				Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
 					(),
-				Some(&::hyper::header::ContentType(ref mime)) =>
+				Some(&::reqwest::header::ContentType(ref mime)) =>
 					bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
 				None =>
 					bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
 			}
 
-			if let Some(&::hyper::header::ContentLength(ref file_size)) = headers.get() {
+			if let Some(&::reqwest::header::ContentLength(ref file_size)) = headers.get() {
 				*file_size
 			}
 			else {
@@ -146,19 +156,9 @@ impl SearchOrder {
 
 const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
-	static ref BASE_URL: ::hyper::Url = ::hyper::Url::parse("https://mods.factorio.com/").unwrap();
-	static ref LOGIN_URL: ::hyper::Url = ::hyper::Url::parse("https://auth.factorio.com/api-login").unwrap();
+	static ref BASE_URL: ::reqwest::Url = ::reqwest::Url::parse("https://mods.factorio.com/").unwrap();
+	static ref LOGIN_URL: ::reqwest::Url = ::reqwest::Url::parse("https://auth.factorio.com/api-login").unwrap();
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
-}
-
-fn should_follow_redirect(url: &::hyper::Url) -> bool {
-	if let Some(host) = url.host_str() {
-		if host != "mods.factorio.com" {
-			return true;
-		}
-	}
-
-	url.path() != "/login"
 }
 
 #[derive(Clone, Debug, Deserialize, newtype_ref)]

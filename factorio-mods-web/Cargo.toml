@@ -9,11 +9,11 @@ derive-error-chain = "0.7.x"
 derive-new = "0.3.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 error-chain = "0.7.x"
-hyper = "0.9.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 itertools = "0.5.x"
 lazy_static = "0.2.x"
+mime = "0.2.x"
+reqwest = "0.2.x"
 serde = "0.8.x"
 serde_derive = "0.8.x"
 serde_json = "0.8.x"
-url = "1.x"

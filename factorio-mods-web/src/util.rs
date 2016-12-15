@@ -1,16 +1,16 @@
 /// GETs the given URL using the given client, and returns the raw response.
-pub fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::client::Response> {
+pub fn get(client: &::reqwest::Client, url: ::reqwest::Url) -> ::Result<::reqwest::Response> {
 	let response = client.get(url).send()?;
-	Ok(match response.status {
-		::hyper::status::StatusCode::Ok =>
+	Ok(match *response.status() {
+		::reqwest::StatusCode::Ok =>
 			response,
 
-		::hyper::status::StatusCode::Unauthorized => {
+		::reqwest::StatusCode::Unauthorized => {
 			let object: LoginFailureResponse = json(response)?;
 			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
-		::hyper::status::StatusCode::Found =>
+		::reqwest::StatusCode::Found =>
 			bail!(::ErrorKind::LoginFailure("Redirected to login page.".to_string())),
 
 		code =>
@@ -19,30 +19,29 @@ pub fn get(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<::hyper::cli
 }
 
 /// GETs the given URL using the given client, and deserializes the response as a JSON object.
-pub fn get_object<T>(client: &::hyper::Client, url: ::hyper::Url) -> ::Result<T> where T: ::serde::Deserialize {
+pub fn get_object<T>(client: &::reqwest::Client, url: ::reqwest::Url) -> ::Result<T> where T: ::serde::Deserialize {
 	let response = get(client, url)?;
 	let object = json(response)?;
 	Ok(object)
 }
 
 /// POSTs the given URL using the given client and request body, and returns the raw response.
-pub fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<::hyper::client::Response> {
+pub fn post<B>(client: &::reqwest::Client, url: ::reqwest::Url, body: &B) -> ::Result<::reqwest::Response> where B: ::serde::Serialize {
 	let response =
 		client.post(url)
-		.header(::hyper::header::ContentType::form_url_encoded())
-		.body(&body)
+		.form(body)
 		.send()?;
 
-	Ok(match response.status {
-		::hyper::status::StatusCode::Ok =>
+	Ok(match *response.status() {
+		::reqwest::StatusCode::Ok =>
 			response,
 
-		::hyper::status::StatusCode::Unauthorized => {
+		::reqwest::StatusCode::Unauthorized => {
 			let object: LoginFailureResponse = json(response)?;
 			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
-		::hyper::status::StatusCode::Found =>
+		::reqwest::StatusCode::Found =>
 			bail!(::ErrorKind::LoginFailure("Redirected to login page.".to_string())),
 
 		code =>
@@ -51,7 +50,8 @@ pub fn post(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Resu
 }
 
 /// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
-pub fn post_object<T>(client: &::hyper::Client, url: ::hyper::Url, body: String) -> ::Result<T> where T: ::serde::Deserialize {
+pub fn post_object<B, T>(client: &::reqwest::Client, url: ::reqwest::Url, body: &B) -> ::Result<T>
+	where B: ::serde::Serialize, T: ::serde::Deserialize {
 	let response = post(client, url, body)?;
 	let object = json(response)?;
 	Ok(object)
@@ -63,17 +63,17 @@ struct LoginFailureResponse {
 	message: String,
 }
 
-fn json<T>(response: ::hyper::client::response::Response) -> ::Result<T> where T: ::serde::Deserialize {
-	match (&response.headers).get() {
-		Some(&::hyper::header::ContentType(::hyper::mime::Mime(::hyper::mime::TopLevel::Application, ::hyper::mime::SubLevel::Json, _))) =>
+fn json<T>(mut response: ::reqwest::Response) -> ::Result<T> where T: ::serde::Deserialize {
+	match response.headers().get() {
+		Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Json, _))) =>
 			(),
-		Some(&::hyper::header::ContentType(ref mime)) =>
+		Some(&::reqwest::header::ContentType(ref mime)) =>
 			bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
 		None =>
 			bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
 	}
 
-	let object = ::serde_json::from_reader(response)?;
+	let object = response.json()?;
 
 	Ok(object)
 }

@@ -13,15 +13,16 @@ extern crate derive_new;
 #[macro_use]
 extern crate derive_struct;
 extern crate factorio_mods_common;
-extern crate hyper;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate mime;
+extern crate reqwest;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
-extern crate url;
 
 mod api;
 pub use api::{ API, SearchOrder };
