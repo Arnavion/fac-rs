@@ -185,7 +185,7 @@ mod tests {
 		let mut iter = api.search("bob's functions library mod", &[], None, None, None);
 		let mod_ = iter.next().unwrap().unwrap();
 		println!("{:?}", mod_);
-		assert!(&**mod_.title() == "Bob's Functions Library mod");
+		assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
 	}
 
 	#[test]
@@ -206,6 +206,6 @@ mod tests {
 
 		let mod_ = api.get(&::factorio_mods_common::ModName::new("boblibrary".to_string())).unwrap();
 		println!("{:?}", mod_);
-		assert!(&**mod_.title() == "Bob's Functions Library mod");
+		assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
 	}
 }
