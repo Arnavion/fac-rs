@@ -32,13 +32,6 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				}).next();
 
 				match identify_type(field_ty) {
-					Ok(Type::OptionString) => quote! {
-						#field_doc_attr
-						pub fn #field_name(&self) -> Option<&str> {
-							self.#field_name.as_ref()
-						}
-					},
-
 					Ok(Type::Option { ty }) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> Option<&#ty> {
@@ -49,13 +42,6 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 					Ok(Type::String) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> &str {
-							&self.#field_name
-						}
-					},
-
-					Ok(Type::VecString) => quote! {
-						#field_doc_attr
-						pub fn #field_name(&self) -> &[str] {
 							&self.#field_name
 						}
 					},
@@ -208,7 +194,6 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 					}
 				},
 				Type::U64 => generate(struct_name, quote!(u64)),
-				Type::VecString => generate(struct_name, quote!([String])),
 				Type::Vec { ty } => generate(struct_name, quote!([#ty])),
 				_ => panic!("#[derive(newtype_ref)] cannot be used for tuple structs with this wrapped type: {:?}", ty),
 			}
@@ -236,13 +221,11 @@ fn as_newtype(ast: &syn::MacroInput) -> Option<&syn::Ty> {
 
 #[derive(Debug)]
 enum Type<'a> {
-	OptionString,
 	Option { ty: &'a syn::Ty },
 	SemverVersion,
 	SemverVersionReq,
 	String,
 	U64,
-	VecString,
 	Vec { ty: &'a syn::Ty },
 }
 
@@ -272,19 +255,10 @@ fn identify_type<'a>(ty: &'a syn::Ty) -> Result<Type<'a>, ()> {
 			}
 
 			let wrapped_ty = &types[0];
-			if wrapped_ty == &*TY_STRING {
-				match ident.as_ref() {
-					"Option" => Ok(Type::OptionString),
-					"Vec" => Ok(Type::VecString),
-					_ => Err(()),
-				}
-			}
-			else {
-				match ident.as_ref() {
-					"Option" => Ok(Type::Option { ty: wrapped_ty }),
-					"Vec" => Ok(Type::Vec { ty: wrapped_ty }),
-					_ => Err(()),
-				}
+			match ident.as_ref() {
+				"Option" => Ok(Type::Option { ty: wrapped_ty }),
+				"Vec" => Ok(Type::Vec { ty: wrapped_ty }),
+				_ => Err(()),
 			}
 		}
 		else {

@@ -154,8 +154,8 @@ struct SearchResponsePagination {
 /// Pagination link information in a search response.
 #[derive(Debug, Deserialize)]
 struct SearchResponsePaginationLinks {
-	prev: Option<String>,
-	next: Option<String>,
-	first: Option<String>,
-	last: Option<String>,
+	prev: Option<::factorio_mods_common::Url>,
+	next: Option<::factorio_mods_common::Url>,
+	first: Option<::factorio_mods_common::Url>,
+	last: Option<::factorio_mods_common::Url>,
 }
