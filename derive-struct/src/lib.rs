@@ -90,7 +90,7 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 /// Derives `serde::Deserialize` on the newtype.
 #[proc_macro_derive(newtype_deserialize)]
 pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	fn generate_semver(struct_name: &syn::Ident, semver_type: &syn::Ty) -> quote::Tokens {
+	fn generate_semver(struct_name: &syn::Ident, parser_func_name: quote::Tokens) -> quote::Tokens {
 		quote! {
 			impl ::serde::Deserialize for #struct_name {
 				fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
@@ -100,48 +100,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 						type Value = #struct_name;
 
 						fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
-							let version =
-								if let Ok(version) = #semver_type::parse(v) {
-									version
-								}
-								else {
-									let fixed_version = fixup_version(v);
-									#semver_type::parse(&fixed_version).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))?
-								};
-
-							Ok(#struct_name(version))
-						}
-					}
-
-					deserializer.deserialize(Visitor)
-				}
-			}
-		}
-	}
-
-	fn generate_string_or_seq_string(struct_name: &syn::Ident) -> quote::Tokens {
-		quote! {
-			impl ::serde::Deserialize for #struct_name {
-				fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
-					struct Visitor;
-
-					impl ::serde::de::Visitor for Visitor {
-						type Value = #struct_name;
-
-						fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
-							Ok(#struct_name(vec![v.to_string()]))
-						}
-
-						fn visit_seq<V>(&mut self, mut visitor: V) -> ::std::result::Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
-							let mut result: Vec<String> = vec![];
-
-							while let Some(value) = visitor.visit()? {
-								result.push(value);
-							}
-
-							visitor.end()?;
-
-							Ok(#struct_name(result))
+							Ok(#struct_name(#parser_func_name(v).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))?))
 						}
 					}
 
@@ -159,17 +118,9 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 			let struct_name = &ast.ident;
 
 			match identify_type(ty).map_err(|_| format!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
-				Type::SemverVersion => {
-					generate_semver(struct_name, &TY_SEMVER_VERSION)
-				},
+				Type::SemverVersion => generate_semver(struct_name, quote!(parse_version)),
 
-				Type::SemverVersionReq => {
-					generate_semver(struct_name, &TY_SEMVER_VERSIONREQ)
-				},
-
-				Type::VecString => {
-					generate_string_or_seq_string(struct_name)
-				},
+				Type::SemverVersionReq => generate_semver(struct_name, quote!(parse_version_req)),
 
 				_ => panic!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty),
 			}

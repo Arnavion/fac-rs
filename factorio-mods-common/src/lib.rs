@@ -17,3 +17,6 @@ extern crate serde_derive;
 
 mod types;
 pub use types::*;
+
+mod util;
+pub use util::deserialize_string_or_seq_string;

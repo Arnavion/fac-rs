@@ -10,14 +10,9 @@ pub struct Url(String);
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModName(String);
 
-/// The names of the authors of a mod.
-#[derive(Clone, Debug, new, newtype_deserialize, newtype_ref)]
-pub struct AuthorNames(Vec<String>);
-impl ::std::fmt::Display for AuthorNames {
-	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-		write!(f, "{}", self.0.join(", "))
-	}
-}
+/// The name of an author of a mod.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+pub struct AuthorName(String);
 
 /// The title of a mod.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
@@ -56,7 +51,8 @@ pub struct ModInfo {
 	name: ModName,
 
 	/// The authors of the mod release.
-	author: AuthorNames,
+	#[serde(deserialize_with = "::deserialize_string_or_seq_string")]
+	author: Vec<AuthorName>,
 
 	/// The title of the mod release.
 	title: ModTitle,
@@ -84,6 +80,28 @@ lazy_static! {
 /// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
 fn default_game_version() -> GameVersion {
 	DEFAULT_GAME_VERSION.clone()
+}
+
+/// Parses the given string as a ::semver::Version
+fn parse_version(s: &str) -> Result<::semver::Version, ::semver::SemVerError> {
+	if let Ok(version) = ::semver::Version::parse(s) {
+		Ok(version)
+	}
+	else {
+		let fixed_version = fixup_version(s);
+		::semver::Version::parse(&fixed_version)
+	}
+}
+
+/// Parses the given string as a ::semver::VersionReq
+fn parse_version_req(s: &str) -> Result<::semver::VersionReq, ::semver::ReqParseError> {
+	if let Ok(version_req) = ::semver::VersionReq::parse(s) {
+		Ok(version_req)
+	}
+	else {
+		let fixed_version = fixup_version(s);
+		::semver::VersionReq::parse(&fixed_version)
+	}
 }
 
 /// Fixes up some bad version strings returned by the web API into something valid for the `semver` crate.

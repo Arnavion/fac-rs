@@ -16,7 +16,8 @@ pub struct SearchResponseMod {
 	name: ::factorio_mods_common::ModName,
 
 	/// The authors of the mod.
-	owner: ::factorio_mods_common::AuthorNames,
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	owner: Vec<::factorio_mods_common::AuthorName>,
 
 	/// The title of the mod.
 	title: ::factorio_mods_common::ModTitle,
@@ -57,7 +58,8 @@ pub struct SearchResponseMod {
 	visits_count: ::VisitCount,
 
 	/// The tags of the mod.
-	tags: ::Tags,
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	tags: Vec<::Tag>,
 }
 
 /// Constructs an iterator of search results.

@@ -17,7 +17,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			let mod_ = web_api.get(&::factorio_mods_common::ModName::new(name.to_string())).unwrap();
 
 			println!("Name: {}", mod_.name());
-			println!("Author: {}", mod_.owner());
+			println!("Author: {}", ::itertools::join(mod_.owner(), ", "));
 			println!("Title: {}", mod_.title());
 			println!("Summary: {}", mod_.summary());
 			println!("Description:");
@@ -25,7 +25,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 				println!("    {}", line);
 			}
 
-			println!("Tags: {}", mod_.tags());
+			println!("Tags: {}", ::itertools::join(mod_.tags().iter().map(|t| t.name()), ", "));
 
 			let homepage = mod_.homepage();
 			if !homepage.is_empty() {

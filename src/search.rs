@@ -20,7 +20,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			let mod_ = mod_.unwrap();
 			println!("{}", mod_.title());
 			println!("    Name: {}", mod_.name());
-			println!("    Tags: {}", mod_.tags());
+			println!("    Tags: {}", ::itertools::join(mod_.tags().iter().map(|t| t.name()), ", "));
 			println!("");
 			max_width.map_or_else(|| {
 				println!("    {}", mod_.summary());

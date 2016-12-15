@@ -83,8 +83,9 @@ impl API {
 	/// Logs in to the web API using the given username and password and returns a credentials object.
 	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let token = {
-			let response: LoginSuccessResponse = ::util::post_object(&self.client, self.login_url.clone(), &[("username", &*username), ("password", password)])?;
-			response.0.into_iter().next().ok_or("No service token found in login response")?
+			let response: [::factorio_mods_common::ServiceToken; 1] =
+				::util::post_object(&self.client, self.login_url.clone(), &[("username", &*username), ("password", password)])?;
+			response[0].clone()
 		};
 		Ok(::factorio_mods_common::UserCredentials::new(username, token))
 	}
@@ -160,9 +161,6 @@ lazy_static! {
 	static ref LOGIN_URL: ::reqwest::Url = ::reqwest::Url::parse("https://auth.factorio.com/api-login").unwrap();
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
 }
-
-#[derive(Clone, Debug, Deserialize, newtype_ref)]
-struct LoginSuccessResponse(Vec<::factorio_mods_common::ServiceToken>);
 
 
 #[cfg(test)]

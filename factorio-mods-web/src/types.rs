@@ -24,7 +24,8 @@ pub struct Mod {
 	name: ::factorio_mods_common::ModName,
 
 	/// The authors of the mod.
-	owner: ::factorio_mods_common::AuthorNames,
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	owner: Vec<::factorio_mods_common::AuthorName>,
 
 	/// The title of the mod.
 	title: ::factorio_mods_common::ModTitle,
@@ -74,7 +75,8 @@ pub struct Mod {
 	visits_count: VisitCount,
 
 	/// The tags of the mod.
-	tags: Tags,
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	tags: Vec<Tag>,
 }
 
 /// A mod ID.
@@ -158,15 +160,6 @@ pub struct Tag {
 	/// The type of the tag.
 	#[serde(rename(deserialize = "type"))]
 	type_name: TagType,
-}
-
-/// A collection of tags.
-#[derive(Clone, Debug, Deserialize, new, newtype_ref)]
-pub struct Tags(Vec<Tag>);
-impl ::std::fmt::Display for Tags {
-	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-		write!(f, "{}", ::itertools::join(self.0.iter().map(|t| &t.name), ", "))
-	}
 }
 
 /// The ID of a tag.
