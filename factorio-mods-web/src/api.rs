@@ -74,9 +74,9 @@ impl API {
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get(&self, mod_name: ::factorio_mods_common::ModName) -> ::Result<::Mod> {
+	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> ::Result<::Mod> {
 		let mut mods_url = self.mods_url.clone();
-		mods_url.path_segments_mut().unwrap().push(&mod_name);
+		mods_url.path_segments_mut().unwrap().push(mod_name);
 		::util::get_object(&self.client, mods_url)
 	}
 
@@ -206,7 +206,7 @@ mod tests {
 	fn get() {
 		let api = API::new(None, None, None).unwrap();
 
-		let mod_ = api.get(::factorio_mods_common::ModName::new("boblibrary".to_string())).unwrap();
+		let mod_ = api.get(&::factorio_mods_common::ModName::new("boblibrary".to_string())).unwrap();
 		println!("{:?}", mod_);
 		assert!(&**mod_.title() == "Bob's Functions Library mod");
 	}

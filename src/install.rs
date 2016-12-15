@@ -76,7 +76,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			let requirement_string = captures.at(2).unwrap_or("*");
 			let requirement = ModVersionReq(::semver::VersionReq::parse(requirement_string).unwrap());
 
-			let mod_ = web_api.get(name.clone()).unwrap();
+			let mod_ = web_api.get(&name).unwrap();
 
 			let mut releases = mod_.releases().to_vec();
 			releases.sort_by(|r1, r2| r2.version().cmp(r1.version()));

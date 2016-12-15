@@ -14,7 +14,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 		let names = matches.values_of("mods").unwrap();
 
 		for name in names {
-			let mod_ = web_api.get(::factorio_mods_common::ModName::new(name.to_string())).unwrap();
+			let mod_ = web_api.get(&::factorio_mods_common::ModName::new(name.to_string())).unwrap();
 
 			println!("Name: {}", mod_.name());
 			println!("Author: {}", mod_.owner());
