@@ -101,21 +101,10 @@ impl API {
 			.append_pair("username", user_credentials.username())
 			.append_pair("token", user_credentials.token());
 
-		let response = ::util::get(&self.client, download_url)?;
+		let response = ::util::get_zip(&self.client, download_url)?;
 
 		let file_size = {
-			let headers = response.headers();
-
-			match headers.get() {
-				Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
-					(),
-				Some(&::reqwest::header::ContentType(ref mime)) =>
-					bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
-				None =>
-					bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
-			}
-
-			if let Some(&::reqwest::header::ContentLength(ref file_size)) = headers.get() {
+			if let Some(&::reqwest::header::ContentLength(ref file_size)) = response.headers().get() {
 				*file_size
 			}
 			else {
