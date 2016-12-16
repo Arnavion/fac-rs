@@ -64,7 +64,7 @@ pub struct SearchResponseMod {
 
 /// Constructs an iterator of search results.
 pub fn search<'a>(
-	client: &'a ::reqwest::Client,
+	client: &'a ::client::Client,
 	mods_url: ::reqwest::Url,
 	starting_page_number: ::PageNumber,
 ) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
@@ -80,7 +80,7 @@ pub fn search<'a>(
 /// An iterator of search results.
 #[derive(Debug)]
 struct SearchResultsIterator<'a> {
-	client: &'a ::reqwest::Client,
+	client: &'a ::client::Client,
 	mods_url: ::reqwest::Url,
 	current_page_number: PageNumber,
 	current_page: Option<SearchResponse>,
@@ -111,7 +111,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 				let mut mods_url = self.mods_url.clone();
 				mods_url.query_pairs_mut().append_pair("page", &self.current_page_number.to_string());
 
-				match ::util::get_object(self.client, mods_url) {
+				match self.client.get_object(mods_url) {
 					Ok(page) => {
 						self.current_page = Some(page);
 						self.next()

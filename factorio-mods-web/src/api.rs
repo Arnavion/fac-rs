@@ -4,7 +4,7 @@ pub struct API {
 	base_url: ::reqwest::Url,
 	login_url: ::reqwest::Url,
 	mods_url: ::reqwest::Url,
-	client: ::reqwest::Client,
+	client: ::client::Client,
 }
 
 impl API {
@@ -25,21 +25,8 @@ impl API {
 			bail!("URL {} cannot be a base.", mods_url);
 		}
 
-		let mut client = match client {
-			Some(client) => client,
-			None => ::reqwest::Client::new()?,
-		};
-
 		let base_url_host = base_url.host_str().ok_or_else(|| format!("URL {} does not have a hostname.", base_url))?.to_string();
-		client.redirect(::reqwest::RedirectPolicy::custom(move |url, _| {
-			if let Some(host) = url.host_str() {
-				if host != base_url_host {
-					return Ok(true);
-				}
-			}
-
-			Ok(url.path() != "/login")
-		}));
+		let client = ::client::Client::new(client, base_url_host)?;
 
 		Ok(API {
 			base_url: base_url,
@@ -77,14 +64,14 @@ impl API {
 	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> ::Result<::Mod> {
 		let mut mods_url = self.mods_url.clone();
 		mods_url.path_segments_mut().unwrap().push(mod_name);
-		::util::get_object(&self.client, mods_url)
+		self.client.get_object(mods_url)
 	}
 
 	/// Logs in to the web API using the given username and password and returns a credentials object.
 	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let token = {
 			let response: [::factorio_mods_common::ServiceToken; 1] =
-				::util::post_object(&self.client, self.login_url.clone(), &[("username", &*username), ("password", password)])?;
+				self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)])?;
 			response[0].clone()
 		};
 		Ok(::factorio_mods_common::UserCredentials::new(username, token))
@@ -101,7 +88,7 @@ impl API {
 			.append_pair("username", user_credentials.username())
 			.append_pair("token", user_credentials.token());
 
-		let response = ::util::get_zip(&self.client, download_url)?;
+		let response = self.client.get_zip(download_url)?;
 
 		let file_size = {
 			if let Some(&::reqwest::header::ContentLength(ref file_size)) = response.headers().get() {

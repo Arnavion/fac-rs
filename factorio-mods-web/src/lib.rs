@@ -27,6 +27,8 @@ extern crate serde_json;
 mod api;
 pub use api::{ API, SearchOrder };
 
+mod client;
+
 mod error;
 pub use error::{ Error, ErrorKind, Result };
 
@@ -35,5 +37,3 @@ pub use search::{ PageNumber, ResponseNumber, SearchResponseMod };
 
 mod types;
 pub use types::*;
-
-mod util;
