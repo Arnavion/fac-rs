@@ -73,7 +73,7 @@ pub fn search<'a>(
 		mods_url: mods_url,
 		current_page_number: starting_page_number,
 		current_page: None,
-		errored: false,
+		ended: false,
 	}
 }
 
@@ -84,14 +84,14 @@ struct SearchResultsIterator<'a> {
 	mods_url: ::reqwest::Url,
 	current_page_number: PageNumber,
 	current_page: Option<SearchResponse>,
-	errored: bool,
+	ended: bool,
 }
 
 impl<'a> Iterator for SearchResultsIterator<'a> {
 	type Item = ::Result<SearchResponseMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if self.errored {
+		if self.ended {
 			return None;
 		}
 
@@ -118,12 +118,12 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 					},
 
 					Err(::Error(::ErrorKind::StatusCode(::reqwest::StatusCode::NotFound), _)) => {
-						self.errored = true;
+						self.ended = true;
 						None
 					},
 
 					Err(err) => {
-						self.errored = true;
+						self.ended = true;
 						Some(Err(err))
 					},
 				}

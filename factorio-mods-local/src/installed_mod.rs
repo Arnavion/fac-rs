@@ -93,7 +93,7 @@ pub fn find<'a>(
 		name_pattern: name_pattern,
 		version: version,
 		mod_status: mod_status,
-		errored: false,
+		ended: false,
 	})
 }
 
@@ -103,14 +103,14 @@ struct InstalledModIterator<'a> {
 	name_pattern: Option<::glob::Pattern>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	errored: bool,
+	ended: bool,
 }
 
 impl<'a> Iterator for InstalledModIterator<'a> {
 	type Item = ::Result<InstalledMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if self.errored {
+		if self.ended {
 			return None;
 		}
 
@@ -123,7 +123,7 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 						Err(::Error(::ErrorKind::UnknownModFormat, _)) => continue,
 
 						Err(err) => {
-							self.errored = true;
+							self.ended = true;
 							return Some(Err(err));
 						},
 					};
