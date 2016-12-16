@@ -1,14 +1,8 @@
 /// An installed mod object.
 #[derive(Clone, Debug, new, getters)]
 pub struct InstalledMod {
-	/// The name of the installed mod.
-	name: ::factorio_mods_common::ModName,
-
-	/// The version of the installed mod.
-	version: ::factorio_mods_common::ReleaseVersion,
-
-	/// The game version of the installed mod.
-	game_version: ::factorio_mods_common::GameVersion,
+	/// The info.json of the mod
+	info: ::factorio_mods_common::ModInfo,
 
 	/// Whether the installed mod is enabled or not in `mod-list.json`
 	enabled: bool,
@@ -69,12 +63,7 @@ impl InstalledMod {
 
 		let enabled = mod_status.get(info.name());
 
-		Ok(InstalledMod::new(
-			info.name().clone(),
-			info.version().clone(),
-			info.factorio_version().clone(),
-			enabled.cloned().unwrap_or(true),
-			mod_type))
+		Ok(InstalledMod::new(info, enabled.cloned().unwrap_or(true), mod_type))
 	}
 }
 
@@ -140,13 +129,13 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 					};
 
 					if let Some(ref name_pattern) = self.name_pattern {
-						if !name_pattern.matches(installed_mod.name()) {
+						if !name_pattern.matches(installed_mod.info().name()) {
 							continue;
 						}
 					}
 
 					if let Some(ref version) = self.version {
-						if version != installed_mod.version() {
+						if version != installed_mod.info().version() {
 							continue;
 						}
 					}

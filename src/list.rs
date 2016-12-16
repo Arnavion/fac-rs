@@ -18,7 +18,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 
 		installed_mods.sort_by(|m1, m2| {
 			match m1.enabled().cmp(m2.enabled()) {
-				::std::cmp::Ordering::Equal => m1.name().cmp(m2.name()),
+				::std::cmp::Ordering::Equal => m1.info().name().cmp(m2.info().name()),
 				o => o.reverse(),
 			}
 		});
@@ -37,7 +37,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 
 			let tags_string = if !tags.is_empty() { format!(" ({})", tags.join(", ")) } else { String::new() };
 
-			println!("    {} {}{}", installed_mod.name(), installed_mod.version(), tags_string);
+			println!("    {} {}{}", installed_mod.info().name(), installed_mod.info().version(), tags_string);
 		}
 	}
 }
