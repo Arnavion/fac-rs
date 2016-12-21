@@ -25,8 +25,8 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				let field_ty = &field.ty;
 
 				let field_doc_attr = field.attrs.iter().filter_map(|attr| {
-					match (&attr.value, &attr.is_sugared_doc) {
-						(&syn::MetaItem::NameValue(ref ident, _), &true) if ident.to_string() == "doc" => Some(attr),
+					match &attr.value {
+						&syn::MetaItem::NameValue(ref ident, _) if ident.to_string() == "doc" => Some(attr),
 						_ => None,
 					}
 				}).next();
