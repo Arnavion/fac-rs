@@ -32,21 +32,21 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				}).next();
 
 				match identify_type(field_ty) {
-					Ok(Type::Option { ty }) => quote! {
+					Some(Type::Option { ty }) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> Option<&#ty> {
 							self.#field_name.as_ref()
 						}
 					},
 
-					Ok(Type::String) => quote! {
+					Some(Type::String) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> &str {
 							&self.#field_name
 						}
 					},
 
-					Ok(Type::Vec { ty }) => quote! {
+					Some(Type::Vec { ty }) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> &[#ty] {
 							&self.#field_name
@@ -103,7 +103,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 		Some(ty) => {
 			let struct_name = &ast.ident;
 
-			match identify_type(ty).map_err(|_| format!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+			match identify_type(ty).ok_or_else(|| format!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
 				Type::SemverVersion => generate_semver(struct_name, quote!(parse_version)),
 
 				Type::SemverVersionReq => generate_semver(struct_name, quote!(parse_version_req)),
@@ -128,7 +128,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 		Some(ty) => {
 			let struct_name = &ast.ident;
 
-			match identify_type(ty).map_err(|_| format!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+			match identify_type(ty).ok_or_else(|| format!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
 				Type::SemverVersion |
 				Type::SemverVersionReq |
 				Type::String |
@@ -177,7 +177,7 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 		Some(ty) => {
 			let struct_name = &ast.ident;
 
-			match identify_type(ty).map_err(|_| format!("#[derive(newtype_ref)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+			match identify_type(ty).ok_or_else(|| format!("#[derive(newtype_ref)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
 				Type::SemverVersion => generate(struct_name, quote!(::semver::Version)),
 				Type::SemverVersionReq => generate(struct_name, quote!(::semver::VersionReq)),
 				Type::String => {
@@ -229,43 +229,43 @@ enum Type<'a> {
 	Vec { ty: &'a syn::Ty },
 }
 
-fn identify_type<'a>(ty: &'a syn::Ty) -> Result<Type<'a>, ()> {
+fn identify_type<'a>(ty: &'a syn::Ty) -> Option<Type<'a>> {
 	if ty == &*TY_SEMVER_VERSION {
-		Ok(Type::SemverVersion)
+		Some(Type::SemverVersion)
 	}
 	else if ty == &*TY_SEMVER_VERSIONREQ {
-		Ok(Type::SemverVersionReq)
+		Some(Type::SemverVersionReq)
 	}
 	else if ty == &*TY_STRING {
-		Ok(Type::String)
+		Some(Type::String)
 	}
 	else if ty == &*TY_U64 {
-		Ok(Type::U64)
+		Some(Type::U64)
 	}
 	else if let syn::Ty::Path(_, syn::Path { ref segments, .. }) = *ty {
 		if segments.len() != 1 {
-			return Err(())
+			return None
 		}
 
 		let syn::PathSegment { ref ident, ref parameters } = segments[0];
 		if let syn::PathParameters::AngleBracketed(syn::AngleBracketedParameterData { ref types, .. }) = *parameters {
 			let ident = ident.to_string();
 			if ident != "Option" && ident != "Vec" {
-				return Err(());
+				return None;
 			}
 
 			let wrapped_ty = &types[0];
 			match ident.as_ref() {
-				"Option" => Ok(Type::Option { ty: wrapped_ty }),
-				"Vec" => Ok(Type::Vec { ty: wrapped_ty }),
-				_ => Err(()),
+				"Option" => Some(Type::Option { ty: wrapped_ty }),
+				"Vec" => Some(Type::Vec { ty: wrapped_ty }),
+				_ => unreachable!(),
 			}
 		}
 		else {
-			Err(())
+			None
 		}
 	}
 	else {
-		Err(())
+		None
 	}
 }
