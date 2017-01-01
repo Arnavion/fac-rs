@@ -14,6 +14,6 @@ regex = "0.1.x"
 rpassword = "0.3.x"
 semver = "0.5.x"
 term_size = "0.2.x"
-unicode-segmentation = "0.1.x"
+unicode-segmentation = "1.x"
 
 [workspace]
