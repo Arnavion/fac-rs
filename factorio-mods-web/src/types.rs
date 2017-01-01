@@ -107,9 +107,6 @@ pub struct ModRelease {
 	/// The versions of the game supported by the mod release.
 	factorio_version: ::factorio_mods_common::GameVersion,
 
-	/// The versions of the game supported by the mod release.
-	game_version: ::factorio_mods_common::GameVersion,
-
 	/// The URL to download the mod release.
 	download_url: ::factorio_mods_common::Url,
 
