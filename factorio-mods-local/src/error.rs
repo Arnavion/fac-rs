@@ -38,6 +38,10 @@ pub enum ErrorKind {
 
 	/// The local Factorio installation could not be found.
 	#[error_chain(custom)]
+	DataPath,
+
+	/// The local Factorio installation could not be found.
+	#[error_chain(custom)]
 	WritePath,
 
 	/// The credentials stored in `player-data.json` do not have both username and service token.

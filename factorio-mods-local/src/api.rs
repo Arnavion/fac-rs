@@ -1,6 +1,7 @@
 /// Entry-point to the local Factorio API
 #[derive(Debug)]
 pub struct API {
+	game_version: ::factorio_mods_common::ReleaseVersion,
 	write_path: ::std::path::PathBuf,
 	config_directory: ::std::path::PathBuf,
 	mods_directory: ::std::path::PathBuf,
@@ -10,6 +11,15 @@ pub struct API {
 impl API {
 	/// Constructs an API object. Tries to detect the local Factorio install in some well-defined locations.
 	pub fn new() -> ::Result<API> {
+		let game_version = FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
+			let search_path = ::std::path::Path::new(search_path);
+			let base_info_file_path = search_path.join("data").join("base").join("info.json");
+			::std::fs::File::open(&base_info_file_path).map_err(::Error::from)
+				.and_then(|base_info_file| ::serde_json::from_reader(base_info_file).map_err(::Error::from))
+				.map(|base_info: BaseInfo| base_info.version)
+				.ok()
+		}).next().ok_or(::ErrorKind::DataPath)?;
+
 		let (write_path, config_directory, mods_directory) =
 			FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 				let search_path = ::std::path::Path::new(search_path);
@@ -31,11 +41,17 @@ impl API {
 		let mod_status = mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect();
 
 		Ok(API {
+			game_version: game_version,
 			write_path: write_path,
 			config_directory: config_directory,
 			mods_directory: mods_directory,
 			mod_status: mod_status,
 		})
+	}
+
+	/// Returns the game version.
+	pub fn game_version(&self) -> &::factorio_mods_common::ReleaseVersion {
+		&self.game_version
 	}
 
 	/// Returns the directory where mods should be installed.
@@ -124,6 +140,12 @@ struct ModList {
 struct ModListMod {
 	name: ::factorio_mods_common::ModName,
 	enabled: String,
+}
+
+/// Represents the contents of `base/info.json`
+#[derive(Debug, Deserialize)]
+struct BaseInfo {
+	version: ::factorio_mods_common::ReleaseVersion,
 }
 
 /// Represents the contents of `player-data.json`
