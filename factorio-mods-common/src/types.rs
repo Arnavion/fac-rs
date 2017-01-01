@@ -116,7 +116,7 @@ fn default_game_version() -> GameVersion {
 	DEFAULT_GAME_VERSION.clone()
 }
 
-/// Parses the given string as a ::semver::Version
+/// Parses the given string as a `::semver::Version`
 fn parse_version(s: &str) -> Result<::semver::Version, ::semver::SemVerError> {
 	if let Ok(version) = ::semver::Version::parse(s) {
 		Ok(version)
@@ -127,7 +127,7 @@ fn parse_version(s: &str) -> Result<::semver::Version, ::semver::SemVerError> {
 	}
 }
 
-/// Parses the given string as a ::semver::VersionReq
+/// Parses the given string as a `::semver::VersionReq`
 fn parse_version_req(s: &str) -> Result<::semver::VersionReq, ::semver::ReqParseError> {
 	if let Ok(version_req) = ::semver::VersionReq::parse(s) {
 		Ok(version_req)
