@@ -1,9 +1,12 @@
 //! A CLI tool to manage Factorio mods.
 
-#![feature(ordering_chaining)]
+#![feature(ordering_chaining, proc_macro)]
 
+extern crate appdirs;
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;
@@ -13,6 +16,10 @@ extern crate lazy_static;
 extern crate regex;
 extern crate rpassword;
 extern crate semver;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 extern crate term_size;
 extern crate unicode_segmentation;
 
@@ -21,6 +28,7 @@ mod list;
 mod search;
 mod show;
 
+mod config;
 mod util;
 
 fn main() {

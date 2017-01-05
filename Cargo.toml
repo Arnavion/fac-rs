@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
+appdirs = "0.2.x"
 clap = "2.19.x"
+derive-struct = { version = "0.1.0", path = "./derive-struct" }
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
@@ -13,6 +15,9 @@ lazy_static = "0.2.x"
 regex = "0.1.x"
 rpassword = "0.3.x"
 semver = "0.5.x"
+serde = "0.8.x"
+serde_derive = "0.8.x"
+serde_json = "0.8.x"
 term_size = "0.2.x"
 unicode-segmentation = "1.x"
 
