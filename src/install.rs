@@ -70,7 +70,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 		reqs.extend(requirements.into_iter().map(|requirement| {
 			let captures = REQUIREMENT_REGEX.captures(requirement).unwrap();
 			let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
-			let requirement_string = captures.at(2).unwrap_or("*");
+			let requirement_string = captures.get(2).map(|m| m.as_str()).unwrap_or("*");
 			let requirement = ::semver::VersionReq::parse(requirement_string).unwrap();
 			(name.clone(), ::config::ModVersionReq::new(requirement))
 		}));
