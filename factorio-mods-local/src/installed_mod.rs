@@ -1,6 +1,9 @@
 /// An installed mod object.
 #[derive(Clone, Debug, new, getters)]
 pub struct InstalledMod {
+	/// The path of the mod.
+	path: ::std::path::PathBuf,
+
 	/// The info.json of the mod
 	info: ::factorio_mods_common::ModInfo,
 
@@ -24,17 +27,17 @@ pub enum InstalledModType {
 impl InstalledMod {
 	/// Parses the installed mod at the given location.
 	pub fn parse(
-		path: &::std::path::Path,
+		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::Result<InstalledMod> {
 		let (info, mod_type): (::factorio_mods_common::ModInfo, _) =
 			if path.is_file() {
 				match path.extension() {
 					Some(extension) if extension == "zip" => {
-						let zip_file = ::std::fs::File::open(path)?;
+						let zip_file = ::std::fs::File::open(&path)?;
 						let mut zip_file = ::zip::ZipArchive::new(zip_file)?;
 						if zip_file.len() == 0 {
-							bail!(::ErrorKind::EmptyZippedMod(path.into()));
+							bail!(::ErrorKind::EmptyZippedMod(path.clone()));
 						}
 
 						let toplevel = {
@@ -63,7 +66,7 @@ impl InstalledMod {
 
 		let enabled = mod_status.get(info.name());
 
-		Ok(InstalledMod::new(info, enabled.cloned().unwrap_or(true), mod_type))
+		Ok(InstalledMod::new(path, info, enabled.cloned().unwrap_or(true), mod_type))
 	}
 }
 
@@ -117,7 +120,7 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 		loop {
 			match self.paths.next() {
 				Some(Ok(path)) => {
-					let installed_mod = match InstalledMod::parse(&path, self.mod_status) {
+					let installed_mod = match InstalledMod::parse(path, self.mod_status) {
 						Ok(installed_mod) => installed_mod,
 
 						Err(::Error(::ErrorKind::UnknownModFormat, _)) => continue,
