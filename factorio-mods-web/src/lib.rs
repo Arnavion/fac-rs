@@ -18,7 +18,7 @@ extern crate itertools;
 extern crate lazy_static;
 #[macro_use]
 extern crate mime;
-extern crate reqwest;
+pub extern crate reqwest;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;

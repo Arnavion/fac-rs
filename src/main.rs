@@ -15,6 +15,8 @@ extern crate factorio_mods_web;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
+extern crate multimap;
+extern crate petgraph;
 extern crate regex;
 extern crate rpassword;
 extern crate semver;
@@ -29,6 +31,7 @@ mod install;
 mod list;
 mod search;
 mod show;
+mod solve;
 
 mod config;
 mod util;
