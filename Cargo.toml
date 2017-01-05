@@ -6,6 +6,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 [dependencies]
 appdirs = "0.2.x"
 clap = "2.19.x"
+derive-new = "0.3.x"
 derive-struct = { version = "0.1.0", path = "./derive-struct" }
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }

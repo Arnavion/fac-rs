@@ -10,6 +10,12 @@ pub struct Url(String);
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct ModName(String);
 
+impl ::serde::Serialize for ModName {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: ::serde::Serializer {
+		serializer.serialize_str(&self.0)
+	}
+}
+
 /// The name of an author of a mod.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct AuthorName(String);
