@@ -16,12 +16,10 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			return;
 		}
 
-		installed_mods.sort_by(|m1, m2| {
-			match m1.enabled().cmp(m2.enabled()) {
-				::std::cmp::Ordering::Equal => m1.info().name().cmp(m2.info().name()),
-				o => o.reverse(),
-			}
-		});
+		installed_mods.sort_by(|m1, m2|
+			m1.enabled().cmp(m2.enabled()).reverse()
+			.then_with(|| m1.info().name().cmp(m2.info().name())));
+
 		let installed_mods = installed_mods;
 
 		println!("Installed mods:");
