@@ -48,10 +48,7 @@ fn main() {
 	subcommands.insert("show", &show_subcommand);
 	let subcommands = subcommands;
 
-	let app = clap_app!(fac =>
-		(author: crate_authors!())
-		(version: crate_version!())
-		(about: "fac")
+	let app = clap_app!(@app (app_from_crate!())
 		(@setting SubcommandRequiredElseHelp)
 		(@setting VersionlessSubcommands));
 

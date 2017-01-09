@@ -2,10 +2,11 @@
 name = "fac"
 version = "0.1.0"
 authors = ["Arnavion <arnavion@gmail.com>"]
+description = "Mod manager for Factorio"
 
 [dependencies]
 appdirs = "0.2.x"
-clap = "2.19.x"
+clap = "2.20.x"
 derive-new = "0.3.x"
 derive-struct = { version = "0.1.0", path = "./derive-struct" }
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
