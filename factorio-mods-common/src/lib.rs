@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![feature(proc_macro)]
 
 //! Common types and functionality used by the other factorio-mods crates.
 

@@ -1,5 +1,4 @@
 #![crate_type = "proc-macro"]
-#![feature(proc_macro, proc_macro_lib)]
 #![recursion_limit = "200"]
 
 //! A helper crate for easily deriving structs.
