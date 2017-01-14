@@ -68,10 +68,10 @@ impl Config {
 	}
 }
 
-fn serialize_config_mods<S>(value: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>, serializer: &mut S) -> Result<(), S::Error>
-	where S: ::serde::Serializer {
+fn serialize_config_mods<'a, I, S>(value: I, serializer: &mut S) -> Result<(), S::Error>
+	where I: IntoIterator<Item = (&'a ::factorio_mods_common::ModName, &'a ::factorio_mods_common::ModVersionReq)>, S: ::serde::Serializer {
 	let mut state = serializer.serialize_map(None)?;
-	for (name, req) in ::itertools::Itertools::sorted_by(value.into_iter(), |&(ref n1, _), &(ref n2, _)| n1.cmp(n2)) {
+	for (name, req) in ::itertools::Itertools::sorted_by(value.into_iter(), |&(n1, _), &(n2, _)| n1.cmp(n2)) {
 		serializer.serialize_map_key(&mut state, name)?;
 		serializer.serialize_map_value(&mut state, req)?;
 	}

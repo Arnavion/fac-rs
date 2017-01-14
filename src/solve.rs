@@ -155,16 +155,14 @@ pub fn solve(
 		}
 	}
 
-	best_solution.map(|best_solution| {
-		best_solution.into_iter().filter_map(|(name, installable)| {
-			if let Installable::Mod(ref release) = *installable {
-				Some((name.clone(), release.clone()))
-			}
-			else {
-				None
-			}
-		}).collect()
-	})
+	best_solution.map(|best_solution| best_solution.into_iter().filter_map(|(name, installable)| {
+		if let Installable::Mod(ref release) = *installable {
+			Some((name.clone(), release.clone()))
+		}
+		else {
+			None
+		}
+	}).collect())
 }
 
 #[derive(Debug)]
@@ -183,7 +181,7 @@ impl Installable {
 
 	fn version(&self) -> &::factorio_mods_common::ReleaseVersion {
 		match *self {
-			Installable::Base(_, ref version) => &version,
+			Installable::Base(_, ref version) => version,
 			Installable::Mod(ref release) => release.version(),
 		}
 	}
@@ -263,7 +261,7 @@ fn compare<'a>(
 	s2: &::std::collections::HashMap<&'a ::factorio_mods_common::ModName, &'a Installable>
 ) -> ::std::cmp::Ordering {
 	for (n1, i1) in s1 {
-		if let Some(ref i2) = s2.get(n1) {
+		if let Some(i2) = s2.get(n1) {
 			if i1.version() < i2.version() {
 				return ::std::cmp::Ordering::Less
 			}
@@ -312,7 +310,7 @@ impl<'a, T> Permutater<'a, T> {
 
 		if self.run_once {
 			if self.state[index] < self.possibilities[index].len() - 1 {
-				self.state[index] = self.state[index] + 1;
+				self.state[index] += 1;
 				true
 			}
 			else {
