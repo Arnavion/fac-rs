@@ -72,7 +72,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 			let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
 			let requirement_string = captures.get(2).map(|m| m.as_str()).unwrap_or("*");
 			let requirement = ::semver::VersionReq::parse(requirement_string).unwrap();
-			(name.clone(), ::config::ModVersionReq::new(requirement))
+			(name.clone(), ::factorio_mods_common::ModVersionReq::new(requirement))
 		}));
 		let game_version = local_api.game_version().clone();
 		if let Some(solution) = ::solve::solve(&web_api, game_version, &reqs) {

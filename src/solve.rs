@@ -1,7 +1,7 @@
 pub fn solve(
 	api: &::factorio_mods_web::API,
 	game_version: ::factorio_mods_common::ReleaseVersion,
-	reqs: &::std::collections::HashMap<::factorio_mods_common::ModName, ::config::ModVersionReq>,
+	reqs: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
 ) -> Option<::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>> {
 	let mut graph = Default::default();
 

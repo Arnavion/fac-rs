@@ -1,38 +1,12 @@
-#[derive(Clone, Debug, new, newtype_ref)]
-pub struct ModVersionReq(::semver::VersionReq);
-
-impl ::serde::Deserialize for ModVersionReq {
-	fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
-		struct Visitor;
-
-		impl ::serde::de::Visitor for Visitor {
-			type Value = ModVersionReq;
-
-			fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E> where E: ::serde::Error {
-				let version = ::semver::VersionReq::parse(v).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))?;
-				Ok(ModVersionReq(version))
-			}
-		}
-
-		deserializer.deserialize(Visitor)
-	}
-}
-
-impl ::serde::Serialize for ModVersionReq {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: ::serde::Serializer {
-		serializer.serialize_str(&self.0.to_string())
-	}
-}
-
 mod versions {
 	#[derive(Clone, Debug, Deserialize, Serialize, getters)]
 	pub struct ConfigV1 {
 		#[serde(serialize_with = "super::serialize_config_mods")]
-		mods: ::std::collections::HashMap<::factorio_mods_common::ModName, super::ModVersionReq>,
+		mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
 	}
 
 	impl ConfigV1 {
-		pub fn with_mods(self, mods: ::std::collections::HashMap<::factorio_mods_common::ModName, super::ModVersionReq>) -> ConfigV1 {
+		pub fn with_mods(self, mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>) -> ConfigV1 {
 			ConfigV1 { mods: mods, .. self }
 		}
 	}
@@ -71,7 +45,7 @@ impl Config {
 				::std::io::ErrorKind::NotFound =>
 					versions::DEFAULT_CONFIG_V1.clone().with_mods(api.installed_mods().unwrap().map(|installed_mod| {
 						let installed_mod = installed_mod.unwrap();
-						(installed_mod.info().name().clone(), ModVersionReq(::semver::VersionReq::any()))
+						(installed_mod.info().name().clone(), ::factorio_mods_common::ModVersionReq::new(::semver::VersionReq::any()))
 					}).collect()),
 
 				_ => panic!(err),
@@ -94,7 +68,8 @@ impl Config {
 	}
 }
 
-fn serialize_config_mods<S>(value: &::std::collections::HashMap<::factorio_mods_common::ModName, ModVersionReq>, serializer: &mut S) -> Result<(), S::Error> where S: ::serde::Serializer {
+fn serialize_config_mods<S>(value: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>, serializer: &mut S) -> Result<(), S::Error>
+	where S: ::serde::Serializer {
 	let mut state = serializer.serialize_map(None)?;
 	for (name, req) in ::itertools::Itertools::sorted_by(value.into_iter(), |&(ref n1, _), &(ref n2, _)| n1.cmp(n2)) {
 		serializer.serialize_map_key(&mut state, name)?;

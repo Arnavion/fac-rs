@@ -38,7 +38,7 @@ pub struct SearchResponseMod {
 	license_url: ::factorio_mods_common::Url,
 
 	/// The versions of the game supported by the mod.
-	game_versions: Vec<::factorio_mods_common::GameVersion>,
+	game_versions: Vec<::factorio_mods_common::ModVersionReq>,
 
 	/// The date and time at which the mod was created.
 	created_at: ::DateTime,

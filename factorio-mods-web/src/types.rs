@@ -52,7 +52,7 @@ pub struct Mod {
 	license_flags: LicenseFlags,
 
 	/// The versions of the game supported by the mod.
-	game_versions: Vec<::factorio_mods_common::GameVersion>,
+	game_versions: Vec<::factorio_mods_common::ModVersionReq>,
 
 	/// The date and time at which the mod was created.
 	created_at: DateTime,
@@ -105,7 +105,7 @@ pub struct ModRelease {
 	version: ::factorio_mods_common::ReleaseVersion,
 
 	/// The versions of the game supported by the mod release.
-	factorio_version: ::factorio_mods_common::GameVersion,
+	factorio_version: ::factorio_mods_common::ModVersionReq,
 
 	/// The URL to download the mod release.
 	download_url: ::factorio_mods_common::Url,

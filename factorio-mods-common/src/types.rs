@@ -1,7 +1,3 @@
-/// The required game version.
-#[derive(Clone, Debug, PartialEq, new, newtype_deserialize, newtype_display, newtype_ref)]
-pub struct GameVersion(::semver::VersionReq);
-
 /// A URL.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct Url(String);
@@ -71,7 +67,7 @@ pub struct ModInfo {
 
 	/// The versions of the game supported by the mod release.
 	#[serde(default = "default_game_version")]
-	factorio_version: GameVersion,
+	factorio_version: ModVersionReq,
 
 	/// The URL of the homepage of the mod release.
 	homepage: Option<Url>,
@@ -89,7 +85,7 @@ pub struct Dependency {
 	name: ModName,
 
 	/// The version of the dependency.
-	version: ::semver::VersionReq,
+	version: ModVersionReq,
 
 	/// Whether the dependency is required or not.
 	required: bool,
@@ -111,14 +107,24 @@ impl ::serde::Deserialize for Dependency {
 	}
 }
 
+/// A version requirement.
+#[derive(Clone, Debug, PartialEq, new, newtype_deserialize, newtype_display, newtype_ref)]
+pub struct ModVersionReq(::semver::VersionReq);
+
+impl ::serde::Serialize for ModVersionReq {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: ::serde::Serializer {
+		serializer.serialize_str(&self.0.to_string())
+	}
+}
+
 lazy_static! {
-	static ref DEFAULT_GAME_VERSION: GameVersion = GameVersion::new(::semver::VersionReq::parse("0.12").unwrap());
+	static ref DEFAULT_GAME_VERSION: ModVersionReq = ModVersionReq::new(::semver::VersionReq::parse("0.12").unwrap());
 }
 
 /// Generates a copy of the default game version.
 ///
 /// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
-fn default_game_version() -> GameVersion {
+fn default_game_version() -> ModVersionReq {
 	DEFAULT_GAME_VERSION.clone()
 }
 
@@ -173,7 +179,11 @@ fn default_dependencies() -> Vec<Dependency> {
 
 lazy_static! {
 	static ref DEPENDENCY_REGEX: ::regex::Regex = ::regex::Regex::new(r"^(\??)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
-	static ref DEFAULT_DEPENDENCIES: Vec<Dependency> = vec![Dependency { name: ModName("base".to_string()), version: ::semver::VersionReq::any(), required: true, }];
+	static ref DEFAULT_DEPENDENCIES: Vec<Dependency> = vec![Dependency {
+		name: ModName("base".to_string()),
+		version: ModVersionReq(::semver::VersionReq::any()),
+		required: true,
+	}];
 }
 
 /// Parses the given string as a Dependency
@@ -196,7 +206,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::Error
 				.map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))?
 		};
 
-	Ok(Dependency { name: ModName(name.to_string()), version: version_req, required: required, })
+	Ok(Dependency { name: ModName(name.to_string()), version: ModVersionReq(version_req), required: required, })
 }
 
 #[cfg(test)]
@@ -219,7 +229,7 @@ mod tests {
 	fn test_parse_dependency_inner(s: &str, name: &str, version: &str, required: bool) {
 		let result = parse_dependency::<::serde_json::error::Error>(s).unwrap();
 		assert_eq!(&**result.name(), name);
-		assert_eq!(result.version(), &::semver::VersionReq::parse(version).unwrap());
+		assert_eq!(&**result.version(), &::semver::VersionReq::parse(version).unwrap());
 		assert_eq!(result.required(), &required);
 	}
 
