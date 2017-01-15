@@ -50,14 +50,15 @@ impl API {
 		let page_size = (page_size.unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
 		let page = page.unwrap_or_else(|| ::PageNumber::new(1));
 
-		let mut mods_url = self.mods_url.clone();
-		mods_url.query_pairs_mut()
+		let mut starting_url = self.mods_url.clone();
+		starting_url.query_pairs_mut()
 			.append_pair("q", query)
 			.append_pair("tags", &tags_query)
 			.append_pair("order", order)
-			.append_pair("page_size", &page_size);
+			.append_pair("page_size", &page_size)
+			.append_pair("page", &page.to_string());
 
-		::search::search(&self.client, mods_url, page)
+		::search::search(&self.client, starting_url)
 	}
 
 	/// Gets information about the specified mod.
@@ -174,6 +175,14 @@ mod tests {
 		let mut tags = mod_.tags().iter().filter(|tag| &**tag.name() == "logistics");
 		let tag = tags.next().unwrap();
 		println!("{:?}", tag);
+	}
+
+	#[test]
+	fn search_non_existing() {
+		let api = API::new(None, None, None).unwrap();
+
+		let mut iter = api.search("arnavion's awesome mod", &[], None, None, None);
+		assert!(iter.next().is_none());
 	}
 
 	#[test]

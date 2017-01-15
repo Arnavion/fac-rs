@@ -63,15 +63,10 @@ pub struct SearchResponseMod {
 }
 
 /// Constructs an iterator of search results.
-pub fn search<'a>(
-	client: &'a ::client::Client,
-	mods_url: ::reqwest::Url,
-	starting_page_number: ::PageNumber,
-) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
+pub fn search<'a>(client: &'a ::client::Client, url: ::reqwest::Url) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
 	SearchResultsIterator {
 		client: client,
-		mods_url: mods_url,
-		current_page_number: starting_page_number,
+		url: url,
 		current_page: None,
 		ended: false,
 	}
@@ -81,8 +76,7 @@ pub fn search<'a>(
 #[derive(Debug)]
 struct SearchResultsIterator<'a> {
 	client: &'a ::client::Client,
-	mods_url: ::reqwest::Url,
-	current_page_number: PageNumber,
+	url: ::reqwest::Url,
 	current_page: Option<SearchResponse>,
 	ended: bool,
 }
@@ -95,39 +89,40 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 			return None;
 		}
 
-		match self.current_page {
-			Some(ref mut page) if !page.results.is_empty() => {
-				let result = page.results.remove(0);
-				Some(Ok(result))
-			},
-
-			Some(_) => {
-				*self.current_page_number += 1;
-				self.current_page = None;
-				self.next()
-			},
-
-			None => {
-				let mut mods_url = self.mods_url.clone();
-				mods_url.query_pairs_mut().append_pair("page", &self.current_page_number.to_string());
-
-				match self.client.get_object(mods_url) {
-					Ok(page) => {
-						self.current_page = Some(page);
-						self.next()
-					},
-
-					Err(::Error(::ErrorKind::StatusCode(::reqwest::StatusCode::NotFound), _)) => {
-						self.ended = true;
-						None
-					},
-
-					Err(err) => {
-						self.ended = true;
-						Some(Err(err))
-					},
+		if let Some(mut page) = self.current_page.take() {
+			if page.results.is_empty() {
+				if let Some(next_url) = page.pagination.links.next {
+					self.url = next_url;
+					self.next()
 				}
-			},
+				else {
+					self.ended = true;
+					None
+				}
+			}
+			else {
+				let result = page.results.remove(0);
+				self.current_page = Some(page);
+				Some(Ok(result))
+			}
+		}
+		else {
+			match self.client.get_object(self.url.clone()) {
+				Ok(page) => {
+					self.current_page = Some(page);
+					self.next()
+				},
+
+				Err(::Error(::ErrorKind::StatusCode(::reqwest::StatusCode::NotFound), _)) => {
+					self.ended = true;
+					None
+				},
+
+				Err(err) => {
+					self.ended = true;
+					Some(Err(err))
+				},
+			}
 		}
 	}
 }
@@ -154,8 +149,26 @@ struct SearchResponsePagination {
 /// Pagination link information in a search response.
 #[derive(Debug, Deserialize)]
 struct SearchResponsePaginationLinks {
-	prev: Option<::factorio_mods_common::Url>,
-	next: Option<::factorio_mods_common::Url>,
-	first: Option<::factorio_mods_common::Url>,
-	last: Option<::factorio_mods_common::Url>,
+	#[serde(deserialize_with = "deserialize_url")]
+	prev: Option<::reqwest::Url>,
+
+	#[serde(deserialize_with = "deserialize_url")]
+	next: Option<::reqwest::Url>,
+
+	#[serde(deserialize_with = "deserialize_url")]
+	first: Option<::reqwest::Url>,
+
+	#[serde(deserialize_with = "deserialize_url")]
+	last: Option<::reqwest::Url>,
+}
+
+/// Deserializes a URL.
+pub fn deserialize_url<D>(deserializer: &mut D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer {
+	let url: Option<String> = ::serde::Deserialize::deserialize(deserializer)?;
+	if let Some(url) = url {
+		::reqwest::Url::parse(&url).map(Some).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))
+	}
+	else {
+		Ok(None)
+	}
 }
