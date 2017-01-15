@@ -172,8 +172,7 @@ mod tests {
 		let mut iter = api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None);
 		let mod_ = iter.next().unwrap().unwrap();
 		println!("{:?}", mod_);
-		let mut tags = mod_.tags().iter().filter(|tag| &**tag.name() == "logistics");
-		let tag = tags.next().unwrap();
+		let tag = mod_.tags().iter().find(|tag| &**tag.name() == "logistics").unwrap();
 		println!("{:?}", tag);
 	}
 
