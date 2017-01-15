@@ -29,23 +29,29 @@ extern crate unicode_segmentation;
 
 mod install;
 mod list;
+mod remove;
 mod search;
 mod show;
-mod solve;
+mod update;
 
 mod config;
+mod solve;
 mod util;
 
 fn main() {
 	let install_subcommand = install::SubCommand;
 	let list_subcommand = list::SubCommand;
+	let remove_subcommand = remove::SubCommand;
 	let search_subcommand = search::SubCommand;
 	let show_subcommand = show::SubCommand;
+	let update_subcommand = update::SubCommand;
 	let mut subcommands = std::collections::HashMap::<_, &util::SubCommand<_, _>>::new();
 	subcommands.insert("install", &install_subcommand);
 	subcommands.insert("list", &list_subcommand);
+	subcommands.insert("remove", &remove_subcommand);
 	subcommands.insert("search", &search_subcommand);
 	subcommands.insert("show", &show_subcommand);
+	subcommands.insert("update", &update_subcommand);
 	let subcommands = subcommands;
 
 	let app = clap_app!(@app (app_from_crate!())
