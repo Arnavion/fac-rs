@@ -9,7 +9,7 @@ impl Client {
 	pub fn new(client: Option<::reqwest::Client>, base_url_host: String) -> ::Result<Client> {
 		let mut client = match client {
 			Some(client) => client,
-			None => ::reqwest::Client::new()?,
+			None => ::error::ResultExt::chain_err(::reqwest::Client::new(), || "Could not create HTTP client")?,
 		};
 
 		client.redirect(::reqwest::RedirectPolicy::custom(move |url, _| {
@@ -27,24 +27,24 @@ impl Client {
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
 	pub fn get_object<T>(&self, url: ::reqwest::Url) -> ::Result<T> where T: ::serde::Deserialize {
-		let request = self.client.get(url).header(USER_AGENT.clone()).header(APPLICATION_JSON.clone());
-		let response = send(request)?;
-		let object = json(response)?;
+		let request = self.client.get(url.clone()).header(USER_AGENT.clone()).header(APPLICATION_JSON.clone());
+		let response = send(request, url.clone())?;
+		let object = json(response, url)?;
 		Ok(object)
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
 	pub fn get_zip(&self, url: ::reqwest::Url) -> ::Result<::reqwest::Response> {
-		let request = self.client.get(url).header(USER_AGENT.clone()).header(APPLICATION_ZIP.clone());
-		let response = send(request)?;
+		let request = self.client.get(url.clone()).header(USER_AGENT.clone()).header(APPLICATION_ZIP.clone());
+		let response = send(request, url.clone())?;
 
 		match response.headers().get() {
 			Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
 				(),
 			Some(&::reqwest::header::ContentType(ref mime)) =>
-				bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
+				bail!(::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {}", mime))),
 			None =>
-				bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
+				bail!(::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string())),
 		}
 
 		Ok(response)
@@ -54,9 +54,9 @@ impl Client {
 	pub fn post_object<B, T>(&self, url: ::reqwest::Url, body: &B) -> ::Result<T>
 		where B: ::serde::Serialize, T: ::serde::Deserialize {
 
-		let request = self.client.post(url).header(USER_AGENT.clone()).header(APPLICATION_JSON.clone()).form(body);
-		let response = send(request)?;
-		let object = json(response)?;
+		let request = self.client.post(url.clone()).header(USER_AGENT.clone()).header(APPLICATION_JSON.clone()).form(body);
+		let response = send(request, url.clone())?;
+		let object = json(response, url)?;
 		Ok(object)
 	}
 }
@@ -73,14 +73,14 @@ struct LoginFailureResponse {
 	message: String,
 }
 
-fn send(request: ::reqwest::RequestBuilder) -> ::Result<::reqwest::Response> {
-	let response = request.send()?;
+fn send(request: ::reqwest::RequestBuilder, url: ::reqwest::Url) -> ::Result<::reqwest::Response> {
+	let response = request.send().map_err(|err| ::ErrorKind::HTTP(url.clone(), err))?;
 	Ok(match *response.status() {
 		::reqwest::StatusCode::Ok =>
 			response,
 
 		::reqwest::StatusCode::Unauthorized => {
-			let object: LoginFailureResponse = json(response)?;
+			let object: LoginFailureResponse = json(response, url)?;
 			bail!(::ErrorKind::LoginFailure(object.message))
 		},
 
@@ -88,21 +88,21 @@ fn send(request: ::reqwest::RequestBuilder) -> ::Result<::reqwest::Response> {
 			bail!(::ErrorKind::LoginFailure("Redirected to login page.".to_string())),
 
 		code =>
-			bail!(::ErrorKind::StatusCode(code)),
+			bail!(::ErrorKind::StatusCode(url, code)),
 	})
 }
 
-fn json<T>(mut response: ::reqwest::Response) -> ::Result<T> where T: ::serde::Deserialize {
+fn json<T>(mut response: ::reqwest::Response, url: ::reqwest::Url) -> ::Result<T> where T: ::serde::Deserialize {
 	match response.headers().get() {
 		Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Json, _))) =>
 			(),
 		Some(&::reqwest::header::ContentType(ref mime)) =>
-			bail!(::ErrorKind::MalformedResponse(format!("Unexpected Content-Type header: {}", mime))),
+			bail!(::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {}", mime))),
 		None =>
-			bail!(::ErrorKind::MalformedResponse("No Content-Type header".to_string())),
+			bail!(::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string())),
 	}
 
-	let object = response.json()?;
+	let object = response.json().map_err(|err| ::ErrorKind::HTTP(url, err))?;
 
 	Ok(object)
 }

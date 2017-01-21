@@ -14,8 +14,10 @@ impl API {
 		let game_version = FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 			let search_path = ::std::path::Path::new(search_path);
 			let base_info_file_path = search_path.join("data").join("base").join("info.json");
-			::std::fs::File::open(&base_info_file_path).map_err(::Error::from)
-				.and_then(|base_info_file| ::serde_json::from_reader(base_info_file).map_err(::Error::from))
+			::std::fs::File::open(&base_info_file_path).map_err(|err| ::ErrorKind::IO(base_info_file_path.clone(), err))
+				.and_then(|base_info_file|
+					::serde_json::from_reader(base_info_file)
+					.map_err(|err| ::ErrorKind::JSON(base_info_file_path.clone(), err)))
 				.map(|base_info: BaseInfo| base_info.version)
 				.ok()
 		}).next().ok_or(::ErrorKind::DataPath)?;
@@ -36,8 +38,8 @@ impl API {
 			}).next().ok_or(::ErrorKind::WritePath)?;
 
 		let mod_list_file_path = mods_directory.join("mod-list.json");
-		let mod_list_file = ::std::fs::File::open(&mod_list_file_path)?;
-		let mod_list: ModList = ::serde_json::from_reader(mod_list_file)?;
+		let mod_list_file = ::std::fs::File::open(&mod_list_file_path).map_err(|err| ::ErrorKind::IO(mod_list_file_path.clone(), err))?;
+		let mod_list: ModList = ::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::JSON(mod_list_file_path.clone(), err))?;
 		let mod_status = mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect();
 
 		Ok(API {
@@ -67,8 +69,8 @@ impl API {
 	/// Fetches the locally saved user credentials, if any.
 	pub fn user_credentials(&self) -> ::Result<::factorio_mods_common::UserCredentials> {
 		let player_data_json_file_path = self.write_path.join("player-data.json");
-		let player_data_json_file = ::std::fs::File::open(&player_data_json_file_path)?;
-		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file)?;
+		let player_data_json_file = ::std::fs::File::open(&player_data_json_file_path).map_err(|err| ::ErrorKind::IO(player_data_json_file_path.clone(), err))?;
+		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::JSON(player_data_json_file_path.clone(), err))?;
 		Ok(match (player_data.service_username, player_data.service_token) {
 			(Some(username), Some(token)) => ::factorio_mods_common::UserCredentials::new(username, token),
 			(username, _) => bail!(::ErrorKind::IncompleteUserCredentials(username)),

@@ -1,20 +1,21 @@
 pub struct SubCommand;
 
-impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
+impl ::util::SubCommand for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		clap_app!(@app (subcommand)
 			(about: "Show details about specific mods.")
 			(@arg mods: ... +required index(1) "mods to show"))
 	}
 
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, _: FL, web_api: FW)
-		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API {
-		let web_api = web_api();
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, _: ::Result<::factorio_mods_local::API>, web_api: ::Result<::factorio_mods_web::API>) -> ::Result<()> {
+		use ::ResultExt;
+
+		let web_api = web_api?;
 
 		let names = matches.values_of("mods").unwrap();
 
 		for name in names {
-			let mod_ = web_api.get(&::factorio_mods_common::ModName::new(name.to_string())).unwrap();
+			let mod_ = web_api.get(&::factorio_mods_common::ModName::new(name.to_string())).chain_err(|| format!("Could not retrieve mod {}", name))?;
 
 			println!("Name: {}", mod_.name());
 			println!("Author: {}", ::itertools::join(mod_.owner(), ", "));
@@ -54,5 +55,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 
 			println!("");
 		}
+
+		Ok(())
 	}
 }

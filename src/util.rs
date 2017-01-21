@@ -1,7 +1,6 @@
-pub trait SubCommand<FL, FW> {
+pub trait SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a>;
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, local_api: FL, web_api: FW)
-		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API;
+	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, local_api: ::Result<::factorio_mods_local::API>, web_api: ::Result<::factorio_mods_web::API>) -> ::Result<()>;
 }
 
 pub fn wrapping_println(s: &str, indent: &str, max_width: usize) {
@@ -41,9 +40,11 @@ pub fn wrapping_println(s: &str, indent: &str, max_width: usize) {
 	}
 }
 
-pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: &::factorio_mods_web::API) -> ::factorio_mods_common::UserCredentials {
+pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: &::factorio_mods_web::API) -> ::Result<::factorio_mods_common::UserCredentials> {
+	use ::ResultExt;
+
 	match local_api.user_credentials() {
-		Ok(user_credentials) => user_credentials,
+		Ok(user_credentials) => Ok(user_credentials),
 
 		Err(err) => {
 			if let ::factorio_mods_local::ErrorKind::IncompleteUserCredentials(ref existing_username) = *err.kind() {
@@ -55,22 +56,22 @@ pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: 
 						None => print!("Username: "),
 					}
 					let stdout = ::std::io::stdout();
-					::std::io::Write::flush(&mut stdout.lock()).unwrap();
+					::std::io::Write::flush(&mut stdout.lock()).chain_err(|| "Could not write to stdout")?;
 
 					let mut username = String::new();
-					::std::io::stdin().read_line(&mut username).unwrap();
+					::std::io::stdin().read_line(&mut username).chain_err(|| "Could not read from stdin")?;
 					let username = username.trim().to_string();
 					let username = match(username.is_empty(), existing_username) {
 						(false, _) => ::std::borrow::Cow::Owned(::factorio_mods_common::ServiceUsername::new(username)),
 						(true, &Some(ref username)) => ::std::borrow::Cow::Borrowed(username),
 						_ => continue,
 					};
-					let password = ::rpassword::prompt_password_stdout("Password (not shown): ").unwrap();
+					let password = ::rpassword::prompt_password_stdout("Password (not shown): ").chain_err(|| "Could not read password")?;
 
 					match web_api.login(username.into_owned(), &password) {
 						Ok(user_credentials) => {
 							println!("Logged in successfully.");
-							return user_credentials;
+							return Ok(user_credentials);
 						},
 
 						Err(err) => {
@@ -85,7 +86,7 @@ pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: 
 				}
 			}
 
-			panic!(err);
+			Err(err).chain_err(|| "Could not read user credentials")
 		},
 	}
 }

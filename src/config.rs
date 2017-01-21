@@ -1,3 +1,5 @@
+use ::ResultExt;
+
 mod versions {
 	#[derive(Clone, Debug, Deserialize, Serialize, getters)]
 	pub struct ConfigV1 {
@@ -24,47 +26,58 @@ enum StoredConfig {
 pub type Config = versions::ConfigV1;
 
 impl Config {
-	pub fn load(api: &::factorio_mods_local::API) -> Config {
-		let user_config_dir = ::appdirs::user_config_dir(Some("fac"), None, false).unwrap();
+	pub fn load(api: &::factorio_mods_local::API) -> ::Result<Config> {
+		let user_config_dir = ::appdirs::user_config_dir(Some("fac"), None, false).map_err(|_| "Could not derive path to config directory")?;
+
 		if let Err(err) = ::std::fs::create_dir(&user_config_dir) {
 			match err.kind() {
 				::std::io::ErrorKind::AlreadyExists => { },
-				_ => panic!(err),
+				_ => return Err(err).chain_err(|| format!("Could not create config directory {}", user_config_dir.display())),
 			}
 		}
 
 		let config_file_path = user_config_dir.join("config.json");
-		match ::std::fs::File::open(config_file_path) {
+		let config_file_path_displayable = config_file_path.display();
+
+		match ::std::fs::File::open(&config_file_path) {
 			Ok(mut file) => {
-				let config: StoredConfig = ::serde_json::from_reader(&mut file).unwrap();
+				let config: StoredConfig = ::serde_json::from_reader(&mut file).chain_err(|| format!("Could not parse JSON file {}", config_file_path_displayable))?;
 				let StoredConfig::V1(config) = config;
-				config
+				Ok(config)
 			},
 
 			Err(err) => match err.kind() {
-				::std::io::ErrorKind::NotFound =>
-					versions::DEFAULT_CONFIG_V1.clone().with_mods(api.installed_mods().unwrap().map(|installed_mod| {
-						let installed_mod = installed_mod.unwrap();
-						(installed_mod.info().name().clone(), ::factorio_mods_common::ModVersionReq::new(::semver::VersionReq::any()))
-					}).collect()),
+				::std::io::ErrorKind::NotFound => {
+					let installed_mods: ::Result<_> =
+						api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
+						.map(|mod_|
+							mod_
+							.map(|mod_| (mod_.info().name().clone(), ::factorio_mods_common::ModVersionReq::new(::semver::VersionReq::any())))
+							.chain_err(|| "Could not process an installed mod"))
+						.collect();
+					let installed_mods = installed_mods.chain_err(|| "Could not enumerate installed mods")?;
+					Ok(versions::DEFAULT_CONFIG_V1.clone().with_mods(installed_mods))
+				},
 
-				_ => panic!(err),
+				_ => Err(err).chain_err(|| format!("Could not read config file {}", config_file_path_displayable)),
 			},
 		}
 	}
 
-	pub fn save(self) {
-		let user_config_dir = ::appdirs::user_config_dir(Some("fac"), None, false).unwrap();
+	pub fn save(self) -> ::Result<()> {
+		let user_config_dir = ::appdirs::user_config_dir(Some("fac"), None, false).map_err(|_| "Could not derive path to config directory")?;
 		if let Err(err) = ::std::fs::create_dir(&user_config_dir) {
 			match err.kind() {
 				::std::io::ErrorKind::AlreadyExists => { },
-				_ => panic!(err),
+				_ => return Err(err).chain_err(|| format!("Could not create config directory {}", user_config_dir.display())),
 			}
 		}
 
 		let config_file_path = user_config_dir.join("config.json");
-		let mut config_file = ::std::fs::File::create(config_file_path).unwrap();
-		::serde_json::to_writer_pretty(&mut config_file, &StoredConfig::V1(self)).unwrap()
+		let config_file_path_displayable = config_file_path.display();
+
+		let mut config_file = ::std::fs::File::create(&config_file_path).chain_err(|| format!("Could not create config file {}", config_file_path_displayable))?;
+		::serde_json::to_writer_pretty(&mut config_file, &StoredConfig::V1(self)).chain_err(|| format!("Could not write to config file {}", config_file_path_displayable))
 	}
 }
 

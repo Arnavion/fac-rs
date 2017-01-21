@@ -11,22 +11,22 @@ impl API {
 	/// Constructs an API object with the given parameters.
 	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::reqwest::Client>) -> ::Result<API> {
 		let base_url = match base_url {
-			Some(base_url) => ::reqwest::Url::parse(base_url)?,
+			Some(base_url) => ::reqwest::Url::parse(base_url).map_err(|err| ::ErrorKind::Parse(base_url.to_string(), err))?,
 			None => BASE_URL.clone(),
 		};
 
 		let login_url = match login_url {
-			Some(login_url) => ::reqwest::Url::parse(login_url)?,
+			Some(login_url) => ::reqwest::Url::parse(login_url).map_err(|err| ::ErrorKind::Parse(login_url.to_string(), err))?,
 			None => LOGIN_URL.clone(),
 		};
 
-		let mods_url = base_url.join("/api/mods")?;
+		let mods_url = base_url.join("api/mods").map_err(|err| ::ErrorKind::Parse(format!("{}/api/mods", base_url), err))?;
 		if mods_url.cannot_be_a_base() {
 			bail!("URL {} cannot be a base.", mods_url);
 		}
 
 		let base_url_host = base_url.host_str().ok_or_else(|| format!("URL {} does not have a hostname.", base_url))?.to_string();
-		let client = ::client::Client::new(client, base_url_host)?;
+		let client = ::error::ResultExt::chain_err(::client::Client::new(client, base_url_host), || "Could not initialize HTTP client")?;
 
 		Ok(API {
 			base_url: base_url,
@@ -84,25 +84,26 @@ impl API {
 		release: &::ModRelease,
 		user_credentials: &::factorio_mods_common::UserCredentials,
 	) -> ::Result<impl ::std::io::Read> {
-		let mut download_url = self.base_url.join(release.download_url())?;
+		let release_download_url = release.download_url();
+		let mut download_url = self.base_url.join(release_download_url).map_err(|err| ::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err))?;
 		download_url.query_pairs_mut()
 			.append_pair("username", user_credentials.username())
 			.append_pair("token", user_credentials.token());
 
-		let response = self.client.get_zip(download_url)?;
+		let response = self.client.get_zip(download_url.clone())?;
 
 		let file_size = {
 			if let Some(&::reqwest::header::ContentLength(ref file_size)) = response.headers().get() {
 				*file_size
 			}
 			else {
-				bail!(::ErrorKind::MalformedResponse("No Content-Length header".to_string()));
+				bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
 			}
 		};
 
 		let expected_file_size = **release.file_size();
 		if file_size != expected_file_size {
-			bail!(::ErrorKind::MalformedResponse(format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
+			bail!(::ErrorKind::MalformedResponse(download_url, format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 		}
 
 		Ok(response)

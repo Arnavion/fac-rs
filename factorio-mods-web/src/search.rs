@@ -113,7 +113,7 @@ impl<'a> Iterator for SearchResultsIterator<'a> {
 					self.next()
 				},
 
-				Err(::Error(::ErrorKind::StatusCode(::reqwest::StatusCode::NotFound), _)) => {
+				Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) => {
 					self.ended = true;
 					None
 				},

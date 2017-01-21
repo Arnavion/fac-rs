@@ -1,19 +1,21 @@
 pub struct SubCommand;
 
-impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
+impl ::util::SubCommand for SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
 		clap_app!(@app (subcommand)
 			(about: "List installed mods and their status."))
 	}
 
-	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, local_api: FL, _: FW)
-		where FL: FnOnce() -> ::factorio_mods_local::API, FW: FnOnce() -> ::factorio_mods_web::API {
-		let local_api = local_api();
+	fn run<'a>(&self, _: &::clap::ArgMatches<'a>, local_api: ::Result<::factorio_mods_local::API>, _: ::Result<::factorio_mods_web::API>) -> ::Result<()> {
+		use ::ResultExt;
 
-		let mut installed_mods: Vec<_> = local_api.installed_mods().unwrap().map(Result::unwrap).collect();
+		let local_api = local_api?;
+
+		let installed_mods: Result<Vec<_>, _> = local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?.collect();
+		let mut installed_mods = installed_mods.chain_err(|| "Could not enumerate installed mods")?;
 		if installed_mods.is_empty() {
 			println!("No installed mods.");
-			return;
+			return Ok(());
 		}
 
 		installed_mods.sort_by(|m1, m2|
@@ -37,5 +39,7 @@ impl<FL, FW> ::util::SubCommand<FL, FW> for SubCommand {
 
 			println!("    {} {}{}", installed_mod.info().name(), installed_mod.info().version(), tags_string);
 		}
+
+		Ok(())
 	}
 }

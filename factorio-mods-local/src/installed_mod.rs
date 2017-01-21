@@ -34,34 +34,36 @@ impl InstalledMod {
 			if path.is_file() {
 				match path.extension() {
 					Some(extension) if extension == "zip" => {
-						let zip_file = ::std::fs::File::open(&path)?;
-						let mut zip_file = ::zip::ZipArchive::new(zip_file)?;
+						let zip_file = ::std::fs::File::open(&path).map_err(|err| ::ErrorKind::IO(path.clone(), err))?;
+						let mut zip_file = ::zip::ZipArchive::new(zip_file).map_err(|err| ::ErrorKind::Zip(path.clone(), err))?;
 						if zip_file.len() == 0 {
 							bail!(::ErrorKind::EmptyZippedMod(path.clone()));
 						}
 
 						let toplevel = {
-							let first_file = zip_file.by_index(0)?;
+							let first_file = zip_file.by_index(0).map_err(|err| ::ErrorKind::Zip(path.clone(), err))?;
 							first_file.name().split('/').next().unwrap().to_string()
 						};
 						let info_json_file_path = format!("{}/info.json", toplevel);
-						let info_json_file = zip_file.by_name(&info_json_file_path)?;
-						(::serde_json::from_reader(info_json_file)?, InstalledModType::Zipped)
+						let info_json_file = zip_file.by_name(&info_json_file_path).map_err(|err| ::ErrorKind::Zip(path.clone(), err))?;
+						(::serde_json::from_reader(info_json_file).map_err(|err| ::ErrorKind::JSON(path.clone(), err))?, InstalledModType::Zipped)
 					},
 
-					_ => bail!(::ErrorKind::UnknownModFormat),
+					_ => bail!(::ErrorKind::UnknownModFormat(path.clone())),
 				}
 			}
 			else {
 				let info_json_file_path = path.join("info.json");
 				let info_json_file =
 					::std::fs::File::open(&info_json_file_path).map_err(|err| {
+						let info_json_file_path = info_json_file_path.clone();
+
 						match err.kind() {
-							::std::io::ErrorKind::NotFound => ::ErrorKind::UnknownModFormat.into(),
-							_ => ::Error::from(err),
+							::std::io::ErrorKind::NotFound => ::ErrorKind::UnknownModFormat(info_json_file_path),
+							_ => ::ErrorKind::IO(info_json_file_path, err),
 						}
 					})?;
-				(::serde_json::from_reader(info_json_file)?, InstalledModType::Unpacked)
+				(::serde_json::from_reader(info_json_file).map_err(|err| ::ErrorKind::JSON(info_json_file_path.clone(), err))?, InstalledModType::Unpacked)
 			};
 
 		let enabled = mod_status.get(info.name());
@@ -77,23 +79,12 @@ pub fn find<'a>(
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 ) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'a> {
-	let glob_pattern = mods_directory.join("*");
-
-	let paths =
-		glob_pattern.to_str()
-			.map(::glob::glob)
-			.ok_or_else(|| ::ErrorKind::Utf8Path(glob_pattern))??;
-
-	let name_pattern = if let Some(name_pattern) = name_pattern {
-		Some(::glob::Pattern::new(name_pattern)?)
-	}
-	else {
-		None
-	};
+	let name_pattern = name_pattern.unwrap_or("*");
+	let glob_pattern = mods_directory.join(name_pattern).into_os_string().into_string().map_err(::ErrorKind::Utf8Path)?;
+	let paths = ::glob::glob(&glob_pattern).map_err(|err| ::ErrorKind::Pattern(glob_pattern, err))?;
 
 	Ok(InstalledModIterator {
 		paths: paths,
-		name_pattern: name_pattern,
 		version: version,
 		mod_status: mod_status,
 		ended: false,
@@ -103,7 +94,6 @@ pub fn find<'a>(
 /// An iterator over all the locally installed mods.
 struct InstalledModIterator<'a> {
 	paths: ::glob::Paths,
-	name_pattern: Option<::glob::Pattern>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	ended: bool,
@@ -123,19 +113,13 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 					let installed_mod = match InstalledMod::parse(path, self.mod_status) {
 						Ok(installed_mod) => installed_mod,
 
-						Err(::Error(::ErrorKind::UnknownModFormat, _)) => continue,
+						Err(::Error(::ErrorKind::UnknownModFormat(_), _)) => continue,
 
 						Err(err) => {
 							self.ended = true;
 							return Some(Err(err));
 						},
 					};
-
-					if let Some(ref name_pattern) = self.name_pattern {
-						if !name_pattern.matches(installed_mod.info().name()) {
-							continue;
-						}
-					}
 
 					if let Some(ref version) = self.version {
 						if version != installed_mod.info().version() {
