@@ -69,7 +69,7 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 		impl #struct_name {
 			#(#getters)*
 		}
-	).to_string().parse().unwrap()
+	).parse().unwrap()
 }
 
 /// Derives `serde::Deserialize` on the newtype.
@@ -114,7 +114,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 		None => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field."),
 	};
 
-	result.to_string().parse().unwrap()
+	result.parse().unwrap()
 }
 
 /// Derives `std::fmt::Display` on the newtype.
@@ -145,7 +145,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 		None => panic!("#[derive(newtype_display)] can only be used with tuple structs of one field."),
 	};
 
-	result.to_string().parse().unwrap()
+	result.parse().unwrap()
 }
 
 /// Derives `std::ops::Deref` and `std::ops::DerefMut` on the newtype.
@@ -201,7 +201,7 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 		None => panic!("#[derive(newtype_ref)] can only be used with tuple structs of one field."),
 	};
 
-	result.to_string().parse().unwrap()
+	result.parse().unwrap()
 }
 
 lazy_static! {
