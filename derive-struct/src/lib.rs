@@ -14,7 +14,7 @@ extern crate syn;
 #[proc_macro_derive(getters)]
 pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
+	let ast = syn::parse_derive_input(&source).unwrap();
 	let struct_name = &ast.ident;
 
 	let getters = match ast.body {
@@ -96,7 +96,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 	}
 
 	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
+	let ast = syn::parse_derive_input(&source).unwrap();
 
 	let result = match as_newtype(&ast) {
 		Some(ty) => {
@@ -121,7 +121,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 #[proc_macro_derive(newtype_display)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
+	let ast = syn::parse_derive_input(&source).unwrap();
 
 	let result = match as_newtype(&ast) {
 		Some(ty) => {
@@ -170,7 +170,7 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 	}
 
 	let source = input.to_string();
-	let ast = syn::parse_macro_input(&source).unwrap();
+	let ast = syn::parse_derive_input(&source).unwrap();
 
 	let result = match as_newtype(&ast) {
 		Some(ty) => {

@@ -6,7 +6,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 [dependencies]
 lazy_static = "0.2.x"
 quote = "^0.3.8"
-syn = "0.10.x"
+syn = "0.11.x"
 
 [lib]
 proc-macro = true
