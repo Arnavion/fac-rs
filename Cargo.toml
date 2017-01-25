@@ -8,7 +8,6 @@ description = "Mod manager for Factorio"
 appdirs = "0.2.x"
 clap = "2.20.x"
 derive-error-chain = "0.8.x"
-derive-new = "0.3.x"
 derive-struct = { version = "0.1.0", path = "./derive-struct" }
 error-chain = "0.8.x"
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }

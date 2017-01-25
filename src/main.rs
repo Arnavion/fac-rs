@@ -10,8 +10,6 @@ extern crate error_chain;
 #[macro_use]
 extern crate derive_error_chain;
 #[macro_use]
-extern crate derive_new;
-#[macro_use]
 extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
