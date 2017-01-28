@@ -218,6 +218,13 @@ fn solve(
 				(installable.name(), node_index)
 			}).collect();
 
+			for name in reqs.keys() {
+				match name_to_node_indices.get_vec(name) {
+					Some(node_indices) if !node_indices.is_empty() => { },
+					_ => bail!("No valid installable releases found for {}", name),
+				}
+			}
+
 			node_indices_to_remove.extend(graph.node_indices().filter(|&node_index| {
 				let installable = graph.node_weight(node_index).unwrap();
 
