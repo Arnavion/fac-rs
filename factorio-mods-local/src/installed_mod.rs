@@ -30,41 +30,66 @@ impl InstalledMod {
 		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::Result<InstalledMod> {
-		let (info, mod_type): (::factorio_mods_common::ModInfo, _) =
-			if path.is_file() {
-				match path.extension() {
-					Some(extension) if extension == "zip" => {
-						let zip_file = ::std::fs::File::open(&path).map_err(|err| ::ErrorKind::IO(path.clone(), err))?;
-						let mut zip_file = ::zip::ZipArchive::new(zip_file).map_err(|err| ::ErrorKind::Zip(path.clone(), err))?;
-						if zip_file.len() == 0 {
-							bail!(::ErrorKind::EmptyZippedMod(path.clone()));
-						}
+		let (info, mod_type): (::factorio_mods_common::ModInfo, _) = if path.is_file() {
+			if match path.extension() {
+				Some(extension) if extension == "zip" => true,
+				_ => false,
+			} {
+				let zip_file = match ::std::fs::File::open(&path) {
+					Ok(zip_file) => zip_file,
+					Err(err) => bail!(::ErrorKind::IO(path, err)),
+				};
 
-						let toplevel = {
-							let first_file = zip_file.by_index(0).map_err(|err| ::ErrorKind::Zip(path.clone(), err))?;
-							first_file.name().split('/').next().unwrap().to_string()
-						};
-						let info_json_file_path = format!("{}/info.json", toplevel);
-						let info_json_file = zip_file.by_name(&info_json_file_path).map_err(|err| ::ErrorKind::Zip(path.clone(), err))?;
-						(::serde_json::from_reader(info_json_file).map_err(|err| ::ErrorKind::JSON(path.clone(), err))?, InstalledModType::Zipped)
-					},
+				let mut zip_file = match ::zip::ZipArchive::new(zip_file) {
+					Ok(zip_file) => zip_file,
+					Err(err) => bail!(::ErrorKind::Zip(path, err)),
+				};
 
-					_ => bail!(::ErrorKind::UnknownModFormat(path.clone())),
+				if zip_file.len() == 0 {
+					bail!(::ErrorKind::EmptyZippedMod(path));
+				}
+
+				let toplevel = {
+					let first_file = match zip_file.by_index(0) {
+						Ok(first_file) => first_file,
+						Err(err) => bail!(::ErrorKind::Zip(path, err)),
+					};
+
+					first_file.name().split('/').next().unwrap().to_string()
+				};
+
+				let info_json_file_path = format!("{}/info.json", toplevel);
+
+				let info_json_file = match zip_file.by_name(&info_json_file_path) {
+					Ok(info_json_file) => info_json_file,
+					Err(err) => bail!(::ErrorKind::Zip(path, err)),
+				};
+
+				match ::serde_json::from_reader(info_json_file) {
+					Ok(info) => (info, InstalledModType::Zipped),
+					Err(err) => bail!(::ErrorKind::JSON(path, err)),
 				}
 			}
 			else {
-				let info_json_file_path = path.join("info.json");
-				let info_json_file =
-					::std::fs::File::open(&info_json_file_path).map_err(|err| {
-						let info_json_file_path = info_json_file_path.clone();
+				bail!(::ErrorKind::UnknownModFormat(path));
+			}
+		}
+		else {
+			let info_json_file_path = path.join("info.json");
 
-						match err.kind() {
-							::std::io::ErrorKind::NotFound => ::ErrorKind::UnknownModFormat(info_json_file_path),
-							_ => ::ErrorKind::IO(info_json_file_path, err),
-						}
-					})?;
-				(::serde_json::from_reader(info_json_file).map_err(|err| ::ErrorKind::JSON(info_json_file_path.clone(), err))?, InstalledModType::Unpacked)
+			let info_json_file = match ::std::fs::File::open(&info_json_file_path) {
+				Ok(info_json_file) => info_json_file,
+				Err(err) => match err.kind() {
+					::std::io::ErrorKind::NotFound => bail!(::ErrorKind::UnknownModFormat(info_json_file_path)),
+					_ => bail!(::ErrorKind::IO(info_json_file_path, err)),
+				},
 			};
+
+			match ::serde_json::from_reader(info_json_file) {
+				Ok(info) => (info, InstalledModType::Unpacked),
+				Err(err) => bail!(::ErrorKind::JSON(info_json_file_path, err)),
+			}
+		};
 
 		let enabled = mod_status.get(info.name());
 

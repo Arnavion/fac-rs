@@ -26,7 +26,7 @@ impl ::util::SubCommand for SubCommand {
 			let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
 			let requirement_string = captures.get(2).map(|m| m.as_str()).unwrap_or("*");
 			let requirement = ::semver::VersionReq::parse(requirement_string).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string))?;
-			reqs.insert(name.clone(), ::factorio_mods_common::ModVersionReq::new(requirement));
+			reqs.insert(name, ::factorio_mods_common::ModVersionReq::new(requirement));
 		}
 
 		if ::solve::compute_and_apply_diff(&local_api, &web_api, &reqs)? {
