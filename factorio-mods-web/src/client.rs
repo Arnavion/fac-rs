@@ -27,10 +27,26 @@ impl Client {
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
 	pub fn get_object<T>(&self, url: ::reqwest::Url) -> ::Result<T> where T: ::serde::Deserialize {
-		let request = self.client.get(url.clone()).header(USER_AGENT.clone()).header(APPLICATION_JSON.clone());
-		let response = send(request, url.clone())?;
-		let object = json(response, url)?;
-		Ok(object)
+		loop {
+			let request = self.client.get(url.clone()).header(USER_AGENT.clone()).header(APPLICATION_JSON.clone());
+			match send(request, url.clone()) {
+				Ok(response) => {
+					let object = json(response, url)?;
+					return Ok(object);
+				},
+
+				Err(err) => if match *err.kind() {
+					::ErrorKind::HTTP(_, ::reqwest::Error::Http(::reqwest::HyperError::Io(ref io_err))) => match io_err.kind() {
+						::std::io::ErrorKind::ConnectionAborted => false,
+						_ => true,
+					},
+
+					_ => true,
+				} {
+					return Err(err);
+				},
+			}
+		}
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
