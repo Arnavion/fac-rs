@@ -71,6 +71,7 @@ pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: 
 					match web_api.login(username.into_owned(), &password) {
 						Ok(user_credentials) => {
 							println!("Logged in successfully.");
+							local_api.save_user_credentials(&user_credentials).chain_err(|| "Could not save player-data.json")?;
 							return Ok(user_credentials);
 						},
 

@@ -2,9 +2,9 @@
 #[derive(Debug)]
 pub struct API {
 	game_version: ::factorio_mods_common::ReleaseVersion,
-	write_path: ::std::path::PathBuf,
 	mods_directory: ::std::path::PathBuf,
 	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	player_data_json_file_path: ::std::path::PathBuf,
 }
 
 impl API {
@@ -30,15 +30,16 @@ impl API {
 			base_info.version
 		};
 
-		let (write_path, mods_directory, mod_list_file_path) =
+		let (mods_directory, mod_list_file_path, player_data_json_file_path) =
 			FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 				let search_path = ::std::path::Path::new(search_path);
 
 				let mods_directory = search_path.join("mods");
 				let mod_list_file_path = mods_directory.join("mod-list.json");
+				let player_data_json_file_path = search_path.join("player-data.json");
 
-				if mod_list_file_path.is_file() {
-					Some((search_path.into(), mods_directory, mod_list_file_path))
+				if mod_list_file_path.is_file() && player_data_json_file_path.is_file() {
+					Some((mods_directory, mod_list_file_path, player_data_json_file_path))
 				}
 				else {
 					None
@@ -56,9 +57,9 @@ impl API {
 
 		Ok(API {
 			game_version: game_version,
-			write_path: write_path,
 			mods_directory: mods_directory,
 			mod_status: mod_status,
+			player_data_json_file_path: player_data_json_file_path,
 		})
 	}
 
@@ -79,16 +80,45 @@ impl API {
 
 	/// Fetches the locally saved user credentials, if any.
 	pub fn user_credentials(&self) -> ::Result<::factorio_mods_common::UserCredentials> {
-		let player_data_json_file_path = self.write_path.join("player-data.json");
-		let player_data_json_file = match ::std::fs::File::open(&player_data_json_file_path) {
+		let player_data_json_file_path = &self.player_data_json_file_path;
+
+		let player_data_json_file = match ::std::fs::File::open(player_data_json_file_path) {
 			Ok(player_data_json_file) => player_data_json_file,
-			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path, err)),
+			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
 		};
-		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::JSON(player_data_json_file_path, err))?;
+
+		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::JSON(player_data_json_file_path.into(), err))?;
+
 		Ok(match (player_data.service_username, player_data.service_token) {
 			(Some(username), Some(token)) => ::factorio_mods_common::UserCredentials::new(username, token),
 			(username, _) => bail!(::ErrorKind::IncompleteUserCredentials(username)),
 		})
+	}
+
+	/// Saves the given user credentials to `player-data.json`
+	pub fn save_user_credentials(&self, user_credentials: &::factorio_mods_common::UserCredentials) -> ::Result<()> {
+		let player_data_json_file_path = &self.player_data_json_file_path;
+
+		let mut player_data: ::serde_json::Map<_, _> = {
+			let player_data_json_file = match ::std::fs::File::open(player_data_json_file_path) {
+				Ok(player_data_json_file) => player_data_json_file,
+				Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
+			};
+
+			::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::JSON(player_data_json_file_path.into(), err))?
+		};
+
+		player_data.insert("service-username".to_string(), ::serde_json::Value::String(user_credentials.username().to_string()));
+		player_data.insert("service-token".to_string(), ::serde_json::Value::String(user_credentials.token().to_string()));
+
+		let player_data = player_data;
+
+		let mut player_data_json_file = match ::std::fs::File::create(player_data_json_file_path) {
+			Ok(player_data_json_file) => player_data_json_file,
+			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
+		};
+
+		::serde_json::to_writer_pretty(&mut player_data_json_file, &player_data).map_err(|err| ::ErrorKind::SaveUserCredentials(err).into())
 	}
 }
 

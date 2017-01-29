@@ -61,4 +61,10 @@ pub enum ErrorKind {
 	#[error_chain(custom)]
 	#[error_chain(display = r#"(|f: &mut ::std::fmt::Formatter, _| write!(f, "Valid API credentials were not found in player-data.json"))"#)]
 	IncompleteUserCredentials(Option<::factorio_mods_common::ServiceUsername>),
+
+	/// `player-data.json` could not be saved.
+	#[error_chain(custom)]
+	#[error_chain(display = r#"(|f: &mut ::std::fmt::Formatter, _| write!(f, "Could not save player-data.json"))"#)]
+	#[error_chain(cause = "(|err| err)")]
+	SaveUserCredentials(::serde_json::Error)
 }
