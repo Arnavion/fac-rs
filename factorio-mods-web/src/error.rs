@@ -30,4 +30,9 @@ pub enum ErrorKind {
 	#[error_chain(custom)]
 	#[error_chain(display = r#"(|f: &mut ::std::fmt::Formatter, url, reason| write!(f, "Request to URL {} was malformed: {}", url, reason))"#)]
 	MalformedResponse(::reqwest::Url, String),
+
+	/// Received a redirect to a host that isn't in the allowed list
+	#[error_chain(custom)]
+	#[error_chain(display = r#"(|f: &mut ::std::fmt::Formatter, url| write!(f, "Unexpected redirect to {}", url))"#)]
+	UnexpectedRedirect(::reqwest::Url),
 }

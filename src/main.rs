@@ -81,5 +81,5 @@ quick_main!(|| -> Result<()> {
 	subcommand.run(
 		subcommand_matches.unwrap(),
 		factorio_mods_local::API::new().chain_err(|| "Could not initialize local API"),
-		factorio_mods_web::API::new(None, None, None).chain_err(|| "Could not initialize local API"))
+		factorio_mods_web::API::new(None).chain_err(|| "Could not initialize local API"))
 });

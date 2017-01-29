@@ -2,37 +2,19 @@
 #[derive(Debug)]
 pub struct API {
 	base_url: ::reqwest::Url,
-	login_url: ::reqwest::Url,
 	mods_url: ::reqwest::Url,
+	login_url: ::reqwest::Url,
 	client: ::client::Client,
 }
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(base_url: Option<&str>, login_url: Option<&str>, client: Option<::reqwest::Client>) -> ::Result<API> {
-		let base_url = match base_url {
-			Some(base_url) => ::reqwest::Url::parse(base_url).map_err(|err| ::ErrorKind::Parse(base_url.to_string(), err))?,
-			None => BASE_URL.clone(),
-		};
-
-		let login_url = match login_url {
-			Some(login_url) => ::reqwest::Url::parse(login_url).map_err(|err| ::ErrorKind::Parse(login_url.to_string(), err))?,
-			None => LOGIN_URL.clone(),
-		};
-
-		let mods_url = base_url.join("api/mods").map_err(|err| ::ErrorKind::Parse(format!("{}/api/mods", base_url), err))?;
-		if mods_url.cannot_be_a_base() {
-			bail!("URL {} cannot be a base.", mods_url);
-		}
-
-		let base_url_host = base_url.host_str().ok_or_else(|| format!("URL {} does not have a hostname.", base_url))?.to_string();
-		let client = ::error::ResultExt::chain_err(::client::Client::new(client, base_url_host), || "Could not initialize HTTP client")?;
-
+	pub fn new(client: Option<::reqwest::Client>) -> ::Result<API> {
 		Ok(API {
-			base_url: base_url,
-			login_url: login_url,
-			mods_url: mods_url,
-			client: client,
+			base_url: BASE_URL.clone(),
+			mods_url: MODS_URL.clone(),
+			login_url: LOGIN_URL.clone(),
+			client: ::error::ResultExt::chain_err(::client::Client::new(client), || "Could not initialize HTTP client")?,
 		})
 	}
 
@@ -136,10 +118,10 @@ impl SearchOrder {
 const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
 	static ref BASE_URL: ::reqwest::Url = ::reqwest::Url::parse("https://mods.factorio.com/").unwrap();
+	static ref MODS_URL: ::reqwest::Url = ::reqwest::Url::parse("https://mods.factorio.com/api/mods").unwrap();
 	static ref LOGIN_URL: ::reqwest::Url = ::reqwest::Url::parse("https://auth.factorio.com/api-login").unwrap();
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -147,7 +129,7 @@ mod tests {
 
 	#[test]
 	fn search_list_all_mods() {
-		let api = API::new(None, None, None).unwrap();
+		let api = API::new(None).unwrap();
 
 		let iter = api.search("", &[], None, None, None);
 		let mods = iter.map(|m| m.unwrap()); // Ensure all are Ok()
@@ -158,7 +140,7 @@ mod tests {
 
 	#[test]
 	fn search_by_title() {
-		let api = API::new(None, None, None).unwrap();
+		let api = API::new(None).unwrap();
 
 		let mut iter = api.search("bob's functions library mod", &[], None, None, None);
 		let mod_ = iter.next().unwrap().unwrap();
@@ -168,7 +150,7 @@ mod tests {
 
 	#[test]
 	fn search_by_tag() {
-		let api = API::new(None, None, None).unwrap();
+		let api = API::new(None).unwrap();
 
 		let mut iter = api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None);
 		let mod_ = iter.next().unwrap().unwrap();
@@ -179,7 +161,7 @@ mod tests {
 
 	#[test]
 	fn search_non_existing() {
-		let api = API::new(None, None, None).unwrap();
+		let api = API::new(None).unwrap();
 
 		let mut iter = api.search("arnavion's awesome mod", &[], None, None, None);
 		assert!(iter.next().is_none());
@@ -187,7 +169,7 @@ mod tests {
 
 	#[test]
 	fn get() {
-		let api = API::new(None, None, None).unwrap();
+		let api = API::new(None).unwrap();
 
 		let mod_ = api.get(&::factorio_mods_common::ModName::new("boblibrary".to_string())).unwrap();
 		println!("{:?}", mod_);

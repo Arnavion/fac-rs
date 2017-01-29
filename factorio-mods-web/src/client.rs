@@ -6,20 +6,20 @@ pub struct Client {
 
 impl Client {
 	/// Creates a new `Client` object.
-	pub fn new(client: Option<::reqwest::Client>, base_url_host: String) -> ::Result<Client> {
+	pub fn new(client: Option<::reqwest::Client>) -> ::Result<Client> {
 		let mut client = match client {
 			Some(client) => client,
 			None => ::error::ResultExt::chain_err(::reqwest::Client::new(), || "Could not create HTTP client")?,
 		};
 
-		client.redirect(::reqwest::RedirectPolicy::custom(move |url, _| {
+		client.redirect(::reqwest::RedirectPolicy::custom(|url, _| {
 			if let Some(host) = url.host_str() {
-				if host != base_url_host {
+				if HOSTS_TO_ACCEPT_REDIRECTS_TO.contains(host) {
 					return Ok(true);
 				}
 			}
 
-			Ok(url.path() != "/login")
+			Ok(false)
 		}));
 
 		Ok(Client { client: client })
@@ -78,6 +78,10 @@ impl Client {
 }
 
 lazy_static! {
+	static ref HOSTS_TO_ACCEPT_REDIRECTS_TO: ::std::collections::HashSet<&'static str> = vec![
+		"mods.factorio.com",
+		"mods-data.factorio.com",
+	].into_iter().collect();
 	static ref USER_AGENT: ::reqwest::header::UserAgent = ::reqwest::header::UserAgent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
 	static ref APPLICATION_JSON: ::reqwest::header::Accept = ::reqwest::header::Accept::json();
 	static ref APPLICATION_ZIP: ::reqwest::header::Accept = ::reqwest::header::Accept(vec![::reqwest::header::qitem(mime!(Application/("zip")))]);
@@ -101,7 +105,7 @@ fn send(request: ::reqwest::RequestBuilder, url: ::reqwest::Url) -> ::Result<::r
 		},
 
 		::reqwest::StatusCode::Found =>
-			bail!(::ErrorKind::LoginFailure("Redirected to login page.".to_string())),
+			bail!(::ErrorKind::UnexpectedRedirect(url)),
 
 		code =>
 			bail!(::ErrorKind::StatusCode(url, code)),
