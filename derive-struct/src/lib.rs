@@ -76,16 +76,23 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 #[proc_macro_derive(newtype_deserialize)]
 pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	fn generate_semver(struct_name: &syn::Ident, parser_func_name: quote::Tokens) -> quote::Tokens {
+		let expecting_str = format!("a string that can be deserialized into a {}", struct_name);
+		let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
+
 		quote! {
 			impl ::serde::Deserialize for #struct_name {
-				fn deserialize<D>(deserializer: &mut D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
+				fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
 					struct Visitor;
 
 					impl ::serde::de::Visitor for Visitor {
 						type Value = #struct_name;
 
-						fn visit_str<E>(&mut self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::Error {
-							Ok(#struct_name(#parser_func_name(v).map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))?))
+						fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+							formatter.write_str(#expecting_str)
+						}
+
+						fn visit_str<E>(self, v: &str) -> ::std::result::Result<Self::Value, E> where E: ::serde::de::Error {
+							Ok(#struct_name(#parser_func_name(v).map_err(|err| ::serde::de::Error::custom(format!(#error_str, v, ::std::error::Error::description(&err))))?))
 						}
 					}
 

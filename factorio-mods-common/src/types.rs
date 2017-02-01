@@ -7,7 +7,7 @@ pub struct Url(String);
 pub struct ModName(String);
 
 impl ::serde::Serialize for ModName {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: ::serde::Serializer {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {
 		serializer.serialize_str(&self.0)
 	}
 }
@@ -92,13 +92,17 @@ pub struct Dependency {
 }
 
 impl ::serde::Deserialize for Dependency {
-	fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: ::serde::Deserializer {
 		struct Visitor;
 
 		impl ::serde::de::Visitor for Visitor {
 			type Value = Dependency;
 
-			fn visit_str<E>(&mut self, v: &str) -> Result<Self::Value, E> where E: ::serde::Error {
+			fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+				formatter.write_str("a string")
+			}
+
+			fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: ::serde::de::Error {
 				parse_dependency(v)
 			}
 		}
@@ -112,7 +116,7 @@ impl ::serde::Deserialize for Dependency {
 pub struct ModVersionReq(::semver::VersionReq);
 
 impl ::serde::Serialize for ModVersionReq {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: ::serde::Serializer {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {
 		serializer.serialize_str(&self.0.to_string())
 	}
 }
@@ -187,9 +191,9 @@ lazy_static! {
 }
 
 /// Parses the given string as a Dependency
-fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::Error {
+fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::Error {
 	let captures = DEPENDENCY_REGEX.captures(s)
-		.ok_or_else(|| ::serde::Error::invalid_value(&format!("Invalid dependency format {}", s)))?;
+		.ok_or_else(|| ::serde::de::Error::invalid_value(::serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
 
 	let required = captures[1].is_empty();
 
@@ -203,7 +207,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::Error
 		else {
 			let fixed_version = captures[4].to_string() + &fixup_version(&captures[5]);
 			::semver::VersionReq::parse(&fixed_version)
-				.map_err(|err| ::serde::Error::invalid_value(::std::error::Error::description(&err)))?
+				.map_err(|err| ::serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, ::std::error::Error::description(&err))))?
 		};
 
 	Ok(Dependency { name: ModName(name.to_string()), version: ModVersionReq(version_req), required: required, })

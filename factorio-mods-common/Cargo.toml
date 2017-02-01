@@ -10,8 +10,8 @@ itertools = "0.5.x"
 lazy_static = "0.2.x"
 regex = "0.2.x"
 semver = "0.5.x"
-serde = "0.8.x"
-serde_derive = "0.8.x"
+serde = "0.9.x"
+serde_derive = "0.9.x"
 
 [dev-dependencies]
-serde_json = "0.8.x"
+serde_json = "0.9.x"
