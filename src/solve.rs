@@ -183,9 +183,13 @@ fn solve(
 
 		add_installable(&mut graph, &mut name_to_node_indices, Installable::Base(::factorio_mods_common::ModName::new("base".to_string()), game_version.clone()));
 
+		println!("Fetching releases...");
+
 		for name in reqs.keys() {
 			add_mod(api, &game_version, &mut graph, &mut name_to_node_indices, name)?;
 		}
+
+		println!("Computing solution...");
 
 		let mut edges_to_add = vec![];
 
@@ -384,6 +388,8 @@ fn add_mod(
 	if name_to_node_indices.contains_key(name) {
 		return Ok(());
 	}
+
+	println!("    {} ...", name);
 
 	{
 		let entry = name_to_node_indices.entry(name.clone());
