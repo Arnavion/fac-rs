@@ -6,7 +6,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 [dependencies]
 backtrace = "0.3.x"
 derive-error-chain = "^0.8.1"
-derive-new = "0.3.x"
+derive-new = "0.4.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 error-chain = "0.8.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
