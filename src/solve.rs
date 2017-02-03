@@ -100,8 +100,8 @@ pub fn compute_and_apply_diff(
 		loop {
 			print!("Continue? [y/n]: ");
 
-			let stdout = ::std::io::stdout();
-			::std::io::Write::flush(&mut stdout.lock()).chain_err(|| "Could not write to stdout")?;
+			let mut stdout = ::std::io::stdout();
+			::std::io::Write::flush(&mut stdout).chain_err(|| "Could not write to stdout")?;
 
 			::std::io::stdin().read_line(&mut choice).chain_err(|| "Could not read from stdin")?;
 

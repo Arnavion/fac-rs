@@ -55,8 +55,8 @@ pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: 
 						Some(ref username) => print!("Username [{}]: ", username),
 						None => print!("Username: "),
 					}
-					let stdout = ::std::io::stdout();
-					::std::io::Write::flush(&mut stdout.lock()).chain_err(|| "Could not write to stdout")?;
+					let mut stdout = ::std::io::stdout();
+					::std::io::Write::flush(&mut stdout).chain_err(|| "Could not write to stdout")?;
 
 					let mut username = String::new();
 					::std::io::stdin().read_line(&mut username).chain_err(|| "Could not read from stdin")?;
