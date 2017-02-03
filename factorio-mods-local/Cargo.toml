@@ -13,7 +13,7 @@ error-chain = "0.8.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 glob = "0.2.x"
 lazy_static = "0.2.x"
-semver = "0.5.x"
+semver = "0.6.x"
 serde = "0.9.x"
 serde_derive = "0.9.x"
 serde_json = "0.9.x"
