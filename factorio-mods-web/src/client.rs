@@ -41,6 +41,8 @@ impl Client {
 						_ => true,
 					},
 
+					::ErrorKind::StatusCode(_, ::reqwest::StatusCode::ServiceUnavailable) => false,
+
 					_ => true,
 				} {
 					return Err(err);
