@@ -35,7 +35,7 @@ impl ::util::SubCommand for SubCommand {
 				tags.push("unpacked");
 			}
 
-			let tags_string = if !tags.is_empty() { format!(" ({})", tags.join(", ")) } else { String::new() };
+			let tags_string = if tags.is_empty() { String::new() } else { format!(" ({})", tags.join(", ")) };
 
 			println!("    {} {}{}", installed_mod.info().name(), installed_mod.info().version(), tags_string);
 		}

@@ -193,16 +193,14 @@ fn solve(
 
 		let mut edges_to_add = vec![];
 
-		for (_, node_indices) in name_to_node_indices.iter_all() {
-			for &node_index in node_indices {
-				let installable = &graph[node_index];
-				for dep in installable.dependencies() {
-					if let Some(dep_node_indices) = name_to_node_indices.get_vec(dep.name()) {
-						for &dep_node_index in dep_node_indices {
-							let dep_installable = &graph[dep_node_index];
-							if dep.version().matches(dep_installable.version()) {
-								edges_to_add.push((node_index, dep_node_index, *dep.required()));
-							}
+		for node_index in graph.node_indices() {
+			let installable = &graph[node_index];
+			for dep in installable.dependencies() {
+				if let Some(dep_node_indices) = name_to_node_indices.get_vec(dep.name()) {
+					for &dep_node_index in dep_node_indices {
+						let dep_installable = &graph[dep_node_index];
+						if dep.version().matches(dep_installable.version()) {
+							edges_to_add.push((node_index, dep_node_index, *dep.required()));
 						}
 					}
 				}
@@ -210,7 +208,8 @@ fn solve(
 		}
 
 		for edge_to_add in edges_to_add {
-			graph.update_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
+			assert!(graph.find_edge(edge_to_add.0, edge_to_add.1).is_none());
+			graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
 		}
 	}
 
@@ -288,13 +287,13 @@ fn solve(
 		}
 
 		let node_indices_to_remove = ::itertools::Itertools::sorted_by(node_indices_to_remove.drain(), |i1, i2| i1.cmp(i2).reverse());
-		if !node_indices_to_remove.is_empty() {
+		if node_indices_to_remove.is_empty() {
+			break
+		}
+		else {
 			for node_index in node_indices_to_remove {
 				graph.remove_node(node_index);
 			}
-		}
-		else {
-			break
 		}
 	}
 
