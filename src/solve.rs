@@ -197,11 +197,12 @@ fn solve(
 			for &node_index in node_indices {
 				let installable = graph.node_weight(node_index).unwrap();
 				for dep in installable.dependencies() {
-					let dep_node_indices = name_to_node_indices.get_vec(dep.name()).unwrap();
-					for &dep_node_index in dep_node_indices {
-						let dep_installable = graph.node_weight(dep_node_index).unwrap();
-						if dep.version().matches(dep_installable.version()) {
-							edges_to_add.push((node_index, dep_node_index, *dep.required()));
+					if let Some(dep_node_indices) = name_to_node_indices.get_vec(dep.name()) {
+						for &dep_node_index in dep_node_indices {
+							let dep_installable = graph.node_weight(dep_node_index).unwrap();
+							if dep.version().matches(dep_installable.version()) {
+								edges_to_add.push((node_index, dep_node_index, *dep.required()));
+							}
 						}
 					}
 				}
@@ -403,7 +404,9 @@ fn add_mod(
 					add_installable(graph, name_to_node_indices, Installable::Mod(release.clone()));
 
 					for dep in release.info_json().dependencies() {
-						add_mod(api, game_version, graph, name_to_node_indices, dep.name())?;
+						if *dep.required() {
+							add_mod(api, game_version, graph, name_to_node_indices, dep.name())?;
+						}
 					}
 				}
 			}
