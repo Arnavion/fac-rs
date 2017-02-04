@@ -195,11 +195,11 @@ fn solve(
 
 		for (_, node_indices) in name_to_node_indices.iter_all() {
 			for &node_index in node_indices {
-				let installable = graph.node_weight(node_index).unwrap();
+				let installable = &graph[node_index];
 				for dep in installable.dependencies() {
 					if let Some(dep_node_indices) = name_to_node_indices.get_vec(dep.name()) {
 						for &dep_node_index in dep_node_indices {
-							let dep_installable = graph.node_weight(dep_node_index).unwrap();
+							let dep_installable = &graph[dep_node_index];
 							if dep.version().matches(dep_installable.version()) {
 								edges_to_add.push((node_index, dep_node_index, *dep.required()));
 							}
@@ -219,7 +219,7 @@ fn solve(
 
 		{
 			let name_to_node_indices: ::multimap::MultiMap<_, _> = graph.node_indices().map(|node_index| {
-				let installable = graph.node_weight(node_index).unwrap();
+				let installable = &graph[node_index];
 				(installable.name(), node_index)
 			}).collect();
 
@@ -231,13 +231,13 @@ fn solve(
 			}
 
 			node_indices_to_remove.extend(graph.node_indices().filter(|&node_index| {
-				let installable = graph.node_weight(node_index).unwrap();
+				let installable = &graph[node_index];
 
 				for dep in installable.dependencies() {
 					if *dep.required() {
 						let dep_node_indices = name_to_node_indices.get_vec(dep.name()).unwrap();
 						if !dep_node_indices.into_iter().any(|&dep_node_index| {
-							let dep_installable = graph.node_weight(dep_node_index).unwrap();
+							let dep_installable = &graph[dep_node_index];
 							dep.version().matches(dep_installable.version())
 						}) {
 							return true
@@ -260,20 +260,20 @@ fn solve(
 			}));
 
 			node_indices_to_remove.extend(graph.externals(::petgraph::Direction::Incoming).filter(|&node_index| {
-				let installable = graph.node_weight(node_index).unwrap();
+				let installable = &graph[node_index];
 				!reqs.contains_key(installable.name())
 			}));
 
 			for (_, node_indices) in name_to_node_indices.iter_all() {
 				for &node_index1 in node_indices {
-					let installable1 = graph.node_weight(node_index1).unwrap();
+					let installable1 = &graph[node_index1];
 					let neighbors1: ::std::collections::HashSet<_> = graph.neighbors(node_index1).collect();
 
 					for &node_index2 in node_indices {
 						if node_index2 > node_index1 {
 							let neighbors2: ::std::collections::HashSet<_> = graph.neighbors(node_index2).collect();
 							if neighbors1 == neighbors2 {
-								let installable2 = graph.node_weight(node_index2).unwrap();
+								let installable2 = &graph[node_index2];
 								if installable1.version() < installable2.version() {
 									node_indices_to_remove.insert(node_index1);
 								}
