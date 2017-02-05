@@ -19,6 +19,7 @@ mod versions {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "version")]
 enum StoredConfig {
 	V1(versions::ConfigV1),
 }
