@@ -208,8 +208,22 @@ fn solve(
 		}
 
 		for edge_to_add in edges_to_add {
-			assert!(graph.find_edge(edge_to_add.0, edge_to_add.1).is_none());
-			graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
+			match graph.find_edge(edge_to_add.0, edge_to_add.1) {
+				Some(edge_index) if graph[edge_index] == edge_to_add.2 => {
+					// Duplicate dependency. Eg: ShinyBob v0.14.9 has duplicate dependency "? Laser_Beam_Turrets >= 0.1.8"
+				},
+
+				Some(edge_index) => {
+					// Duplicate dependency but with different required(). Required takes precedence over optional.
+					if edge_to_add.2 {
+						*graph.edge_weight_mut(edge_index).unwrap() = true;
+					}
+				},
+
+				None => {
+					graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
+				}
+			}
 		}
 	}
 
