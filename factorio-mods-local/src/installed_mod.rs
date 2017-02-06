@@ -67,7 +67,7 @@ impl InstalledMod {
 
 				match ::serde_json::from_reader(info_json_file) {
 					Ok(info) => (info, InstalledModType::Zipped),
-					Err(err) => bail!(::ErrorKind::JSON(path, err)),
+					Err(err) => bail!(::ErrorKind::ReadJSONFile(path, err)),
 				}
 			}
 			else {
@@ -87,7 +87,7 @@ impl InstalledMod {
 
 			match ::serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Unpacked),
-				Err(err) => bail!(::ErrorKind::JSON(info_json_file_path, err)),
+				Err(err) => bail!(::ErrorKind::ReadJSONFile(info_json_file_path, err)),
 			}
 		};
 

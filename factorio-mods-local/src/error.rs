@@ -14,11 +14,17 @@ pub enum ErrorKind {
 	#[error_chain(cause = "|_, err| err")]
 	IO(::std::path::PathBuf, ::std::io::Error),
 
-	/// Deserializing some JSON failed
+	/// Reading a JSON file failed
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|path: &::std::path::Path, _| write!(f, "Could not parse the JSON file {}", path.display())"#)]
 	#[error_chain(cause = "|_, err| err")]
-	JSON(::std::path::PathBuf, ::serde_json::Error),
+	ReadJSONFile(::std::path::PathBuf, ::serde_json::Error),
+
+	/// Writing a JSON file failed
+	#[error_chain(custom)]
+	#[error_chain(display = r#"|path: &::std::path::Path, _| write!(f, "Could not save {}", path.display())"#)]
+	#[error_chain(cause = "|_, err| err")]
+	WriteJSONFile(::std::path::PathBuf, ::serde_json::Error),
 
 	/// An error encountered while working with a .zip file
 	#[error_chain(custom)]
@@ -61,16 +67,4 @@ pub enum ErrorKind {
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|_| write!(f, "Valid API credentials were not found in player-data.json")"#)]
 	IncompleteUserCredentials(Option<::factorio_mods_common::ServiceUsername>),
-
-	/// `player-data.json` could not be saved.
-	#[error_chain(custom)]
-	#[error_chain(display = r#"|_| write!(f, "Could not save player-data.json")"#)]
-	#[error_chain(cause = "|err| err")]
-	SaveUserCredentials(::serde_json::Error),
-
-	/// `mod-list.json` could not be saved.
-	#[error_chain(custom)]
-	#[error_chain(display = r#"|_| write!(f, "Could not save mod-list.json")"#)]
-	#[error_chain(cause = "|err| err")]
-	SaveModList(::serde_json::Error),
 }

@@ -26,7 +26,7 @@ impl API {
 				Ok(base_info_file) => base_info_file,
 				Err(err) => bail!(::ErrorKind::IO(base_info_file_path, err)),
 			};
-			let base_info: BaseInfo = ::serde_json::from_reader(base_info_file).map_err(|err| ::ErrorKind::JSON(base_info_file_path, err))?;
+			let base_info: BaseInfo = ::serde_json::from_reader(base_info_file).map_err(|err| ::ErrorKind::ReadJSONFile(base_info_file_path, err))?;
 			base_info.version
 		};
 
@@ -79,7 +79,7 @@ impl API {
 			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
 		};
 
-		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::JSON(player_data_json_file_path.into(), err))?;
+		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?;
 
 		Ok(match (player_data.service_username, player_data.service_token) {
 			(Some(username), Some(token)) => ::factorio_mods_common::UserCredentials::new(username, token),
@@ -97,7 +97,7 @@ impl API {
 				Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
 			};
 
-			::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::JSON(player_data_json_file_path.into(), err))?
+			::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?
 		};
 
 		player_data.insert("service-username".to_string(), ::serde_json::Value::String(user_credentials.username().to_string()));
@@ -110,7 +110,7 @@ impl API {
 			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
 		};
 
-		::serde_json::to_writer_pretty(&mut player_data_json_file, &player_data).map_err(|err| ::ErrorKind::SaveUserCredentials(err).into())
+		::serde_json::to_writer_pretty(&mut player_data_json_file, &player_data).map_err(|err| ::ErrorKind::WriteJSONFile(player_data_json_file_path.into(), err).into())
 	}
 
 	/// Marks the given locally installed mods as enabled or disabled in `mod-list.json`
@@ -130,7 +130,7 @@ impl API {
 			Ok(mod_list_file) => mod_list_file,
 			Err(err) => bail!(::ErrorKind::IO(mod_list_file_path.into(), err)),
 		};
-		let mod_list: ModList = ::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::JSON(mod_list_file_path.into(), err))?;
+		let mod_list: ModList = ::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?;
 		Ok(mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect())
 	}
 
@@ -148,7 +148,7 @@ impl API {
 		mods.sort_by(|mod1, mod2| mod1.name.cmp(&mod2.name));
 
 		let mod_list = ModList { mods: mods };
-		::serde_json::to_writer_pretty(&mut mod_list_file, &mod_list).map_err(|err| ::ErrorKind::SaveModList(err).into())
+		::serde_json::to_writer_pretty(&mut mod_list_file, &mod_list).map_err(|err| ::ErrorKind::WriteJSONFile(mod_list_file_path.into(), err).into())
 	}
 }
 
