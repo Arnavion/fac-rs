@@ -94,23 +94,9 @@ pub fn compute_and_apply_diff(
 		println!("Nothing to do.");
 		return Ok(true);
 	}
-	else {
-		let mut choice = String::new();
 
-		loop {
-			print!("Continue? [y/n]: ");
-
-			let mut stdout = ::std::io::stdout();
-			::std::io::Write::flush(&mut stdout).chain_err(|| "Could not write to stdout")?;
-
-			::std::io::stdin().read_line(&mut choice).chain_err(|| "Could not read from stdin")?;
-
-			match choice.trim() {
-				"y" | "Y" => break,
-				"n" | "N" => return Ok(false),
-				_ => continue,
-			}
-		}
+	if !::util::prompt_continue()? {
+		return Ok(false);
 	}
 
 	let user_credentials = ::util::ensure_user_credentials(local_api, web_api)?;

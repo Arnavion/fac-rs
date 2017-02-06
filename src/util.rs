@@ -91,3 +91,24 @@ pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: 
 		},
 	}
 }
+
+pub fn prompt_continue() -> ::Result<bool> {
+	use ::ResultExt;
+
+	let mut choice = String::new();
+
+	loop {
+		print!("Continue? [y/n]: ");
+
+		let mut stdout = ::std::io::stdout();
+		::std::io::Write::flush(&mut stdout).chain_err(|| "Could not write to stdout")?;
+
+		::std::io::stdin().read_line(&mut choice).chain_err(|| "Could not read from stdin")?;
+
+		match choice.trim() {
+			"y" | "Y" => return Ok(true),
+			"n" | "N" => return Ok(false),
+			_ => continue,
+		}
+	}
+}
