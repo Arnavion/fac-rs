@@ -98,12 +98,12 @@ impl InstalledMod {
 }
 
 /// Constructs an iterator over all the locally installed mods.
-pub fn find<'a>(
+pub fn find(
 	mods_directory: &::std::path::Path,
 	name_pattern: Option<&str>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
-	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'a> {
+	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>>> {
 	let name_pattern = name_pattern.unwrap_or("*");
 	let glob_pattern = mods_directory.join(name_pattern).into_os_string().into_string().map_err(::ErrorKind::Utf8Path)?;
 	let paths = ::glob::glob(&glob_pattern).map_err(|err| ::ErrorKind::Pattern(glob_pattern, err))?;
@@ -117,14 +117,14 @@ pub fn find<'a>(
 }
 
 /// An iterator over all the locally installed mods.
-struct InstalledModIterator<'a> {
+struct InstalledModIterator {
 	paths: ::glob::Paths,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
-	mod_status: &'a ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
+	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	ended: bool,
 }
 
-impl<'a> Iterator for InstalledModIterator<'a> {
+impl Iterator for InstalledModIterator {
 	type Item = ::Result<InstalledMod>;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -135,7 +135,7 @@ impl<'a> Iterator for InstalledModIterator<'a> {
 		loop {
 			match self.paths.next() {
 				Some(Ok(path)) => {
-					let installed_mod = match InstalledMod::parse(path, self.mod_status) {
+					let installed_mod = match InstalledMod::parse(path, &self.mod_status) {
 						Ok(installed_mod) => installed_mod,
 
 						Err(::Error(::ErrorKind::UnknownModFormat(_), _)) => continue,

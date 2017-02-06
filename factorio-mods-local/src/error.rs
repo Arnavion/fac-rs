@@ -66,5 +66,11 @@ pub enum ErrorKind {
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|_| write!(f, "Could not save player-data.json")"#)]
 	#[error_chain(cause = "|err| err")]
-	SaveUserCredentials(::serde_json::Error)
+	SaveUserCredentials(::serde_json::Error),
+
+	/// `mod-list.json` could not be saved.
+	#[error_chain(custom)]
+	#[error_chain(display = r#"|_| write!(f, "Could not save mod-list.json")"#)]
+	#[error_chain(cause = "|err| err")]
+	SaveModList(::serde_json::Error),
 }
