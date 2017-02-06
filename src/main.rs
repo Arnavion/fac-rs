@@ -29,6 +29,7 @@ extern crate serde_json;
 extern crate term_size;
 extern crate unicode_segmentation;
 
+mod enable_disable;
 mod install;
 mod list;
 mod remove;
@@ -48,6 +49,8 @@ pub enum ErrorKind {
 quick_main!(|| -> Result<()> {
 	std::env::set_var("RUST_BACKTRACE", "1");
 
+	let disable_subcommand = enable_disable::DisableSubCommand;
+	let enable_subcommand = enable_disable::EnableSubCommand;
 	let install_subcommand = install::SubCommand;
 	let list_subcommand = list::SubCommand;
 	let remove_subcommand = remove::SubCommand;
@@ -55,6 +58,8 @@ quick_main!(|| -> Result<()> {
 	let show_subcommand = show::SubCommand;
 	let update_subcommand = update::SubCommand;
 	let mut subcommands = std::collections::HashMap::<_, &util::SubCommand>::new();
+	subcommands.insert("disable", &disable_subcommand);
+	subcommands.insert("enable", &enable_subcommand);
 	subcommands.insert("install", &install_subcommand);
 	subcommands.insert("list", &list_subcommand);
 	subcommands.insert("remove", &remove_subcommand);
