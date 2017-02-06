@@ -41,7 +41,8 @@ fn enable_disable<'a>(matches: &::clap::ArgMatches<'a>, local_api: ::Result<::fa
 
 	for (name, installed_mods) in &all_installed_mods {
 		if installed_mods.len() > 1 {
-			bail!("There is more than one version of {} installed. Run `fac update` or remove all but one version manually.", name);
+			println!("There is more than one version of {} installed. Run `fac update` or remove all but one version manually.", name);
+			return Ok(());
 		}
 	}
 
@@ -85,7 +86,7 @@ fn visit_installed_mod<'a>(
 		}
 	}
 	else {
-		bail!("Mod {} is a required dependency but not installed. Run `fac update` to install missing dependencies.", name)
+		println!("Mod {} is a required dependency but not installed. Run `fac update` to install missing dependencies.", name)
 	}
 
 	Ok(())
