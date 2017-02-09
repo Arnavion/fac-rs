@@ -95,9 +95,9 @@ pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: 
 pub fn prompt_continue() -> ::Result<bool> {
 	use ::ResultExt;
 
-	let mut choice = String::new();
-
 	loop {
+		let mut choice = String::new();
+
 		print!("Continue? [y/n]: ");
 
 		let mut stdout = ::std::io::stdout();
