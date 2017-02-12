@@ -179,37 +179,49 @@ fn solve(
 
 		let mut edges_to_add = vec![];
 
-		for node_index in graph.node_indices() {
-			let installable = &graph[node_index];
-			for dep in installable.dependencies() {
-				if let Some(dep_node_indices) = name_to_node_indices.get_vec(dep.name()) {
-					for &dep_node_index in dep_node_indices {
-						let dep_installable = &graph[dep_node_index];
-						if dep.version().matches(dep_installable.version()) {
-							edges_to_add.push((node_index, dep_node_index, *dep.required()));
+		for node_index1 in graph.node_indices() {
+			let installable1 = &graph[node_index1];
+
+			for node_index2 in graph.node_indices() {
+				if node_index1 == node_index2 {
+					continue
+				}
+
+				let installable2 = &graph[node_index2];
+
+				if installable1.name() == installable2.name() {
+					edges_to_add.push((node_index1, node_index2, Relation::Conflicts));
+				}
+				else {
+					let mut requires = false;
+					let mut conflicts = false;
+
+					for dep in installable1.dependencies() {
+						if dep.name() != installable2.name() {
+							continue
 						}
+
+						match (*dep.required(), dep.version().matches(installable2.version())) {
+							(true, true) => requires = true,
+							(false, false) => conflicts = true,
+							_ => continue,
+						}
+					}
+
+					match (requires, conflicts) {
+						(true, true) => bail!("{} {} both requires and conflicts with {} {}", installable1.name(), installable1.version(), installable2.name(), installable2.version()),
+						(true, false) => edges_to_add.push((node_index1, node_index2, Relation::Requires)),
+						(false, true) => edges_to_add.push((node_index1, node_index2, Relation::Conflicts)),
+						(false, false) => { },
 					}
 				}
 			}
 		}
 
 		for edge_to_add in edges_to_add {
-			match graph.find_edge(edge_to_add.0, edge_to_add.1) {
-				Some(edge_index) if graph[edge_index] == edge_to_add.2 => {
-					// Duplicate dependency. Eg: ShinyBob v0.14.9 has duplicate dependency "? Laser_Beam_Turrets >= 0.1.8"
-				},
+			assert!(graph.find_edge(edge_to_add.0, edge_to_add.1).is_none());
 
-				Some(edge_index) => {
-					// Duplicate dependency but with different required(). Required takes precedence over optional.
-					if edge_to_add.2 {
-						*graph.edge_weight_mut(edge_index).unwrap() = true;
-					}
-				},
-
-				None => {
-					graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
-				}
-			}
+			graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
 		}
 	}
 
@@ -232,65 +244,111 @@ fn solve(
 			node_indices_to_remove.extend(graph.node_indices().filter(|&node_index| {
 				let installable = &graph[node_index];
 
-				for dep in installable.dependencies() {
-					if *dep.required() {
-						let dep_node_indices = name_to_node_indices.get_vec(dep.name()).unwrap();
-						if !dep_node_indices.into_iter().any(|&dep_node_index| {
-							let dep_installable = &graph[dep_node_index];
-							dep.version().matches(dep_installable.version())
-						}) {
-							return true
+				let keep = match reqs.get(installable.name()) {
+					// Required installable
+					Some(req) => req.matches(installable.version()),
+
+					// Required by another installable
+					None => graph.edges_directed(node_index, ::petgraph::Direction::Incoming).any(|edge|
+						if let Relation::Requires = *edge.weight() {
+							true
 						}
-					}
-				}
+						else {
+							false
+						}),
+				};
 
-				if let Some(req) = reqs.get(installable.name()) {
-					if !req.matches(installable.version()) {
-						return true
-					}
-				}
-				else {
-					if !graph.edges_directed(node_index, ::petgraph::Direction::Incoming).any(|edge| *edge.weight()) {
-						return true
-					}
-				}
+				// All required dependencies satisfied
+				let keep = keep &&
+					installable.dependencies().into_iter()
+					.filter(|dep| *dep.required()).all(|dep|
+						name_to_node_indices.get_vec(dep.name()).unwrap().into_iter()
+						.any(|&dep_node_index| dep.version().matches(graph[dep_node_index].version())));
 
-				false
+				!keep
 			}));
 
-			node_indices_to_remove.extend(graph.externals(::petgraph::Direction::Incoming).filter(|&node_index| {
-				let installable = &graph[node_index];
-				!reqs.contains_key(installable.name())
-			}));
+			if node_indices_to_remove.is_empty() {
+				for (_, node_indices) in name_to_node_indices.iter_all() {
+					for &node_index1 in node_indices {
+						let installable1 = &graph[node_index1];
 
-			for (_, node_indices) in name_to_node_indices.iter_all() {
-				for &node_index1 in node_indices {
-					let installable1 = &graph[node_index1];
-					let neighbors1: ::std::collections::HashSet<_> = graph.neighbors(node_index1).collect();
+						let neighbors1: ::std::collections::HashSet<_> =
+							graph.edges_directed(node_index1, ::petgraph::Direction::Incoming)
+							.map(|edge| (::petgraph::Direction::Incoming, edge.weight(), ::petgraph::visit::EdgeRef::source(&edge)))
+							.chain(
+								graph.edges(node_index1)
+								.map(|edge| (::petgraph::Direction::Outgoing, edge.weight(), ::petgraph::visit::EdgeRef::target(&edge))))
+							.filter(|&(_, _, neighbor_node_index)| graph[neighbor_node_index].name() != installable1.name())
+							.collect();
 
-					for &node_index2 in node_indices {
-						if node_index2 > node_index1 {
-							let neighbors2: ::std::collections::HashSet<_> = graph.neighbors(node_index2).collect();
-							if neighbors1 == neighbors2 {
+						for &node_index2 in node_indices {
+							if node_index2 > node_index1 {
 								let installable2 = &graph[node_index2];
-								if installable1.version() < installable2.version() {
-									node_indices_to_remove.insert(node_index1);
-								}
-								else {
-									node_indices_to_remove.insert(node_index2);
+
+								let neighbors2: ::std::collections::HashSet<_> =
+									graph.edges_directed(node_index2, ::petgraph::Direction::Incoming)
+									.map(|edge| (::petgraph::Direction::Incoming, edge.weight(), ::petgraph::visit::EdgeRef::source(&edge)))
+									.chain(
+										graph.edges(node_index2)
+										.map(|edge| (::petgraph::Direction::Outgoing, edge.weight(), ::petgraph::visit::EdgeRef::target(&edge))))
+									.filter(|&(_, _, neighbor_node_index)| graph[neighbor_node_index].name() != installable2.name())
+									.collect();
+
+								if neighbors1 == neighbors2 {
+									// Two installables with identical requirements and conflicts. Remove the one with the lower version.
+									if installable1.version() < installable2.version() {
+										node_indices_to_remove.insert(node_index1);
+									}
+									else {
+										node_indices_to_remove.insert(node_index2);
+									}
 								}
 							}
 						}
 					}
 				}
 			}
+
+			if node_indices_to_remove.is_empty() {
+				for req in reqs.keys() {
+					let node_indices = name_to_node_indices.get_vec(req).unwrap();
+
+					let mut common_conflicts = None;
+
+					for &node_index in node_indices {
+						let conflicts: ::std::collections::HashSet<_> =
+							graph.edges(node_index)
+							.filter_map(|edge|
+								if let Relation::Conflicts = *edge.weight() {
+									Some(::petgraph::visit::EdgeRef::target(&edge))
+								}
+								else {
+									None
+								})
+							.collect();
+
+						common_conflicts = if let Some(existing) = common_conflicts {
+							Some(&existing & &conflicts)
+						}
+						else {
+							Some(conflicts)
+						};
+					}
+
+					if let Some(common_conflicts) = common_conflicts {
+						node_indices_to_remove.extend(common_conflicts);
+					}
+				}
+			}
 		}
 
-		let node_indices_to_remove = ::itertools::Itertools::sorted_by(node_indices_to_remove.drain(), |i1, i2| i1.cmp(i2).reverse());
 		if node_indices_to_remove.is_empty() {
 			break
 		}
 		else {
+			let node_indices_to_remove = ::itertools::Itertools::sorted_by(node_indices_to_remove.into_iter(), |i1, i2| i1.cmp(i2).reverse());
+
 			for node_index in node_indices_to_remove {
 				graph.remove_node(node_index);
 			}
@@ -302,7 +360,7 @@ fn solve(
 			graph.into_nodes_edges().0.into_iter().map(|node| {
 				let installable = node.weight;
 				(installable.name().clone(), Some(installable))
-			}).collect();
+		}).collect();
 
 		name_to_installables.into_iter().map(|(name, mut installables)| {
 			if &*name != "base" && !reqs.contains_key(&name) {
@@ -378,10 +436,16 @@ impl Installable {
 	}
 }
 
-fn add_mod(
+#[derive(Debug, PartialEq, Eq, Hash)]
+enum Relation {
+	Requires,
+	Conflicts,
+}
+
+fn add_mod<E>(
 	api: &::factorio_mods_web::API,
 	game_version: &::factorio_mods_common::ReleaseVersion,
-	graph: &mut ::petgraph::Graph<Installable, bool>,
+	graph: &mut ::petgraph::Graph<Installable, E>,
 	name_to_node_indices: &mut ::multimap::MultiMap<::factorio_mods_common::ModName, ::petgraph::graph::NodeIndex>,
 	name: &::factorio_mods_common::ModName,
 ) -> ::Result<()> {
@@ -421,8 +485,8 @@ fn add_mod(
 	}
 }
 
-fn add_installable(
-	graph: &mut ::petgraph::Graph<Installable, bool>,
+fn add_installable<E>(
+	graph: &mut ::petgraph::Graph<Installable, E>,
 	name_to_node_indices: &mut ::multimap::MultiMap<::factorio_mods_common::ModName, ::petgraph::graph::NodeIndex>,
 	installable: Installable,
 ) {
