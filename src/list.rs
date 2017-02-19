@@ -27,7 +27,7 @@ impl ::util::SubCommand for SubCommand {
 		println!("Installed mods:");
 
 		for installed_mod in installed_mods {
-			let mut tags: Vec<&'static str> = vec![];
+			let mut tags = vec![];
 			if !installed_mod.enabled() {
 				tags.push("disabled");
 			}

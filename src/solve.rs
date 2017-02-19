@@ -516,12 +516,9 @@ fn compare<'a>(
 ) -> ::std::cmp::Ordering {
 	for (n1, i1) in s1 {
 		if let Some(i2) = s2.get(n1) {
-			if i1.version() < i2.version() {
-				return ::std::cmp::Ordering::Less
-			}
-
-			if i1.version() > i2.version() {
-				return ::std::cmp::Ordering::Greater
+			match i1.version().cmp(i2.version()) {
+					::std::cmp::Ordering::Equal => { },
+					o => return o,
 			}
 		}
 	}
@@ -546,8 +543,8 @@ impl<'a, T> Permutater<'a, T> {
 
 	fn next(&mut self, values: &mut [Option<&'a T>]) -> bool {
 		if self.advance(values, 0) {
-			for (value_index, element_index) in self.state.iter().enumerate() {
-				values[value_index] = self.possibilities[value_index][*element_index];
+			for (value_index, &element_index) in self.state.iter().enumerate() {
+				values[value_index] = self.possibilities[value_index][element_index];
 			}
 
 			true

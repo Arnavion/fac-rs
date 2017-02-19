@@ -74,14 +74,13 @@ impl API {
 
 		let response = self.client.get_zip(download_url.clone())?;
 
-		let file_size = {
-			if let Some(&::reqwest::header::ContentLength(ref file_size)) = response.headers().get() {
-				*file_size
+		let file_size =
+			if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
+				file_size
 			}
 			else {
 				bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
-			}
-		};
+			};
 
 		let expected_file_size = **release.file_size();
 		if file_size != expected_file_size {
