@@ -201,7 +201,7 @@ fn solve(
 							continue
 						}
 
-						match (*dep.required(), dep.version().matches(installable2.version())) {
+						match (dep.required(), dep.version().matches(installable2.version())) {
 							(true, true) => requires = true,
 							(false, false) => conflicts = true,
 							_ => continue,
@@ -261,7 +261,7 @@ fn solve(
 				// All required dependencies satisfied
 				let keep = keep &&
 					installable.dependencies().into_iter()
-					.filter(|dep| *dep.required()).all(|dep|
+					.filter(|dep| dep.required()).all(|dep|
 						name_to_node_indices.get_vec(dep.name()).unwrap().into_iter()
 						.any(|&dep_node_index| dep.version().matches(graph[dep_node_index].version())));
 
@@ -467,7 +467,7 @@ fn add_mod<E>(
 					add_installable(graph, name_to_node_indices, Installable::Mod(release.clone()));
 
 					for dep in release.info_json().dependencies() {
-						if *dep.required() {
+						if dep.required() {
 							add_mod(api, game_version, graph, name_to_node_indices, dep.name())?;
 						}
 					}
@@ -501,7 +501,7 @@ fn is_valid(solution: &::std::collections::HashMap<&::factorio_mods_common::ModN
 					return false
 				}
 			}
-			else if *dep.required() {
+			else if dep.required() {
 				return false
 			}
 		}

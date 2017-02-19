@@ -31,6 +31,13 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				}).next();
 
 				match identify_type(field_ty) {
+					Some(Type::Bool) => quote! {
+						#field_doc_attr
+						pub fn #field_name(&self) -> bool {
+							self.#field_name
+						}
+					},
+
 					Some(Type::Option { ty }) => quote! {
 						#field_doc_attr
 						pub fn #field_name(&self) -> Option<&#ty> {
@@ -212,6 +219,7 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 }
 
 lazy_static! {
+	static ref TY_BOOL: ::syn::Ty = syn::parse_type("bool").unwrap();
 	static ref TY_SEMVER_VERSION: ::syn::Ty = syn::parse_type("::semver::Version").unwrap();
 	static ref TY_SEMVER_VERSIONREQ: ::syn::Ty = syn::parse_type("::semver::VersionReq").unwrap();
 	static ref TY_STRING: ::syn::Ty = syn::parse_type("String").unwrap();
@@ -227,6 +235,7 @@ fn as_newtype(ast: &syn::MacroInput) -> Option<&syn::Ty> {
 
 #[derive(Debug)]
 enum Type<'a> {
+	Bool,
 	Option { ty: &'a syn::Ty },
 	SemverVersion,
 	SemverVersionReq,
@@ -236,7 +245,10 @@ enum Type<'a> {
 }
 
 fn identify_type<'a>(ty: &'a syn::Ty) -> Option<Type<'a>> {
-	if ty == &*TY_SEMVER_VERSION {
+	if ty == &*TY_BOOL {
+		Some(Type::Bool)
+	}
+	else if ty == &*TY_SEMVER_VERSION {
 		Some(Type::SemverVersion)
 	}
 	else if ty == &*TY_SEMVER_VERSIONREQ {

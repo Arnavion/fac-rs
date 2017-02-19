@@ -234,7 +234,7 @@ mod tests {
 		let result = parse_dependency::<::serde_json::error::Error>(s).unwrap();
 		assert_eq!(&**result.name(), name);
 		assert_eq!(&**result.version(), &::semver::VersionReq::parse(version).unwrap());
-		assert_eq!(result.required(), &required);
+		assert_eq!(result.required(), required);
 	}
 
 	#[test]

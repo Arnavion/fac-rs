@@ -19,7 +19,7 @@ impl ::util::SubCommand for SubCommand {
 		}
 
 		installed_mods.sort_by(|m1, m2|
-			m1.enabled().cmp(m2.enabled()).reverse()
+			m1.enabled().cmp(&m2.enabled()).reverse()
 			.then_with(|| m1.info().name().cmp(m2.info().name())));
 
 		let installed_mods = installed_mods;
