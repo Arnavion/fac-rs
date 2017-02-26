@@ -45,9 +45,7 @@ impl InstalledMod {
 					Err(err) => bail!(::ErrorKind::Zip(path, err)),
 				};
 
-				if zip_file.len() == 0 {
-					bail!(::ErrorKind::EmptyZippedMod(path));
-				}
+				ensure!(zip_file.len() != 0, ::ErrorKind::EmptyZippedMod(path));
 
 				let toplevel = {
 					let first_file = match zip_file.by_index(0) {

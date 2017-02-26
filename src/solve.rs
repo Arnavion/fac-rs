@@ -133,8 +133,9 @@ pub fn compute_and_apply_diff(
 		{
 			let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
 			let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
-			if parent_canonicalized != mods_directory.canonicalize().chain_err(|| format!("Could not canonicalize {}", mods_directory.display()))? {
-				bail!("Filename {} is malformed.", download_displayable_filename);
+			ensure! {
+				parent_canonicalized == mods_directory.canonicalize().chain_err(|| format!("Could not canonicalize {}", mods_directory.display()))?,
+				"Filename {} is malformed.", download_displayable_filename
 			}
 		}
 

@@ -83,8 +83,9 @@ impl API {
 			};
 
 		let expected_file_size = **release.file_size();
-		if file_size != expected_file_size {
-			bail!(::ErrorKind::MalformedResponse(download_url, format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
+		ensure! {
+			file_size == expected_file_size,
+			::ErrorKind::MalformedResponse(download_url, format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size))
 		}
 
 		Ok(response)
