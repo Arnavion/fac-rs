@@ -9,7 +9,7 @@ pub fn compute_and_apply_diff(
 	web_api: &::factorio_mods_web::API,
 	reqs: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
 ) -> ::Result<bool> {
-	let solution = solve(web_api, local_api.game_version().clone(), reqs)?.ok_or("No solution found.")?;
+	let solution = solve(web_api, local_api.game_version(), reqs)?.ok_or("No solution found.")?;
 
 	let all_installed_mods: ::Result<::multimap::MultiMap<_, _>> =
 		local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
@@ -160,7 +160,7 @@ pub fn compute_and_apply_diff(
 
 fn solve(
 	api: &::factorio_mods_web::API,
-	game_version: ::factorio_mods_common::ReleaseVersion,
+	game_version: &::factorio_mods_common::ReleaseVersion,
 	reqs: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
 ) -> ::Result<Option<::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>>> {
 	let mut graph = Default::default();
@@ -173,7 +173,7 @@ fn solve(
 		println!("Fetching releases...");
 
 		for name in reqs.keys() {
-			add_mod(api, &game_version, &mut graph, &mut name_to_node_indices, name)?;
+			add_mod(api, game_version, &mut graph, &mut name_to_node_indices, name)?;
 		}
 
 		println!("Computing solution...");
