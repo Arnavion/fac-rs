@@ -142,8 +142,8 @@ impl API {
 		};
 
 		let mut mods: Vec<_> =
-			mod_status.into_iter().
-			map(|(name, &enabled)| ModListMod { name: name.clone(), enabled: if enabled { "true".to_string() } else { "false".to_string() } })
+			mod_status.into_iter()
+			.map(|(name, &enabled)| ModListMod { name: name.clone(), enabled: if enabled { "true".to_string() } else { "false".to_string() } })
 			.collect();
 		mods.sort_by(|mod1, mod2| mod1.name.cmp(&mod2.name));
 
