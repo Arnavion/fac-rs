@@ -54,9 +54,6 @@ pub struct SearchResponseMod {
 	/// The number of times the mod has been downloaded.
 	downloads_count: ::DownloadCount,
 
-	/// The number of times the mod page has been visited.
-	visits_count: ::VisitCount,
-
 	/// The tags of the mod.
 	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
 	tags: Vec<::Tag>,

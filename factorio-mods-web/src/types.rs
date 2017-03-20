@@ -10,10 +10,6 @@ pub struct RatingCount(u64);
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct DownloadCount(u64);
 
-/// Number of visits.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
-pub struct VisitCount(u64);
-
 /// A mod object returned by `API::get`.
 #[derive(Clone, Debug, Deserialize, new, getters)]
 pub struct Mod {
@@ -70,9 +66,6 @@ pub struct Mod {
 
 	/// The number of times the mod has been downloaded.
 	downloads_count: DownloadCount,
-
-	/// The number of times the mod page has been visited.
-	visits_count: VisitCount,
 
 	/// The tags of the mod.
 	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
