@@ -1,7 +1,5 @@
 //! A CLI tool to manage Factorio mods.
 
-#![feature(ordering_chaining)]
-
 extern crate appdirs;
 #[macro_use]
 extern crate clap;
