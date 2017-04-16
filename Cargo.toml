@@ -23,7 +23,7 @@ semver = "0.6.x"
 serde = "^0.9.6"
 serde_derive = "^0.9.6"
 serde_json = "0.9.x"
-term_size = "0.2.x"
+term_size = "0.3.x"
 unicode-segmentation = "1.x"
 
 [workspace]
