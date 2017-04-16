@@ -57,7 +57,7 @@ impl Client {
 		let response = send(request, url.clone())?;
 
 		match response.headers().get() {
-			Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
+			Some(&::reqwest::header::ContentType(::reqwest::mime::Mime(::reqwest::mime::TopLevel::Application, ::reqwest::mime::SubLevel::Ext(ref sublevel), _))) if sublevel == "zip" =>
 				(),
 			Some(&::reqwest::header::ContentType(ref mime)) =>
 				bail!(::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {}", mime))),
@@ -86,7 +86,9 @@ lazy_static! {
 	].into_iter().collect();
 	static ref USER_AGENT: ::reqwest::header::UserAgent = ::reqwest::header::UserAgent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
 	static ref APPLICATION_JSON: ::reqwest::header::Accept = ::reqwest::header::Accept::json();
-	static ref APPLICATION_ZIP: ::reqwest::header::Accept = ::reqwest::header::Accept(vec![::reqwest::header::qitem(mime!(Application/("zip")))]);
+	static ref APPLICATION_ZIP: ::reqwest::header::Accept =
+		::reqwest::header::Accept(vec![::reqwest::header::qitem(::reqwest::mime::Mime(
+			::reqwest::mime::TopLevel::Application, ::reqwest::mime::SubLevel::Ext("zip".to_string()), vec![]))]);
 }
 
 /// A login failure response.
@@ -116,7 +118,7 @@ fn send(request: ::reqwest::RequestBuilder, url: ::reqwest::Url) -> ::Result<::r
 
 fn json<T>(mut response: ::reqwest::Response, url: ::reqwest::Url) -> ::Result<T> where T: ::serde::Deserialize {
 	match response.headers().get() {
-		Some(&::reqwest::header::ContentType(::mime::Mime(::mime::TopLevel::Application, ::mime::SubLevel::Json, _))) =>
+		Some(&::reqwest::header::ContentType(::reqwest::mime::Mime(::reqwest::mime::TopLevel::Application, ::reqwest::mime::SubLevel::Json, _))) =>
 			(),
 		Some(&::reqwest::header::ContentType(ref mime)) =>
 			bail!(::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {}", mime))),

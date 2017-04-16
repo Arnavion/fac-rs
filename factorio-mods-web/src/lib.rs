@@ -16,8 +16,6 @@ extern crate factorio_mods_common;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate mime;
 pub extern crate reqwest;
 extern crate serde;
 #[macro_use]
