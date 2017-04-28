@@ -14,7 +14,7 @@ extern crate derive_new;
 #[macro_use]
 extern crate derive_struct;
 extern crate factorio_mods_common;
-extern crate glob;
+extern crate globset;
 #[macro_use]
 extern crate lazy_static;
 extern crate semver;

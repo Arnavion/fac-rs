@@ -37,7 +37,7 @@ impl InstalledMod {
 			} {
 				let zip_file = match ::std::fs::File::open(&path) {
 					Ok(zip_file) => zip_file,
-					Err(err) => bail!(::ErrorKind::IO(path, err)),
+					Err(err) => bail!(::ErrorKind::FileIO(path, err)),
 				};
 
 				let mut zip_file = match ::zip::ZipArchive::new(zip_file) {
@@ -79,7 +79,7 @@ impl InstalledMod {
 				Ok(info_json_file) => info_json_file,
 				Err(err) => match err.kind() {
 					::std::io::ErrorKind::NotFound => bail!(::ErrorKind::UnknownModFormat(info_json_file_path)),
-					_ => bail!(::ErrorKind::IO(info_json_file_path, err)),
+					_ => bail!(::ErrorKind::FileIO(info_json_file_path, err)),
 				},
 			};
 
@@ -102,21 +102,24 @@ pub fn find(
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 ) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>>> {
+	let directory_entries = ::std::fs::read_dir(mods_directory)?;
+
 	let name_pattern = name_pattern.unwrap_or("*");
-	let glob_pattern = mods_directory.join(name_pattern).into_os_string().into_string().map_err(::ErrorKind::Utf8Path)?;
-	let paths = ::glob::glob(&glob_pattern).map_err(|err| ::ErrorKind::Pattern(glob_pattern, err))?;
+	let matcher = ::globset::Glob::new(&name_pattern).map_err(|err| ::ErrorKind::Pattern(name_pattern.to_string(), err))?.compile_matcher();
 
 	Ok(InstalledModIterator {
-		paths: paths,
-		version: version,
-		mod_status: mod_status,
+		directory_entries,
+		matcher,
+		version,
+		mod_status,
 		ended: false,
 	})
 }
 
 /// An iterator over all the locally installed mods.
 struct InstalledModIterator {
-	paths: ::glob::Paths,
+	directory_entries: ::std::fs::ReadDir,
+	matcher: ::globset::GlobMatcher,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	ended: bool,
@@ -131,8 +134,22 @@ impl Iterator for InstalledModIterator {
 		}
 
 		loop {
-			match self.paths.next() {
-				Some(Ok(path)) => {
+			match self.directory_entries.next() {
+				Some(Ok(directory_entry)) => {
+					let path = directory_entry.path();
+
+					let matches =
+						if let Some(filename) = path.file_name() {
+							self.matcher.is_match(filename)
+						}
+						else {
+							false
+						};
+
+					if !matches {
+						continue;
+					}
+
 					let installed_mod = match InstalledMod::parse(path, &self.mod_status) {
 						Ok(installed_mod) => installed_mod,
 
@@ -153,13 +170,11 @@ impl Iterator for InstalledModIterator {
 					return Some(Ok(installed_mod));
 				},
 
-				Some(Err(err)) => {
-					return Some(Err(::ErrorKind::Glob(err).into()));
-				},
+				Some(Err(err)) =>
+					return Some(Err(::ErrorKind::IO(err).into())),
 
-				None => {
-					return None;
-				},
+				None =>
+					return None,
 			}
 		}
 	}

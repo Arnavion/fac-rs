@@ -24,7 +24,7 @@ impl API {
 		let game_version = {
 			let base_info_file = match ::std::fs::File::open(&base_info_file_path) {
 				Ok(base_info_file) => base_info_file,
-				Err(err) => bail!(::ErrorKind::IO(base_info_file_path, err)),
+				Err(err) => bail!(::ErrorKind::FileIO(base_info_file_path, err)),
 			};
 			let base_info: BaseInfo = ::serde_json::from_reader(base_info_file).map_err(|err| ::ErrorKind::ReadJSONFile(base_info_file_path, err))?;
 			base_info.version
@@ -76,7 +76,7 @@ impl API {
 
 		let player_data_json_file = match ::std::fs::File::open(player_data_json_file_path) {
 			Ok(player_data_json_file) => player_data_json_file,
-			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
+			Err(err) => bail!(::ErrorKind::FileIO(player_data_json_file_path.into(), err)),
 		};
 
 		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?;
@@ -94,7 +94,7 @@ impl API {
 		let mut player_data: ::serde_json::Map<_, _> = {
 			let player_data_json_file = match ::std::fs::File::open(player_data_json_file_path) {
 				Ok(player_data_json_file) => player_data_json_file,
-				Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
+				Err(err) => bail!(::ErrorKind::FileIO(player_data_json_file_path.into(), err)),
 			};
 
 			::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?
@@ -107,7 +107,7 @@ impl API {
 
 		let mut player_data_json_file = match ::std::fs::File::create(player_data_json_file_path) {
 			Ok(player_data_json_file) => player_data_json_file,
-			Err(err) => bail!(::ErrorKind::IO(player_data_json_file_path.into(), err)),
+			Err(err) => bail!(::ErrorKind::FileIO(player_data_json_file_path.into(), err)),
 		};
 
 		::serde_json::to_writer_pretty(&mut player_data_json_file, &player_data).map_err(|err| ::ErrorKind::WriteJSONFile(player_data_json_file_path.into(), err).into())
@@ -128,7 +128,7 @@ impl API {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mod_list_file = match ::std::fs::File::open(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
-			Err(err) => bail!(::ErrorKind::IO(mod_list_file_path.into(), err)),
+			Err(err) => bail!(::ErrorKind::FileIO(mod_list_file_path.into(), err)),
 		};
 		let mod_list: ModList = ::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?;
 		Ok(mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect())
@@ -138,7 +138,7 @@ impl API {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mut mod_list_file = match ::std::fs::File::create(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
-			Err(err) => bail!(::ErrorKind::IO(mod_list_file_path.into(), err)),
+			Err(err) => bail!(::ErrorKind::FileIO(mod_list_file_path.into(), err)),
 		};
 
 		let mut mods: Vec<_> =

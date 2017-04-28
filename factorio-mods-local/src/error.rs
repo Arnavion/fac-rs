@@ -4,15 +4,15 @@ pub enum ErrorKind {
 	/// A generic error message
 	Msg(String),
 
-	/// An error encountered while iterating over a glob result
+	/// An IO error
 	#[error_chain(foreign)]
-	Glob(::glob::GlobError),
+	IO(::std::io::Error),
 
 	/// An IO error
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|path: &::std::path::Path, _| write!(f, "IO error on file {}", path.display())"#)]
 	#[error_chain(cause = "|_, err| err")]
-	IO(::std::path::PathBuf, ::std::io::Error),
+	FileIO(::std::path::PathBuf, ::std::io::Error),
 
 	/// Reading a JSON file failed
 	#[error_chain(custom)]
@@ -42,16 +42,11 @@ pub enum ErrorKind {
 	#[error_chain(display = r#"|path: &::std::path::Path| write!(f, "The mod at {} could not be recognized as a valid mod", path.display())"#)]
 	UnknownModFormat(::std::path::PathBuf),
 
-	/// The glob cannot be constructed because the pattern is not UTF-8
-	#[error_chain(custom)]
-	#[error_chain(display = r#"|pattern| write!(f, "The pattern {:?} is not valid UTF-8 and thus cannot be converted into a glob", pattern)"#)]
-	Utf8Path(::std::ffi::OsString),
-
 	/// Generating a glob from a pattern failed
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|pattern, _| write!(f, "The pattern {} is invalid", pattern)"#)]
 	#[error_chain(cause = "|_, err| err")]
-	Pattern(String, ::glob::PatternError),
+	Pattern(String, ::globset::Error),
 
 	/// The local Factorio installation could not be found.
 	#[error_chain(custom)]
