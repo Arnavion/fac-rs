@@ -62,8 +62,8 @@ pub struct SearchResponseMod {
 /// Constructs an iterator of search results.
 pub fn search<'a>(client: &'a ::client::Client, url: ::reqwest::Url) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
 	SearchResultsIterator {
-		client: client,
-		url: url,
+		client,
+		url,
 		current_page: None,
 		ended: false,
 	}

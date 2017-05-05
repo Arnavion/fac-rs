@@ -47,10 +47,10 @@ impl API {
 			}).next().ok_or(::ErrorKind::WritePath)?;
 
 		Ok(API {
-			game_version: game_version,
-			mods_directory: mods_directory,
-			mod_list_file_path: mod_list_file_path,
-			player_data_json_file_path: player_data_json_file_path,
+			game_version,
+			mods_directory,
+			mod_list_file_path,
+			player_data_json_file_path,
 		})
 	}
 
@@ -147,7 +147,7 @@ impl API {
 			.collect();
 		mods.sort_by(|mod1, mod2| mod1.name.cmp(&mod2.name));
 
-		let mod_list = ModList { mods: mods };
+		let mod_list = ModList { mods };
 		::serde_json::to_writer_pretty(&mut mod_list_file, &mod_list).map_err(|err| ::ErrorKind::WriteJSONFile(mod_list_file_path.into(), err).into())
 	}
 }

@@ -9,7 +9,7 @@ mod versions {
 
 	impl ConfigV1 {
 		pub fn with_mods(self, mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>) -> ConfigV1 {
-			ConfigV1 { mods: mods, .. self }
+			ConfigV1 { mods, .. self }
 		}
 	}
 

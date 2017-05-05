@@ -22,7 +22,7 @@ impl Client {
 			Ok(false)
 		}));
 
-		Ok(Client { client: client })
+		Ok(Client { client })
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.

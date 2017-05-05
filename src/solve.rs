@@ -537,7 +537,7 @@ impl<'a, T> Permutater<'a, T> {
 	fn new(possibilities: &'a [&'a [Option<&'a T>]]) -> Permutater<'a, T> {
 		Permutater {
 			state: vec![0; possibilities.len()],
-			possibilities: possibilities,
+			possibilities,
 			run_once: false,
 		}
 	}

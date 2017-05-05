@@ -210,7 +210,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::E
 				.map_err(|err| ::serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, ::std::error::Error::description(&err))))?
 		};
 
-	Ok(Dependency { name: ModName(name.to_string()), version: ModVersionReq(version_req), required: required, })
+	Ok(Dependency { name: ModName(name.to_string()), version: ModVersionReq(version_req), required, })
 }
 
 #[cfg(test)]
