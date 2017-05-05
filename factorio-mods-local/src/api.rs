@@ -131,7 +131,7 @@ impl API {
 			Err(err) => bail!(::ErrorKind::FileIO(mod_list_file_path.into(), err)),
 		};
 		let mod_list: ModList = ::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?;
-		Ok(mod_list.mods.into_iter().map(|m| (m.name, m.enabled == "true")).collect())
+		Ok(mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect())
 	}
 
 	fn save_mod_status(&self, mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>) -> ::Result<()> {
@@ -143,7 +143,7 @@ impl API {
 
 		let mut mods: Vec<_> =
 			mod_status.into_iter()
-			.map(|(name, &enabled)| ModListMod { name: name.clone(), enabled: if enabled { "true".to_string() } else { "false".to_string() } })
+			.map(|(name, &enabled)| ModListMod { name: name.clone(), enabled })
 			.collect();
 		mods.sort_by(|mod1, mod2| mod1.name.cmp(&mod2.name));
 
@@ -215,7 +215,7 @@ struct ModList {
 #[derive(Debug, Deserialize, Serialize)]
 struct ModListMod {
 	name: ::factorio_mods_common::ModName,
-	enabled: String,
+	enabled: bool,
 }
 
 /// Represents the contents of `base/info.json`
