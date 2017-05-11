@@ -105,7 +105,7 @@ pub fn find(
 	let directory_entries = ::std::fs::read_dir(mods_directory)?;
 
 	let name_pattern = name_pattern.unwrap_or("*");
-	let matcher = ::globset::Glob::new(&name_pattern).map_err(|err| ::ErrorKind::Pattern(name_pattern.to_string(), err))?.compile_matcher();
+	let matcher = ::globset::Glob::new(name_pattern).map_err(|err| ::ErrorKind::Pattern(name_pattern.to_string(), err))?.compile_matcher();
 
 	Ok(InstalledModIterator {
 		directory_entries,
