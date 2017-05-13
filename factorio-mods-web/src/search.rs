@@ -160,7 +160,7 @@ struct SearchResponsePaginationLinks {
 }
 
 /// Deserializes a URL.
-pub fn deserialize_url<D>(deserializer: D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer {
+pub fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer<'de> {
 	let url: Option<String> = ::serde::Deserialize::deserialize(deserializer)?;
 	if let Some(url) = url {
 		::reqwest::Url::parse(&url).map(Some)

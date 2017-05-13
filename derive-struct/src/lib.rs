@@ -87,11 +87,11 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 		let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
 
 		quote! {
-			impl ::serde::Deserialize for #struct_name {
-				fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer {
+			impl<'de> ::serde::Deserialize<'de> for #struct_name {
+				fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error> where D: ::serde::Deserializer<'de> {
 					struct Visitor;
 
-					impl ::serde::de::Visitor for Visitor {
+					impl<'de> ::serde::de::Visitor<'de> for Visitor {
 						type Value = #struct_name;
 
 						fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -103,7 +103,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 						}
 					}
 
-					deserializer.deserialize(Visitor)
+					deserializer.deserialize_any(Visitor)
 				}
 			}
 		}

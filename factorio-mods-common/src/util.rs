@@ -1,57 +1,61 @@
 /// Deserializes a string or a sequence of strings into a vector of the target type.
-pub fn deserialize_string_or_seq_string<T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
-	where T: ::serde::Deserialize, D: ::serde::Deserializer {
+pub fn deserialize_string_or_seq_string<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
+	where T: ::serde::Deserialize<'de>, D: ::serde::Deserializer<'de> {
 
 	struct Visitor<T>(::std::marker::PhantomData<T>);
 
-	impl<T> ::serde::de::Visitor for Visitor<T> where T: ::serde::Deserialize {
+	impl<'de, T> ::serde::de::Visitor<'de> for Visitor<T>
+		where T: ::serde::Deserialize<'de> {
+
 		type Value = Vec<T>;
 
-		fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-			formatter.write_str("a string or sequence of strings")
+		fn expecting(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+			write!(f, "a string or sequence of strings")
 		}
 
-		fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: ::serde::de::Error {
+		fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+			where E: ::serde::de::Error {
+
 			let value = {
+				// Try parsing as a newtype
 				let deserializer = StringNewTypeStructDeserializer(v, ::std::marker::PhantomData);
 				::serde::Deserialize::deserialize(deserializer)
 			}.or_else(|_: E| {
-				let deserializer = ::serde::de::value::ValueDeserializer::into_deserializer(v);
+				// Try parsing as a str
+				let deserializer = ::serde::de::IntoDeserializer::into_deserializer(v);
 				::serde::Deserialize::deserialize(deserializer)
 			})?;
 			Ok(vec![value])
 		}
 
-		fn visit_seq<V>(self, mut visitor: V) -> ::std::result::Result<Self::Value, V::Error> where V: ::serde::de::SeqVisitor {
-			let mut result: Vec<T> = vec![];
+		fn visit_seq<A>(self, visitor: A) -> Result<Self::Value, A::Error>
+			where A: ::serde::de::SeqAccess<'de> {
 
-			while let Some(value) = visitor.visit()? {
-				result.push(value);
-			}
-
-			Ok(result)
+			::serde::Deserialize::deserialize(::serde::de::value::SeqAccessDeserializer::new(visitor))
 		}
 	}
 
-	deserializer.deserialize(Visitor(::std::marker::PhantomData))
+	deserializer.deserialize_any(Visitor(::std::marker::PhantomData))
 }
 
+// Tries to deserialize the given string as a newtype
 struct StringNewTypeStructDeserializer<'a, E>(&'a str, ::std::marker::PhantomData<E>);
 
-impl<'a, E> ::serde::Deserializer for StringNewTypeStructDeserializer<'a, E> where E: ::serde::de::Error {
+impl<'de, 'a, E> ::serde::Deserializer<'de> for StringNewTypeStructDeserializer<'a, E> where E: ::serde::de::Error {
 	type Error = E;
 
-	fn deserialize<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: ::serde::de::Visitor {
+	fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: ::serde::de::Visitor<'de> {
 		visitor.visit_newtype_struct(self)
 	}
 
-	fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: ::serde::de::Visitor {
+	fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: ::serde::de::Visitor<'de> {
+		// Called by newtype visitor
 		visitor.visit_str(self.0)
 	}
 
-	forward_to_deserialize! {
-		bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str
-		unit option seq seq_fixed_size bytes map unit_struct newtype_struct
-		tuple_struct struct struct_field tuple enum ignored_any byte_buf
+	forward_to_deserialize_any! {
+		bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str bytes
+		byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct map
+		struct enum identifier ignored_any
 	}
 }
