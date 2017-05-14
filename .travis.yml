@@ -2,7 +2,7 @@ language: rust
 rust:
 - nightly
 
-script: cd $CRATE && cargo build --verbose && cargo test --verbose
+script: cd $CRATE && cargo build --verbose && cargo test --verbose && cargo install clippy && cargo clippy --verbose
 
 env:
 - CRATE=factorio-mods-common

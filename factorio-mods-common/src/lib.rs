@@ -1,6 +1,17 @@
+//! Common types and functionality used by the other factorio-mods crates.
+
 #![deny(missing_docs)]
 
-//! Common types and functionality used by the other factorio-mods crates.
+#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+#![cfg_attr(feature = "cargo-clippy", allow(
+	missing_docs_in_private_items,
+	option_unwrap_used,
+	result_unwrap_used,
+	string_add,
+	too_many_arguments,
+	unseparated_literal_suffix,
+	use_debug,
+))]
 
 #[macro_use]
 extern crate derive_new;

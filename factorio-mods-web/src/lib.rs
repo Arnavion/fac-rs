@@ -1,7 +1,18 @@
+//! API to interface with https://mods.factorio.com/
+
 #![deny(missing_docs)]
 #![feature(conservative_impl_trait)]
 
-//! API to interface with https://mods.factorio.com/
+#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+#![cfg_attr(feature = "cargo-clippy", allow(
+	missing_docs_in_private_items,
+	result_unwrap_used,
+	shadow_reuse,
+	stutter,
+	too_many_arguments,
+	unseparated_literal_suffix,
+	use_debug,
+))]
 
 extern crate backtrace;
 #[macro_use]

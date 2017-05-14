@@ -1,7 +1,7 @@
+//! A helper crate for easily deriving structs.
+
 #![crate_type = "proc-macro"]
 #![recursion_limit = "200"]
-
-//! A helper crate for easily deriving structs.
 
 #[macro_use]
 extern crate lazy_static;

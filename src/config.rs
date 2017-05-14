@@ -9,6 +9,7 @@ mod versions {
 
 	impl ConfigV1 {
 		pub fn with_mods(self, mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>) -> ConfigV1 {
+			#[cfg_attr(feature = "cargo-clippy", allow(needless_update))]
 			ConfigV1 { mods, .. self }
 		}
 	}
