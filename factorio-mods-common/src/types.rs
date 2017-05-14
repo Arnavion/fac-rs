@@ -199,7 +199,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::E
 
 	let name = ModName::new(captures[2].to_string());
 
-	let version_req_string = captures.get(3).map(|m| m.as_str()).unwrap_or("*");
+	let version_req_string = captures.get(3).map_or("*", |m| m.as_str());
 	let version_req =
 		if let Ok(version_req) = parse_version_req(version_req_string) {
 			version_req

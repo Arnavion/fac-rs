@@ -84,10 +84,10 @@ impl Config {
 
 fn serialize_config_mods<'a, I, S>(value: I, serializer: S) -> Result<S::Ok, S::Error>
 	where I: IntoIterator<Item = (&'a ::factorio_mods_common::ModName, &'a ::factorio_mods_common::ModVersionReq)>, S: ::serde::Serializer {
-	let mut serializer = serializer.serialize_map(None)?;
+	let mut map = serializer.serialize_map(None)?;
 	for (name, req) in ::itertools::Itertools::sorted_by(value.into_iter(), |&(n1, _), &(n2, _)| n1.cmp(n2)) {
-		::serde::ser::SerializeMap::serialize_key(&mut serializer, name)?;
-		::serde::ser::SerializeMap::serialize_value(&mut serializer, req)?;
+		::serde::ser::SerializeMap::serialize_key(&mut map, name)?;
+		::serde::ser::SerializeMap::serialize_value(&mut map, req)?;
 	}
-	::serde::ser::SerializeMap::end(serializer)
+	::serde::ser::SerializeMap::end(map)
 }

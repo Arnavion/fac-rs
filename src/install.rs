@@ -24,7 +24,7 @@ impl ::util::SubCommand for SubCommand {
 		for requirement in requirements {
 			let captures = REQUIREMENT_REGEX.captures(requirement).ok_or_else(|| format!(r#"Could not parse requirement "{}""#, requirement))?;
 			let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
-			let requirement_string = captures.get(2).map(|m| m.as_str()).unwrap_or("*");
+			let requirement_string = captures.get(2).map_or("*", |m| m.as_str());
 			let requirement = ::semver::VersionReq::parse(requirement_string).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string))?;
 			reqs.insert(name, ::factorio_mods_common::ModVersionReq::new(requirement));
 		}
