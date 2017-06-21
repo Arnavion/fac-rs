@@ -37,7 +37,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate term_size;
-extern crate unicode_segmentation;
+extern crate textwrap;
 
 mod enable_disable;
 mod install;

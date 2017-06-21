@@ -24,6 +24,6 @@ serde = "1.0.x"
 serde_derive = "1.0.x"
 serde_json = "1.0.x"
 term_size = "0.3.x"
-unicode-segmentation = "1.x"
+textwrap = "0.6.x"
 
 [workspace]
