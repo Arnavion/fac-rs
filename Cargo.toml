@@ -6,7 +6,7 @@ description = "Mod manager for Factorio"
 
 [dependencies]
 appdirs = "0.2.x"
-clap = "2.24.x"
+clap = "2.25.x"
 derive-error-chain = "0.10.x"
 derive-struct = { version = "0.1.0", path = "./derive-struct" }
 error-chain = "0.10.x"
