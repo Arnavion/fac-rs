@@ -223,6 +223,8 @@ struct ModList {
 #[derive(Debug, Deserialize, Serialize)]
 struct ModListMod {
 	name: ::factorio_mods_common::ModName,
+
+	#[serde(deserialize_with = "deserialize_mod_list_mod_enabled")]
 	enabled: bool,
 }
 
@@ -239,4 +241,29 @@ struct PlayerData {
 	service_username: Option<::factorio_mods_common::ServiceUsername>,
 	#[serde(rename(deserialize = "service-token"))]
 	service_token: Option<::factorio_mods_common::ServiceToken>,
+}
+
+/// Deserializes the `enabled` field of a mod in `mod-list.json`, which can be a JSON string or a JSON boolean.
+pub fn deserialize_mod_list_mod_enabled<'de, D>(deserializer: D) -> Result<bool, D::Error>
+	where D: ::serde::Deserializer<'de> {
+
+	struct Visitor;
+
+	impl<'de> ::serde::de::Visitor<'de> for Visitor {
+		type Value = bool;
+
+		fn expecting(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+			write!(f, r#""true" or "false" or true or false"#)
+		}
+
+		fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E> where E: ::serde::de::Error {
+			Ok(v)
+		}
+
+		fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: ::serde::de::Error {
+			v.parse().map_err(|_| ::serde::de::Error::invalid_value(::serde::de::Unexpected::Str(v), &self))
+		}
+	}
+
+	deserializer.deserialize_any(Visitor)
 }
