@@ -182,7 +182,7 @@ lazy_static! {
 
 		if let Ok(user_data_dir) = ::appdirs::user_data_dir(Some("Steam"), None, false) {
 			let mut steam_directory = user_data_dir;
-			steam_directory.push("SteamApps");
+			steam_directory.push("steamapps");
 			steam_directory.push("common");
 			steam_directory.push("Factorio");
 			if steam_directory.is_dir() {
@@ -199,6 +199,14 @@ lazy_static! {
 			}
 
 			result.push(::std::path::PathBuf::from(r"C:\Program Files (x86)\Steam\steamapps\common\Factorio"));
+		}
+
+		if cfg!(target_os = "linux") {
+			if let Some(home) = ::std::env::var_os("HOME") {
+				let home_directory = ::std::path::Path::new(&home);
+				result.push(home_directory.join("factorio"));
+				result.push(home_directory.join(".factorio"));
+			}
 		}
 
 		result
