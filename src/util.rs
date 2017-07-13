@@ -1,71 +1,109 @@
+use ::futures::{ future, Future, IntoFuture };
+
 pub trait SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a>;
-	fn run<'a>(&self, matches: &::clap::ArgMatches<'a>, local_api: ::Result<::factorio_mods_local::API>, web_api: ::Result<::factorio_mods_web::API>) -> ::Result<()>;
+	fn run<'a, 'b, 'c>(
+		&'a self,
+		matches: &'a ::clap::ArgMatches<'b>,
+		local_api: ::Result<&'c ::factorio_mods_local::API>,
+		web_api: ::Result<&'c ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c;
 }
 
-pub fn wrapping_println(s: &str, indent: &str, max_width: usize) {
-	let wrapper = ::textwrap::Wrapper {
-		width: max_width,
-		initial_indent: indent,
-		subsequent_indent: indent,
-		break_words: true,
-		squeeze_whitespace: true,
-		splitter: Box::new(::textwrap::NoHyphenation),
-	};
+pub fn wrapping_println(s: &str, indent: &str) {
+	match ::term_size::dimensions() {
+		Some((width, _)) => {
+			let wrapper = ::textwrap::Wrapper {
+				width,
+				initial_indent: indent,
+				subsequent_indent: indent,
+				break_words: true,
+				squeeze_whitespace: true,
+				splitter: Box::new(::textwrap::NoHyphenation),
+			};
 
-	for line in wrapper.wrap(s) {
-		println!("{}", line);
+			for line in wrapper.wrap(s) {
+				println!("{}", line);
+			}
+		},
+
+		None =>
+			println!("{}{}", indent, s),
 	}
 }
 
-pub fn ensure_user_credentials(local_api: &::factorio_mods_local::API, web_api: &::factorio_mods_web::API) -> ::Result<::factorio_mods_common::UserCredentials> {
+pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, web_api: &'a ::factorio_mods_web::API) ->
+	impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'a {
+
 	use ::ResultExt;
 
 	match local_api.user_credentials() {
-		Ok(user_credentials) => Ok(user_credentials),
+		Ok(user_credentials) =>
+			future::Either::A(future::ok(user_credentials)),
 
 		Err(err) => {
-			if let ::factorio_mods_local::ErrorKind::IncompleteUserCredentials(ref existing_username) = *err.kind() {
-				loop {
+			let existing_username = if let ::factorio_mods_local::ErrorKind::IncompleteUserCredentials(ref existing_username) = *err.kind() {
+				Some(existing_username.clone())
+			}
+			else {
+				None
+			};
+
+			let existing_username = if let Some(existing_username) = existing_username {
+				existing_username
+			}
+			else {
+				return future::Either::A(Err(err).chain_err(|| "Could not read user credentials").into_future());
+			};
+
+			future::Either::B(
+				future::loop_fn((), move |()| {
 					println!("You need a Factorio account to download mods.");
 					println!("Please provide your username and password to authenticate yourself.");
-					match *existing_username {
+					match existing_username {
 						Some(ref username) => print!("Username [{}]: ", username),
 						None => print!("Username: "),
 					}
 					let mut stdout = ::std::io::stdout();
-					::std::io::Write::flush(&mut stdout).chain_err(|| "Could not write to stdout")?;
+					if let Err(err) = ::std::io::Write::flush(&mut stdout) {
+						return future::Either::A(Err(err).chain_err(|| "Could not write to stdout").into_future());
+					}
 
 					let mut username = String::new();
-					::std::io::stdin().read_line(&mut username).chain_err(|| "Could not read from stdin")?;
-					let username = username.trim().to_string();
-					let username = match(username.is_empty(), existing_username) {
-						(false, _) => ::std::borrow::Cow::Owned(::factorio_mods_common::ServiceUsername::new(username)),
-						(true, &Some(ref username)) => ::std::borrow::Cow::Borrowed(username),
-						_ => continue,
-					};
-					let password = ::rpassword::prompt_password_stdout("Password (not shown): ").chain_err(|| "Could not read password")?;
-
-					match web_api.login(username.into_owned(), &password) {
-						Ok(user_credentials) => {
-							println!("Logged in successfully.");
-							local_api.save_user_credentials(&user_credentials).chain_err(|| "Could not save player-data.json")?;
-							return Ok(user_credentials);
-						},
-
-						Err(err) => {
-							match err.kind() {
-								&::factorio_mods_web::ErrorKind::LoginFailure(ref message) => println!("Authentication error: {}", message),
-								k => println!("Error: {}", k),
-							}
-
-							continue;
-						},
+					if let Err(err) = ::std::io::stdin().read_line(&mut username) {
+						return future::Either::A(Err(err).chain_err(|| "Could not read from stdin").into_future());
 					}
-				}
-			}
 
-			Err(err).chain_err(|| "Could not read user credentials")
+					let username = username.trim().to_string();
+					let username = match(username.is_empty(), existing_username.as_ref()) {
+						(false, _) => ::std::borrow::Cow::Owned(::factorio_mods_common::ServiceUsername::new(username)),
+						(true, Some(username)) => ::std::borrow::Cow::Borrowed(username),
+						_ => return future::Either::A(future::ok(future::Loop::Continue(()))),
+					};
+
+					let password = match ::rpassword::prompt_password_stdout("Password (not shown): ") {
+						Ok(password) => password,
+						Err(err) => return future::Either::A(Err(err).chain_err(|| "Could not read password").into_future()),
+					};
+
+					future::Either::B(
+						web_api.login(username.into_owned(), &password)
+						.then(move |user_credentials| match user_credentials {
+							Ok(user_credentials) => {
+								println!("Logged in successfully.");
+								match local_api.save_user_credentials(&user_credentials) {
+									Ok(()) =>
+										Ok(future::Loop::Break(user_credentials)),
+
+									Err(err) =>
+										Err(err).chain_err(|| "Could not save player-data.json"),
+								}
+							},
+
+							Err(err) =>
+								Err(err).chain_err(|| "Authentication error")
+						}))
+				}))
 		},
 	}
 }

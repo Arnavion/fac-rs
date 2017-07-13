@@ -5,6 +5,7 @@
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
+	large_enum_variant,
 	missing_docs_in_private_items,
 	result_unwrap_used,
 	shadow_reuse,
@@ -24,6 +25,7 @@ extern crate derive_new;
 #[macro_use]
 extern crate derive_struct;
 extern crate factorio_mods_common;
+pub extern crate futures;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
@@ -32,6 +34,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+pub extern crate tokio_core;
 
 mod api;
 pub use api::{ API, SearchOrder };

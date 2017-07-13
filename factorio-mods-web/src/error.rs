@@ -28,11 +28,11 @@ pub enum ErrorKind {
 
 	/// Got a malformed HTTP response
 	#[error_chain(custom)]
-	#[error_chain(display = r#"|url, reason| write!(f, "Request to URL {} was malformed: {}", url, reason)"#)]
+	#[error_chain(display = r#"|url, reason| write!(f, "Request to URL {} got malformed response: {}", url, reason)"#)]
 	MalformedResponse(::reqwest::Url, String),
 
-	/// Received a redirect to a host that isn't in the allowed list
+	/// Tried to request a host that isn't whitelisted
 	#[error_chain(custom)]
-	#[error_chain(display = r#"|url| write!(f, "Unexpected redirect to {}", url)"#)]
-	UnexpectedRedirect(::reqwest::Url),
+	#[error_chain(display = r#"|url| write!(f, "Host {} is not whitelisted", url)"#)]
+	NotWhitelistedHost(::reqwest::Url),
 }

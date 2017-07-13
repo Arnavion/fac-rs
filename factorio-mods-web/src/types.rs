@@ -129,7 +129,7 @@ pub struct ReleaseId(u64);
 pub struct Filename(String);
 
 /// The file size of a mod release.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct FileSize(u64);
 
 /// A tag.

@@ -1,20 +1,259 @@
+use ::futures::{ future, Async, Future, IntoFuture, Poll, Stream };
 use ::ResultExt;
 
 /// Computes which old mods to uninstall and which new mods to install based on the given reqs.
 /// Asks the user for confirmation, then applies the diff.
 ///
 /// Returns true if the diff was successfully applied or empty.
-pub fn compute_and_apply_diff(
-	local_api: &::factorio_mods_local::API,
-	web_api: &::factorio_mods_web::API,
-	reqs: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
-) -> ::Result<bool> {
-	let solution = solve(web_api, local_api.game_version(), reqs)?.ok_or("No solution found.")?;
+pub fn compute_and_apply_diff<'a>(
+	local_api: &'a ::factorio_mods_local::API,
+	web_api: &'a ::factorio_mods_web::API,
+	reqs: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
+) -> impl Future<Item = bool, Error = ::Error> + 'a {
+	solve(web_api, local_api.game_version(), reqs)
+	.and_then(|solution| solution.ok_or_else(|| "No solution found.".into()))
+	.and_then(move |solution| compute_diff(&solution, local_api))
+	.and_then(move |diff| if let Some((to_uninstall, to_install)) = diff {
+		if to_uninstall.is_empty() && to_install.is_empty() {
+			return future::Either::A(future::ok(true));
+		}
 
+		future::Either::B(
+			::util::ensure_user_credentials(local_api, web_api)
+			.and_then(move |user_credentials| {
+				for installed_mod in to_uninstall {
+					match *installed_mod.mod_type() {
+						::factorio_mods_local::InstalledModType::Zipped => {
+							let path = installed_mod.path();
+							println!("Removing file {}", path.display());
+							if let Err(err) = ::std::fs::remove_file(path) {
+								return future::Either::A(Err(err).chain_err(|| format!("Could not remove file {}", path.display())).into_future());
+							}
+						},
+
+						::factorio_mods_local::InstalledModType::Unpacked => {
+							let path = installed_mod.path();
+							println!("Removing directory {}", path.display());
+							if let Err(err) = ::std::fs::remove_dir_all(path) {
+								return future::Either::A(Err(err).chain_err(|| format!("Could not remove directory {}", path.display())).into_future());
+							}
+						},
+					}
+				}
+
+				let mods_directory = local_api.mods_directory();
+				let mods_directory_canonicalized = match mods_directory.canonicalize() {
+					Ok(mods_directory_canonicalized) =>
+						mods_directory_canonicalized,
+
+					Err(err) =>
+						return future::Either::A(Err(err).chain_err(|| format!("Could not canonicalize {}", mods_directory.display())).into_future()),
+				};
+
+				future::Either::B(
+					future::join_all(
+						to_install
+						.into_iter()
+						.map(move |release| {
+							let filename = mods_directory.join(release.filename());
+							let displayable_filename = filename.display().to_string();
+
+							let mut download_filename: ::std::ffi::OsString = if let Some(filename) = filename.file_name() {
+								filename.into()
+							}
+							else {
+								return future::Either::A(future::err(format!("Could not parse filename {}", displayable_filename).into()));
+							};
+
+							download_filename.push(".new");
+							let download_filename = filename.with_file_name(download_filename);
+							let download_displayable_filename = download_filename.display().to_string();
+
+							println!("Downloading to {}", download_displayable_filename);
+
+							{
+								let parent = if let Some(parent) = download_filename.parent() {
+									parent
+								}
+								else {
+									return future::Either::A(future::err(format!("Filename {} is malformed", download_displayable_filename).into()));
+								};
+
+								let parent_canonicalized = match parent.canonicalize() {
+									Ok(parent_canonicalized) =>
+										parent_canonicalized,
+
+									Err(err) =>
+										return future::Either::A(Err(err).chain_err(|| format!("Filename {} is malformed", download_displayable_filename)).into_future()),
+								};
+
+								if parent_canonicalized != mods_directory_canonicalized {
+									return future::Either::A(future::err(format!("Filename {} is malformed", download_displayable_filename).into()));
+								}
+							}
+
+							let mut file = ::std::fs::OpenOptions::new();
+							let mut file = file.create(true).truncate(true);
+							let file = match file.write(true).open(&download_filename) {
+								Ok(file) =>
+									file,
+								Err(err) =>
+									return future::Either::A(Err(err).chain_err(|| format!("Could not open {} for writing", download_displayable_filename)).into_future()),
+							};
+
+							future::Either::B(DownloadFileFuture {
+								chunk_stream: web_api.download(&release, &user_credentials),
+								writer: ::std::io::BufWriter::new(file),
+								release_name: release.info_json().name().clone(),
+								release_version: release.version().clone(),
+								filename,
+								displayable_filename,
+								download_filename,
+								download_displayable_filename,
+							})
+						}))
+					.map(|_| true))
+			}))
+	}
+	else {
+		future::Either::A(future::ok(false))
+	})
+}
+
+struct DownloadFileFuture<S> {
+	chunk_stream: S,
+	writer: ::std::io::BufWriter<::std::fs::File>,
+	release_name: ::factorio_mods_common::ModName,
+	release_version: ::factorio_mods_common::ReleaseVersion,
+	filename: ::std::path::PathBuf,
+	displayable_filename: String,
+	download_filename: ::std::path::PathBuf,
+	download_displayable_filename: String,
+}
+
+impl<'a, S> Future for DownloadFileFuture<S> where S: Stream<Item = ::factorio_mods_web::reqwest::unstable::async::Chunk, Error = ::factorio_mods_web::Error> {
+	type Item = ();
+	type Error = ::Error;
+
+	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+		loop {
+			match self.chunk_stream.poll() {
+				Ok(Async::Ready(Some(chunk))) => match ::std::io::Write::write_all(&mut self.writer, &chunk) {
+					Ok(()) => (),
+					Err(err) => return Err(err).chain_err(|| format!("Could not write to file {}", self.download_displayable_filename.clone())),
+				},
+
+				Ok(Async::Ready(None)) => {
+					println!("Renaming {} to {}", self.download_displayable_filename, self.displayable_filename);
+					match ::std::fs::rename(&self.download_filename, &self.filename) {
+						Ok(()) => return Ok(Async::Ready(())),
+						Err(err) => return Err(err).chain_err(|| format!("Could not rename {} to {}", self.download_displayable_filename, self.displayable_filename))
+					}
+				},
+
+				Ok(Async::NotReady) =>
+					return Ok(Async::NotReady),
+
+				Err(err) =>
+					return Err(err).chain_err(|| format!("Could not download release {} {}", self.release_name, self.release_version))
+			};
+		}
+	}
+}
+
+#[derive(Debug)]
+struct Cache<E> {
+	graph: ::petgraph::Graph<Installable, E>,
+	name_to_node_indices: ::multimap::MultiMap<::factorio_mods_common::ModName, ::petgraph::graph::NodeIndex>,
+}
+
+impl<E> Default for Cache<E> {
+	fn default() -> Self {
+		Cache {
+			graph: Default::default(),
+			name_to_node_indices: Default::default(),
+		}
+	}
+}
+
+#[derive(Clone, Debug)]
+enum Installable {
+	Base(::factorio_mods_common::ModName, ::factorio_mods_common::ReleaseVersion),
+	Mod(::factorio_mods_web::ModRelease),
+}
+
+impl Installable {
+	fn name(&self) -> &::factorio_mods_common::ModName {
+		match *self {
+			Installable::Base(ref name, _) => name,
+			Installable::Mod(ref release) => release.info_json().name(),
+		}
+	}
+
+	fn version(&self) -> &::factorio_mods_common::ReleaseVersion {
+		match *self {
+			Installable::Base(_, ref version) => version,
+			Installable::Mod(ref release) => release.version(),
+		}
+	}
+
+	fn dependencies(&self) -> &[::factorio_mods_common::Dependency] {
+		match *self {
+			Installable::Base(..) => &[],
+			Installable::Mod(ref release) => release.info_json().dependencies(),
+		}
+	}
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum Relation {
+	Requires,
+	Conflicts,
+}
+
+fn solve<'a>(
+	api: &'a ::factorio_mods_web::API,
+	game_version: &'a ::factorio_mods_common::ReleaseVersion,
+	reqs: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
+) -> impl Future<Item = Option<::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>>, Error = ::Error> + 'a {
+	let cache = ::futures_mutex::FutMutex::new(Default::default());
+
+	add_installable(cache, Installable::Base(::factorio_mods_common::ModName::new("base".to_string()), game_version.clone()))
+	.and_then(move |cache| {
+		println!("Fetching releases...");
+
+		let futures: Vec<_> =
+			reqs.keys()
+			.map(|name| add_mod(api, game_version, cache.clone(), name.clone()))
+			.collect();
+		future::join_all(futures)
+		.map(|_| (reqs, cache))
+	})
+	.and_then(|(reqs, cache)|
+		cache.lock()
+		.then(move |guard| match guard {
+			Ok(mut guard) => {
+				let graph = ::std::mem::replace(&mut (*guard).graph, Default::default());
+				compute_solution(graph, &reqs)
+			},
+
+			Err(()) =>
+				unreachable!(),
+		}))
+}
+
+fn compute_diff(
+	solution: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>,
+	local_api: &::factorio_mods_local::API,
+) -> ::Result<Option<(Vec<::factorio_mods_local::InstalledMod>, Vec<::factorio_mods_web::ModRelease>)>> {
 	let all_installed_mods: ::Result<::multimap::MultiMap<_, _>> =
 		local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
-		.map(|mod_| mod_.map(|mod_| (mod_.info().name().clone(), mod_)).chain_err(|| "Could not process an installed mod"))
+		.map(|mod_|
+			mod_
+			.map(|mod_| (mod_.info().name().clone(), mod_))
+			.chain_err(|| "Could not process an installed mod"))
 		.collect();
+
 	let all_installed_mods = all_installed_mods.chain_err(|| "Could not enumerate installed mods")?;
 
 	let mut to_keep = vec![];
@@ -29,24 +268,24 @@ pub fn compute_and_apply_diff(
 					to_keep.push(installed_mod);
 				}
 				else {
-					to_uninstall.push(installed_mod);
+					to_uninstall.push(installed_mod.clone());
 					to_upgrade.push((installed_mod, release));
 				}
 			}
 		}
 		else {
-			to_uninstall.extend(installed_mods);
+			to_uninstall.extend(installed_mods.into_iter().cloned());
 		}
 	}
 
-	for (name, release) in &solution {
+	for (name, release) in solution {
 		if let Some(installed_mods) = all_installed_mods.get_vec(name) {
 			if !installed_mods.iter().any(|installed_mod| installed_mod.info().version() == release.version()) {
-				to_install.push(release);
+				to_install.push(release.clone());
 			}
 		}
 		else {
-			to_install.push(release);
+			to_install.push(release.clone());
 		}
 	}
 
@@ -92,138 +331,165 @@ pub fn compute_and_apply_diff(
 
 	if to_uninstall.is_empty() && to_install.is_empty() {
 		println!("Nothing to do.");
-		return Ok(true);
 	}
-
-	if !::util::prompt_continue()? {
-		return Ok(false);
-	}
-
-	let user_credentials = ::util::ensure_user_credentials(local_api, web_api)?;
-
-	for installed_mod in to_uninstall {
-		match *installed_mod.mod_type() {
-			::factorio_mods_local::InstalledModType::Zipped => {
-				let path = installed_mod.path();
-				println!("Removing file {}", path.display());
-				::std::fs::remove_file(path).chain_err(|| format!("Could not remove file {}", path.display()))?;
-			},
-
-			::factorio_mods_local::InstalledModType::Unpacked => {
-				let path = installed_mod.path();
-				println!("Removing directory {}", path.display());
-				::std::fs::remove_dir_all(path).chain_err(|| format!("Could not remove directory {}", path.display()))?;
-			},
+	else {
+		match ::util::prompt_continue() {
+			Ok(true) => (),
+			Ok(false) => return Ok(None),
+			Err(err) => return Err(err),
 		}
 	}
 
-	let mods_directory = local_api.mods_directory();
-
-	for release in to_install {
-		let filename = mods_directory.join(release.filename());
-		let displayable_filename = filename.display().to_string();
-
-		let mut download_filename: ::std::ffi::OsString = filename.file_name().ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?.into();
-		download_filename.push(".new");
-		let download_filename = filename.with_file_name(download_filename);
-		let download_displayable_filename = download_filename.display().to_string();
-
-		println!("Downloading to {}", download_displayable_filename);
-
-		{
-			let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
-			let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
-			ensure! {
-				parent_canonicalized == mods_directory.canonicalize().chain_err(|| format!("Could not canonicalize {}", mods_directory.display()))?,
-				"Filename {} is malformed.", download_displayable_filename
-			}
-		}
-
-		{
-			let read = web_api.download(release, &user_credentials).chain_err(|| format!("Could not download release {} {}", release.info_json().name(), release.version()))?;
-			let mut reader = ::std::io::BufReader::new(read);
-
-			let mut file = ::std::fs::OpenOptions::new();
-			let mut file = file.create(true).truncate(true);
-			let file = file.write(true).open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
-
-			let mut writer = ::std::io::BufWriter::new(file);
-			::std::io::copy(&mut reader, &mut writer).chain_err(|| format!("Could not write to file {}", download_displayable_filename))?;
-		}
-
-		println!("Renaming {} to {}", download_displayable_filename, displayable_filename);
-		::std::fs::rename(download_filename, filename).chain_err(|| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename))?;
-	}
-
-	Ok(true)
+	Ok(Some((to_uninstall, to_install)))
 }
 
-fn solve(
-	api: &::factorio_mods_web::API,
-	game_version: &::factorio_mods_common::ReleaseVersion,
+fn add_mod<'a, E>(
+	api: &'a ::factorio_mods_web::API,
+	game_version: &'a ::factorio_mods_common::ReleaseVersion,
+	cache: ::futures_mutex::FutMutex<Cache<E>>,
+	name: ::factorio_mods_common::ModName,
+) -> Box<Future<Item = (), Error = ::Error> + 'a> where E: 'a {
+	Box::new(
+		cache.lock()
+		.then(|guard| match guard {
+			Ok(mut guard) => {
+				let need_to_fetch = {
+					let cache = &mut *guard;
+
+					match cache.name_to_node_indices.entry(name.clone()) {
+						::multimap::Entry::Occupied(_) => false,
+						::multimap::Entry::Vacant(entry) => {
+							entry.insert_vec(vec![]);
+							true
+						},
+					}
+				};
+
+				Ok((need_to_fetch, guard.unlock(), name))
+			},
+
+			Err(()) =>
+				unreachable!(),
+		})
+		.and_then(move |(need_to_fetch, cache, name)| {
+			if !need_to_fetch {
+				return future::Either::A(future::ok(()));
+			}
+
+			println!("    {} ...", name);
+
+			future::Either::B(
+				api.get(&name)
+				.then(move |result| match result {
+					Ok(mod_) => {
+						let add_releases_and_deps_futures: Vec<_> =
+							mod_.releases().into_iter()
+							.flat_map(|release| if release.factorio_version().matches(game_version) {
+								let mut futures: Vec<_> =
+									release.info_json().dependencies()
+									.into_iter()
+									.filter_map(|dep| if dep.required() {
+										Some(add_mod(api, game_version, cache.clone(), dep.name().clone()))
+									}
+									else {
+										None
+									})
+									.collect();
+
+								futures.push(Box::new(add_installable(cache.clone(), Installable::Mod(release.clone())).map(|_| ())));
+
+								futures
+							}
+							else {
+								vec![]
+							})
+							.collect(); // Force eager evaluation to remove dependency on lifetime of `mod_`
+
+						future::Either::A(
+							future::join_all(add_releases_and_deps_futures)
+							.map(|_| ()))
+					},
+
+					Err(err) => match *err.kind() {
+						::factorio_mods_web::ErrorKind::StatusCode(_, ::factorio_mods_web::reqwest::StatusCode::NotFound) => future::Either::B(future::ok(())),
+
+						_ => future::Either::B(Err(err).chain_err(|| format!("Could not get mod info for {}", name)).into_future()),
+					}
+				}))
+		}))
+}
+
+fn add_installable<E>(
+	cache: ::futures_mutex::FutMutex<Cache<E>>,
+	installable: Installable,
+) -> impl Future<Item = ::futures_mutex::FutMutex<Cache<E>>, Error = ::Error> {
+	cache.lock()
+	.then(|guard| match guard {
+		Ok(mut guard) => {
+			{
+				let cache = &mut *guard;
+				cache.name_to_node_indices.insert(installable.name().clone(), cache.graph.add_node(installable));
+			}
+
+			Ok(guard.unlock())
+		},
+
+		Err(()) =>
+			unreachable!(),
+	})
+}
+
+fn compute_solution(
+	mut graph: ::petgraph::Graph<Installable, Relation>,
 	reqs: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
 ) -> ::Result<Option<::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>>> {
-	let mut graph = Default::default();
+	println!("Computing solution...");
 
-	{
-		let mut name_to_node_indices = Default::default();
+	let mut edges_to_add = vec![];
 
-		add_installable(&mut graph, &mut name_to_node_indices, Installable::Base(::factorio_mods_common::ModName::new("base".to_string()), game_version.clone()));
+	for node_index1 in graph.node_indices() {
+		let installable1 = &graph[node_index1];
 
-		println!("Fetching releases...");
+		for node_index2 in graph.node_indices() {
+			if node_index1 == node_index2 {
+				continue
+			}
 
-		for name in reqs.keys() {
-			add_mod(api, game_version, &mut graph, &mut name_to_node_indices, name)?;
-		}
+			let installable2 = &graph[node_index2];
 
-		println!("Computing solution...");
+			if installable1.name() == installable2.name() {
+				edges_to_add.push((node_index1, node_index2, Relation::Conflicts));
+			}
+			else {
+				let mut requires = false;
+				let mut conflicts = false;
 
-		let mut edges_to_add = vec![];
-
-		for node_index1 in graph.node_indices() {
-			let installable1 = &graph[node_index1];
-
-			for node_index2 in graph.node_indices() {
-				if node_index1 == node_index2 {
-					continue
-				}
-
-				let installable2 = &graph[node_index2];
-
-				if installable1.name() == installable2.name() {
-					edges_to_add.push((node_index1, node_index2, Relation::Conflicts));
-				}
-				else {
-					let mut requires = false;
-					let mut conflicts = false;
-
-					for dep in installable1.dependencies() {
-						if dep.name() != installable2.name() {
-							continue
-						}
-
-						match (dep.required(), dep.version().matches(installable2.version())) {
-							(true, true) => requires = true,
-							(false, false) => conflicts = true,
-							_ => continue,
-						}
+				for dep in installable1.dependencies() {
+					if dep.name() != installable2.name() {
+						continue
 					}
 
-					match (requires, conflicts) {
-						(true, true) => bail!("{} {} both requires and conflicts with {} {}", installable1.name(), installable1.version(), installable2.name(), installable2.version()),
-						(true, false) => edges_to_add.push((node_index1, node_index2, Relation::Requires)),
-						(false, true) => edges_to_add.push((node_index1, node_index2, Relation::Conflicts)),
-						(false, false) => { },
+					match (dep.required(), dep.version().matches(installable2.version())) {
+						(true, true) => requires = true,
+						(false, false) => conflicts = true,
+						_ => continue,
 					}
+				}
+
+				match (requires, conflicts) {
+					(true, true) => bail!("{} {} both requires and conflicts with {} {}", installable1.name(), installable1.version(), installable2.name(), installable2.version()),
+					(true, false) => edges_to_add.push((node_index1, node_index2, Relation::Requires)),
+					(false, true) => edges_to_add.push((node_index1, node_index2, Relation::Conflicts)),
+					(false, false) => (),
 				}
 			}
 		}
+	}
 
-		for edge_to_add in edges_to_add {
-			assert!(graph.find_edge(edge_to_add.0, edge_to_add.1).is_none());
+	for edge_to_add in edges_to_add {
+		assert!(graph.find_edge(edge_to_add.0, edge_to_add.1).is_none());
 
-			graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
-		}
+		graph.add_edge(edge_to_add.0, edge_to_add.1, edge_to_add.2);
 	}
 
 	loop {
@@ -237,7 +503,7 @@ fn solve(
 
 			for name in reqs.keys() {
 				match name_to_node_indices.get_vec(name) {
-					Some(node_indices) if !node_indices.is_empty() => { },
+					Some(node_indices) if !node_indices.is_empty() => (),
 					_ => bail!("No valid installable releases found for {}", name),
 				}
 			}
@@ -361,7 +627,7 @@ fn solve(
 			graph.into_nodes_edges().0.into_iter().map(|node| {
 				let installable = node.weight;
 				(installable.name().clone(), Some(installable))
-		}).collect();
+			}).collect();
 
 		name_to_installables.into_iter().map(|(name, mut installables)| {
 			if &*name != "base" && !reqs.contains_key(&name) {
@@ -408,92 +674,6 @@ fn solve(
 	}).collect()))
 }
 
-#[derive(Debug)]
-enum Installable {
-	Base(::factorio_mods_common::ModName, ::factorio_mods_common::ReleaseVersion),
-	Mod(::factorio_mods_web::ModRelease),
-}
-
-impl Installable {
-	fn name(&self) -> &::factorio_mods_common::ModName {
-		match *self {
-			Installable::Base(ref name, _) => name,
-			Installable::Mod(ref release) => release.info_json().name(),
-		}
-	}
-
-	fn version(&self) -> &::factorio_mods_common::ReleaseVersion {
-		match *self {
-			Installable::Base(_, ref version) => version,
-			Installable::Mod(ref release) => release.version(),
-		}
-	}
-
-	fn dependencies(&self) -> &[::factorio_mods_common::Dependency] {
-		match *self {
-			Installable::Base(..) => &[],
-			Installable::Mod(ref release) => release.info_json().dependencies(),
-		}
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-enum Relation {
-	Requires,
-	Conflicts,
-}
-
-fn add_mod<E>(
-	api: &::factorio_mods_web::API,
-	game_version: &::factorio_mods_common::ReleaseVersion,
-	graph: &mut ::petgraph::Graph<Installable, E>,
-	name_to_node_indices: &mut ::multimap::MultiMap<::factorio_mods_common::ModName, ::petgraph::graph::NodeIndex>,
-	name: &::factorio_mods_common::ModName,
-) -> ::Result<()> {
-	if name_to_node_indices.contains_key(name) {
-		return Ok(());
-	}
-
-	println!("    {} ...", name);
-
-	{
-		let entry = name_to_node_indices.entry(name.clone());
-		entry.or_insert_vec(vec![]);
-	}
-
-	match api.get(name) {
-		Ok(mod_) => {
-			for release in mod_.releases() {
-				if release.factorio_version().matches(game_version) {
-					add_installable(graph, name_to_node_indices, Installable::Mod(release.clone()));
-
-					for dep in release.info_json().dependencies() {
-						if dep.required() {
-							add_mod(api, game_version, graph, name_to_node_indices, dep.name())?;
-						}
-					}
-				}
-			}
-
-			Ok(())
-		},
-
-		Err(err) => match *err.kind() {
-			::factorio_mods_web::ErrorKind::StatusCode(_, ::factorio_mods_web::reqwest::StatusCode::NotFound) => Ok(()),
-
-			_ => Err(err).chain_err(|| format!("Could not get mod info for {}", name)),
-		},
-	}
-}
-
-fn add_installable<E>(
-	graph: &mut ::petgraph::Graph<Installable, E>,
-	name_to_node_indices: &mut ::multimap::MultiMap<::factorio_mods_common::ModName, ::petgraph::graph::NodeIndex>,
-	installable: Installable,
-) {
-	name_to_node_indices.insert(installable.name().clone(), graph.add_node(installable));
-}
-
 fn is_valid(solution: &::std::collections::HashMap<&::factorio_mods_common::ModName, &Installable>) -> bool {
 	for installable in solution.values() {
 		for dep in installable.dependencies() {
@@ -518,7 +698,7 @@ fn compare<'a>(
 	for (n1, i1) in s1 {
 		if let Some(i2) = s2.get(n1) {
 			match i1.version().cmp(i2.version()) {
-					::std::cmp::Ordering::Equal => { },
+					::std::cmp::Ordering::Equal => (),
 					o => return o,
 			}
 		}

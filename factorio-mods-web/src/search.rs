@@ -1,3 +1,5 @@
+use ::futures::{ Async, Future, Poll, Stream };
+
 /// The page number of one page of a search response.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
 pub struct PageNumber(u64);
@@ -60,67 +62,98 @@ pub struct SearchResponseMod {
 }
 
 /// Constructs an iterator of search results.
-pub fn search<'a>(client: &'a ::client::Client, url: ::reqwest::Url) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
-	SearchResultsIterator {
+pub fn search<'a>(
+	client: &'a ::client::Client,
+	url: ::reqwest::Url,
+) -> impl Stream<Item = ::SearchResponseMod, Error = ::Error> + 'a {
+	let page_future = client.get_object(url);
+
+	SearchResultsStream {
 		client,
-		url,
-		current_page: None,
-		ended: false,
+		state: SearchResultsStreamState::WaitingForPage(Box::new(page_future)),
 	}
 }
 
 /// An iterator of search results.
 #[derive(Debug)]
-struct SearchResultsIterator<'a> {
+struct SearchResultsStream<'a> {
 	client: &'a ::client::Client,
-	url: ::reqwest::Url,
-	current_page: Option<SearchResponse>,
-	ended: bool,
+	state: SearchResultsStreamState<'a>,
 }
 
-impl<'a> Iterator for SearchResultsIterator<'a> {
-	type Item = ::Result<SearchResponseMod>;
+enum SearchResultsStreamState<'a> {
+	WaitingForPage(Box<Future<Item = (SearchResponse, ::reqwest::Url), Error = ::Error> + 'a>),
+	HavePage(::std::vec::IntoIter<SearchResponseMod>, Option<::reqwest::Url>),
+	Ended,
+}
 
-	fn next(&mut self) -> Option<Self::Item> {
-		if self.ended {
-			return None;
-		}
+impl<'a> ::std::fmt::Debug for SearchResultsStreamState<'a> {
+	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+		match *self {
+			SearchResultsStreamState::WaitingForPage(_) =>
+				f.debug_tuple("WaitingForPage")
+				.finish(),
 
-		if let Some(mut page) = self.current_page.take() {
-			if page.results.is_empty() {
-				if let Some(next_url) = page.pagination.links.next {
-					self.url = next_url;
-					self.next()
-				}
-				else {
-					self.ended = true;
-					None
-				}
-			}
-			else {
-				let result = page.results.remove(0);
-				self.current_page = Some(page);
-				Some(Ok(result))
-			}
+			SearchResultsStreamState::HavePage(_, ref next_page_url) =>
+				f.debug_tuple("HavePage")
+				.field(next_page_url)
+				.finish(),
+
+			SearchResultsStreamState::Ended =>
+				f.debug_tuple("Ended")
+				.finish(),
 		}
-		else {
-			match self.client.get_object(self.url.clone()) {
-				Ok(page) => {
-					self.current_page = Some(page);
-					self.next()
+	}
+}
+
+impl<'a> Stream for SearchResultsStream<'a> {
+	type Item = SearchResponseMod;
+	type Error = ::Error;
+
+	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+		let mut state = ::std::mem::replace(&mut self.state, SearchResultsStreamState::Ended);
+
+		let (next_state, result) = loop {
+			state = match state {
+				SearchResultsStreamState::WaitingForPage(mut page_future) => match page_future.poll() {
+					Ok(Async::Ready((page, _))) =>
+						SearchResultsStreamState::HavePage(page.results.into_iter(), page.pagination.links.next),
+
+					Ok(Async::NotReady) => break (
+						SearchResultsStreamState::WaitingForPage(page_future),
+						Ok(Async::NotReady)),
+
+					Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) => break (
+						SearchResultsStreamState::Ended,
+						Ok(Async::Ready(None))),
+
+					Err(err) => break (
+						SearchResultsStreamState::Ended,
+						Err(err)),
 				},
 
-				Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) => {
-					self.ended = true;
-					None
+				SearchResultsStreamState::HavePage(mut results, next_page_url) => match (results.next(), next_page_url) {
+					(Some(mod_), next_page_url) => break (
+						SearchResultsStreamState::HavePage(results, next_page_url),
+						Ok(Async::Ready(Some(mod_)))),
+
+					(None, Some(next_page_url)) =>
+						SearchResultsStreamState::WaitingForPage(Box::new(self.client.get_object(next_page_url))),
+
+					(None, None) => break (
+						SearchResultsStreamState::Ended,
+						Ok(Async::Ready(None))),
 				},
 
-				Err(err) => {
-					self.ended = true;
-					Some(Err(err))
-				},
-			}
-		}
+				SearchResultsStreamState::Ended => break (
+					SearchResultsStreamState::Ended,
+					Ok(Async::Ready(None))),
+			};
+		};
+
+		self.state = next_state;
+
+		result
 	}
 }
 

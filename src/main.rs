@@ -1,5 +1,7 @@
 //! A CLI tool to manage Factorio mods.
 
+#![feature(catch_expr, conservative_impl_trait)]
+
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
 	cyclomatic_complexity,
@@ -24,6 +26,7 @@ extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;
+extern crate futures_mutex;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
@@ -38,6 +41,8 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate term_size;
 extern crate textwrap;
+
+use ::factorio_mods_web::futures;
 
 mod enable_disable;
 mod install;
@@ -93,8 +98,15 @@ quick_main!(|| -> Result<()> {
 	let (subcommand_name, subcommand_matches) = matches.subcommand();
 	let subcommand = subcommands[subcommand_name];
 
-	subcommand.run(
+	let mut core = ::factorio_mods_web::tokio_core::reactor::Core::new().chain_err(|| "Could not create Tokio event loop")?;
+
+	let local_api = factorio_mods_local::API::new().chain_err(|| "Could not initialize local API");
+	let web_api = factorio_mods_web::API::new(None, core.handle()).chain_err(|| "Could not initialize web API");
+
+	let result = subcommand.run(
 		subcommand_matches.unwrap(),
-		factorio_mods_local::API::new().chain_err(|| "Could not initialize local API"),
-		factorio_mods_web::API::new(None).chain_err(|| "Could not initialize local API"))
+		match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err), },
+		match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err), });
+
+	core.run(result)
 });

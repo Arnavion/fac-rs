@@ -33,7 +33,7 @@ impl Config {
 
 		if let Err(err) = ::std::fs::create_dir(&user_config_dir) {
 			match err.kind() {
-				::std::io::ErrorKind::AlreadyExists => { },
+				::std::io::ErrorKind::AlreadyExists => (),
 				_ => return Err(err).chain_err(|| format!("Could not create config directory {}", user_config_dir.display())),
 			}
 		}
@@ -70,7 +70,7 @@ impl Config {
 		let user_config_dir = ::appdirs::user_config_dir(Some("fac"), None, false).map_err(|_| "Could not derive path to config directory")?;
 		if let Err(err) = ::std::fs::create_dir(&user_config_dir) {
 			match err.kind() {
-				::std::io::ErrorKind::AlreadyExists => { },
+				::std::io::ErrorKind::AlreadyExists => (),
 				_ => return Err(err).chain_err(|| format!("Could not create config directory {}", user_config_dir.display())),
 			}
 		}

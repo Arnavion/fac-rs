@@ -1,3 +1,5 @@
+use ::futures::{ future, Future, Poll, Stream };
+
 /// Entry-point to the https://mods.factorio.com API
 #[derive(Debug)]
 pub struct API {
@@ -9,12 +11,17 @@ pub struct API {
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(client: Option<::reqwest::Client>) -> ::Result<API> {
+	pub fn new(
+		builder: Option<::reqwest::unstable::async::ClientBuilder>,
+		handle: ::tokio_core::reactor::Handle,
+	) -> ::Result<API> {
+		use ::error::ResultExt;
+
 		Ok(API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
 			login_url: LOGIN_URL.clone(),
-			client: ::error::ResultExt::chain_err(::client::Client::new(client), || "Could not initialize HTTP client")?,
+			client: ::client::Client::new(builder, handle).chain_err(|| "Could not initialize HTTP client")?,
 		})
 	}
 
@@ -26,7 +33,7 @@ impl API {
 		order: Option<&SearchOrder>,
 		page_size: Option<&::ResponseNumber>,
 		page: Option<::PageNumber>
-	) -> impl Iterator<Item = ::Result<::SearchResponseMod>> + 'a {
+	) -> impl Stream<Item = ::SearchResponseMod, Error = ::Error> + 'a {
 		let tags_query = ::itertools::join(tags, ",");
 		let order = order.unwrap_or(&DEFAULT_ORDER).to_query_parameter();
 		let page_size = (page_size.unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
@@ -44,51 +51,84 @@ impl API {
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> ::Result<::Mod> {
-		let mut mods_url = self.mods_url.clone();
-		mods_url.path_segments_mut().unwrap().push(mod_name);
-		self.client.get_object(mods_url)
+	pub fn get<'a>(&'a self, mod_name: &::factorio_mods_common::ModName) -> Box<Future<Item = ::Mod, Error = ::Error> + 'a> {
+		// TODO: `Box` instead of `impl trait` because of ICE https://github.com/rust-lang/rust/issues/41297
+		let mut mod_url = self.mods_url.clone();
+		mod_url.path_segments_mut().unwrap().push(mod_name);
+
+		Box::new(
+			self.client.get_object(mod_url)
+			.map(|(mod_, _)| mod_))
 	}
 
 	/// Logs in to the web API using the given username and password and returns a credentials object.
-	pub fn login(&self, username: ::factorio_mods_common::ServiceUsername, password: &str) -> ::Result<::factorio_mods_common::UserCredentials> {
-		let token = {
-			let response: [::factorio_mods_common::ServiceToken; 1] =
-				self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)])?;
-			response[0].clone()
-		};
-		Ok(::factorio_mods_common::UserCredentials::new(username, token))
+	pub fn login<'a>(
+		&'a self,
+		username: ::factorio_mods_common::ServiceUsername,
+		password: &str,
+	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'a {
+		self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)])
+		.map(|(response, _): ([::factorio_mods_common::ServiceToken; 1], _)| ::factorio_mods_common::UserCredentials::new(username, response[0].clone()))
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
-	pub fn download(
-		&self,
+	pub fn download<'a>(
+		&'a self,
 		release: &::ModRelease,
 		user_credentials: &::factorio_mods_common::UserCredentials,
-	) -> ::Result<impl ::std::io::Read> {
+	) -> Box<Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'a> {
+		// TODO: `Box` instead of `impl trait` because of ICE https://github.com/rust-lang/rust/issues/41297
 		let release_download_url = release.download_url();
-		let mut download_url = self.base_url.join(release_download_url).map_err(|err| ::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err))?;
+		let expected_file_size = *release.file_size();
+
+		let mut download_url = match self.base_url.join(release_download_url) {
+			Ok(download_url) => download_url,
+
+			Err(err) => return
+				Box::new(
+					future::err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into())
+					.into_stream()),
+		};
+
 		download_url.query_pairs_mut()
 			.append_pair("username", user_credentials.username())
 			.append_pair("token", user_credentials.token());
 
-		let response = self.client.get_zip(download_url.clone())?;
+		Box::new(
+			self.client.get_zip(download_url)
+			.and_then(move |(response, download_url)| {
+				let file_size =
+					if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
+						file_size
+					}
+					else {
+						bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
+					};
 
-		let file_size =
-			if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
-				file_size
-			}
-			else {
-				bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
-			};
+				if file_size != *expected_file_size {
+					bail!(
+						::ErrorKind::MalformedResponse(
+							download_url,
+							format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
+				}
 
-		let expected_file_size = **release.file_size();
-		ensure! {
-			file_size == expected_file_size,
-			::ErrorKind::MalformedResponse(download_url, format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size))
-		}
+				Ok(ResponseWithUrlContext { response, url: download_url })
+			})
+			.flatten_stream())
+	}
+}
 
-		Ok(response)
+struct ResponseWithUrlContext {
+	response: ::reqwest::unstable::async::Response,
+	url: ::reqwest::Url,
+}
+
+impl Stream for ResponseWithUrlContext {
+	type Item = ::reqwest::unstable::async::Chunk;
+	type Error = ::Error;
+
+	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+		self.response.body_mut().poll().map_err(|err| ::ErrorKind::HTTP(self.url.clone(), err).into())
 	}
 }
 
@@ -126,53 +166,106 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use ::futures::Stream;
 
 	#[test]
 	fn search_list_all_mods() {
-		let api = API::new(None).unwrap();
+		let mut core = ::tokio_core::reactor::Core::new().unwrap();
+		let api = API::new(None, core.handle()).unwrap();
 
-		let iter = api.search("", &[], None, None, None);
-		let mods = iter.map(|m| m.unwrap()); // Ensure all are Ok()
-		let count = mods.count();
-		println!("Found {} mods", count);
-		assert!(count > 500); // 700+ as of 2016-10-03
+		let result =
+			api.search("", &[], None, None, None)
+			.fold(0usize, |count, _| Ok::<_, ::Error>(count + 1usize))
+			.map(|count| {
+				println!("Found {} mods", count);
+				assert!(count > 1700); // 1700+ as of 2017-06-21
+			});
+
+		core.run(result).unwrap();
 	}
 
 	#[test]
 	fn search_by_title() {
-		let api = API::new(None).unwrap();
+		let mut core = ::tokio_core::reactor::Core::new().unwrap();
+		let api = API::new(None, core.handle()).unwrap();
 
-		let mut iter = api.search("bob's functions library mod", &[], None, None, None);
-		let mod_ = iter.next().unwrap().unwrap();
-		println!("{:?}", mod_);
-		assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
+		let result =
+			api.search("bob's functions library mod", &[], None, None, None)
+			.into_future()
+			.then(|result| match result {
+				Ok((Some(mod_), _)) => {
+					println!("{:?}", mod_);
+					assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
+					Ok(())
+				},
+
+				Ok((None, _)) =>
+					unreachable!(),
+
+				Err((err, _)) =>
+					Err(err),
+			});
+
+		core.run(result).unwrap();
 	}
 
 	#[test]
 	fn search_by_tag() {
-		let api = API::new(None).unwrap();
+		let mut core = ::tokio_core::reactor::Core::new().unwrap();
+		let api = API::new(None, core.handle()).unwrap();
 
-		let mut iter = api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None);
-		let mod_ = iter.next().unwrap().unwrap();
-		println!("{:?}", mod_);
-		let tag = mod_.tags().iter().find(|tag| &**tag.name() == "logistics").unwrap();
-		println!("{:?}", tag);
+		let result =
+			api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None)
+			.into_future()
+			.then(|result| match result {
+				Ok((Some(mod_), _)) => {
+					println!("{:?}", mod_);
+					let tag = mod_.tags().iter().find(|tag| &**tag.name() == "logistics").unwrap();
+					println!("{:?}", tag);
+					Ok(())
+				},
+
+				Ok((None, _)) =>
+					unreachable!(),
+
+				Err((err, _)) =>
+					Err(err),
+			});
+
+		core.run(result).unwrap();
 	}
 
 	#[test]
 	fn search_non_existing() {
-		let api = API::new(None).unwrap();
+		let mut core = ::tokio_core::reactor::Core::new().unwrap();
+		let api = API::new(None, core.handle()).unwrap();
 
-		let mut iter = api.search("arnavion's awesome mod", &[], None, None, None);
-		assert!(iter.next().is_none());
+		let result =
+			api.search("arnavion's awesome mod", &[], None, None, None)
+			.into_future()
+			.then(|result| match result {
+				Ok((Some(_), _)) => unreachable!(),
+				Ok((None, _)) => Ok(()),
+				Err((err, _)) => Err(err),
+			});
+
+		core.run(result).unwrap();
 	}
 
 	#[test]
 	fn get() {
-		let api = API::new(None).unwrap();
+		let mut core = ::tokio_core::reactor::Core::new().unwrap();
+		let api = API::new(None, core.handle()).unwrap();
 
-		let mod_ = api.get(&::factorio_mods_common::ModName::new("boblibrary".to_string())).unwrap();
-		println!("{:?}", mod_);
-		assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
+		let mod_name = ::factorio_mods_common::ModName::new("boblibrary".to_string());
+
+		let result =
+			api.get(&mod_name)
+			.map(|mod_| {
+				println!("{:?}", mod_);
+				assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
+			});
+
+		core.run(result).unwrap();
 	}
 }
