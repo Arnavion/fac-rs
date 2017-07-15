@@ -8,12 +8,12 @@ impl ::util::SubCommand for SubCommand {
 			(about: "List installed mods and their status."))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		_: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		_: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		_: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		_: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		Box::new((do catch {
 			use ::ResultExt;
 

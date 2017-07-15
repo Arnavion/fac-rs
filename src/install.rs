@@ -13,12 +13,12 @@ impl ::util::SubCommand for SubCommand {
 			(@arg requirements: ... +required index(1) "requirements to install"))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		matches: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		web_api: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		matches: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		web_api: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
 		let requirements = matches.values_of("requirements").unwrap();

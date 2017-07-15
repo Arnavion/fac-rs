@@ -11,12 +11,12 @@ impl ::util::SubCommand for EnableSubCommand {
 			(@arg mods: ... +required index(1) "mods to enable"))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		matches: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		_: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		matches: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		_: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		enable_disable(matches, local_api, true)
 	}
 }
@@ -30,21 +30,21 @@ impl ::util::SubCommand for DisableSubCommand {
 			(@arg mods: ... +required index(1) "mods to disable"))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		matches: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		_: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		matches: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		_: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		enable_disable(matches, local_api, false)
 	}
 }
 
 fn enable_disable<'a, 'b, 'c>(
-	matches: &'a ::clap::ArgMatches<'b>,
-	local_api: ::Result<&'c ::factorio_mods_local::API>,
+	matches: &'a ::clap::ArgMatches<'a>,
+	local_api: ::Result<&'a ::factorio_mods_local::API>,
 	enable: bool,
-) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 	Box::new((do catch {
 		let local_api = local_api?;
 

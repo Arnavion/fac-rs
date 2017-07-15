@@ -9,12 +9,12 @@ impl ::util::SubCommand for SubCommand {
 			(@arg mods: ... +required index(1) "mod names to remove"))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		matches: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		web_api: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		matches: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		web_api: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		let mods = matches.values_of("mods").unwrap();
 
 		let (local_api, web_api) = match (local_api, web_api) {

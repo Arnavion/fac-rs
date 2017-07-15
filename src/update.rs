@@ -8,12 +8,12 @@ impl ::util::SubCommand for SubCommand {
 			(about: "Update installed mods."))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		_: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		web_api: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		_: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		web_api: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		let (local_api, web_api) = match (local_api, web_api) {
 			(Ok(local_api), Ok(web_api)) => (local_api, web_api),
 			(Err(err), _) | (_, Err(err)) => return Box::new(future::err(err)),

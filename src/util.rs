@@ -2,12 +2,12 @@ use ::futures::{ future, Future, IntoFuture };
 
 pub trait SubCommand {
 	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a>;
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		matches: &'a ::clap::ArgMatches<'b>,
-		local_api: ::Result<&'c ::factorio_mods_local::API>,
-		web_api: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c;
+		matches: &'a ::clap::ArgMatches<'a>,
+		local_api: ::Result<&'a ::factorio_mods_local::API>,
+		web_api: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a>;
 }
 
 pub fn wrapping_println(s: &str, indent: &str) {

@@ -9,12 +9,12 @@ impl ::util::SubCommand for SubCommand {
 			(@arg mods: ... +required index(1) "mods to show"))
 	}
 
-	fn run<'a, 'b, 'c>(
+	fn run<'a>(
 		&'a self,
-		matches: &'a ::clap::ArgMatches<'b>,
-		_: ::Result<&'c ::factorio_mods_local::API>,
-		web_api: ::Result<&'c ::factorio_mods_web::API>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'c> where 'a: 'b, 'b: 'c {
+		matches: &'a ::clap::ArgMatches<'a>,
+		_: ::Result<&'a ::factorio_mods_local::API>,
+		web_api: ::Result<&'a ::factorio_mods_web::API>,
+	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
 		let web_api = match web_api {
