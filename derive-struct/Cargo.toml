@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["Arnavion <arnavion@gmail.com>"]
 
 [dependencies]
-lazy_static = "0.2.x"
 quote = "^0.3.8"
 syn = "0.11.x"
 

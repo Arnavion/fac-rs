@@ -3,8 +3,6 @@
 #![crate_type = "proc-macro"]
 #![recursion_limit = "200"]
 
-#[macro_use]
-extern crate lazy_static;
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
@@ -18,65 +16,64 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 	let struct_name = &ast.ident;
 
 	let getters = match ast.body {
-		syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
-			fields.iter().map(|field| {
-				let field_name = &field.ident;
-				let field_ty = &field.ty;
+		syn::Body::Struct(syn::VariantData::Struct(fields)) => {
+			fields.into_iter().map(|field| {
+				let syn::Field { ident, attrs, ty, .. } = field;
 
-				let field_doc_attr = field.attrs.iter().filter_map(|attr| {
-					match &attr.value {
-						&syn::MetaItem::NameValue(ref ident, _) if ident.to_string() == "doc" => Some(attr),
-						_ => None,
-					}
+				let field_doc_attr = attrs.into_iter().filter(|attr| match attr.value {
+					syn::MetaItem::NameValue(ref ident, _) if ident.as_ref() == "doc" => true,
+					_ => false,
 				}).next();
 
-				match identify_type(field_ty) {
+				match identify_type(&ty) {
 					Some(Type::Bool) => quote! {
 						#field_doc_attr
-						pub fn #field_name(&self) -> bool {
-							self.#field_name
+						pub fn #ident(&self) -> bool {
+							self.#ident
 						}
 					},
 
 					Some(Type::Option { ty }) => quote! {
 						#field_doc_attr
-						pub fn #field_name(&self) -> Option<&#ty> {
-							self.#field_name.as_ref()
+						pub fn #ident(&self) -> Option<&#ty> {
+							self.#ident.as_ref()
 						}
 					},
 
 					Some(Type::String) => quote! {
 						#field_doc_attr
-						pub fn #field_name(&self) -> &str {
-							&self.#field_name
+						pub fn #ident(&self) -> &str {
+							&self.#ident
 						}
 					},
 
 					Some(Type::Vec { ty }) => quote! {
 						#field_doc_attr
-						pub fn #field_name(&self) -> &[#ty] {
-							&self.#field_name
+						pub fn #ident(&self) -> &[#ty] {
+							&self.#ident
 						}
 					},
 
 					_ => quote! {
 						#field_doc_attr
-						pub fn #field_name(&self) -> &#field_ty {
-							&self.#field_name
+						pub fn #ident(&self) -> &#ty {
+							&self.#ident
 						}
 					},
 				}
 			})
 		},
 
-		_ => panic!("#[derive(getters)] can only be used with non-tuple structs."),
+		_ => panic!("#[derive(getters)] can only be used with non-tuple structs"),
 	};
 
-	quote!(
+	let result = quote! {
 		impl #struct_name {
 			#(#getters)*
 		}
-	).parse().unwrap()
+	};
+
+	result.parse().unwrap()
 }
 
 /// Derives `serde::Deserialize` on the newtype.
@@ -116,7 +113,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 		Some(ty) => {
 			let struct_name = &ast.ident;
 
-			match identify_type(ty).ok_or_else(|| format!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+			match identify_type(ty).unwrap_or_else(|| panic!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type: {:?}", ty)) {
 				Type::SemverVersion => generate_semver(struct_name, quote!(parse_version)),
 
 				Type::SemverVersionReq => generate_semver(struct_name, quote!(parse_version_req)),
@@ -125,7 +122,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 			}
 		},
 
-		None => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field."),
+		None => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field"),
 	};
 
 	result.parse().unwrap()
@@ -141,7 +138,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 		Some(ty) => {
 			let struct_name = &ast.ident;
 
-			match identify_type(ty).ok_or_else(|| format!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+			match identify_type(ty).unwrap_or_else(|| panic!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type: {:?}", ty)) {
 				Type::SemverVersion |
 				Type::SemverVersionReq |
 				Type::String |
@@ -156,7 +153,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 			}
 		},
 
-		None => panic!("#[derive(newtype_display)] can only be used with tuple structs of one field."),
+		None => panic!("#[derive(newtype_display)] can only be used with tuple structs of one field"),
 	};
 
 	result.parse().unwrap()
@@ -190,7 +187,7 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 		Some(ty) => {
 			let struct_name = &ast.ident;
 
-			match identify_type(ty).ok_or_else(|| format!("#[derive(newtype_ref)] cannot be used with tuple structs with this wrapped type: {:?}", ty)).unwrap() {
+			match identify_type(ty).unwrap_or_else(|| panic!("#[derive(newtype_ref)] cannot be used with tuple structs with this wrapped type: {:?}", ty)) {
 				Type::SemverVersion => generate(struct_name, quote!(::semver::Version)),
 				Type::SemverVersionReq => generate(struct_name, quote!(::semver::VersionReq)),
 				Type::String => {
@@ -212,18 +209,10 @@ pub fn derive_newtype_ref(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 			}
 		},
 
-		None => panic!("#[derive(newtype_ref)] can only be used with tuple structs of one field."),
+		None => panic!("#[derive(newtype_ref)] can only be used with tuple structs of one field"),
 	};
 
 	result.parse().unwrap()
-}
-
-lazy_static! {
-	static ref TY_BOOL: ::syn::Ty = syn::parse_type("bool").unwrap();
-	static ref TY_SEMVER_VERSION: ::syn::Ty = syn::parse_type("::semver::Version").unwrap();
-	static ref TY_SEMVER_VERSIONREQ: ::syn::Ty = syn::parse_type("::semver::VersionReq").unwrap();
-	static ref TY_STRING: ::syn::Ty = syn::parse_type("String").unwrap();
-	static ref TY_U64: ::syn::Ty = syn::parse_type("u64").unwrap();
 }
 
 fn as_newtype(ast: &syn::MacroInput) -> Option<&syn::Ty> {
@@ -245,45 +234,58 @@ enum Type<'a> {
 }
 
 fn identify_type<'a>(ty: &'a syn::Ty) -> Option<Type<'a>> {
-	if ty == &*TY_BOOL {
-		Some(Type::Bool)
-	}
-	else if ty == &*TY_SEMVER_VERSION {
-		Some(Type::SemverVersion)
-	}
-	else if ty == &*TY_SEMVER_VERSIONREQ {
-		Some(Type::SemverVersionReq)
-	}
-	else if ty == &*TY_STRING {
-		Some(Type::String)
-	}
-	else if ty == &*TY_U64 {
-		Some(Type::U64)
-	}
-	else if let syn::Ty::Path(_, syn::Path { ref segments, .. }) = *ty {
-		if segments.len() != 1 {
-			return None
-		}
-
-		let syn::PathSegment { ref ident, ref parameters } = segments[0];
-		if let syn::PathParameters::AngleBracketed(syn::AngleBracketedParameterData { ref types, .. }) = *parameters {
-			let ident = ident.to_string();
-			if ident != "Option" && ident != "Vec" {
-				return None;
-			}
-
-			let wrapped_ty = &types[0];
-			match ident.as_ref() {
-				"Option" => Some(Type::Option { ty: wrapped_ty }),
-				"Vec" => Some(Type::Vec { ty: wrapped_ty }),
-				_ => unreachable!(),
-			}
+	let path =
+		if let syn::Ty::Path(None, ref path) = *ty {
+			path
 		}
 		else {
-			None
-		}
-	}
-	else {
-		None
+			return None;
+		};
+
+	match *path {
+		syn::Path { global: true, ref segments } if segments.len() == 2 => {
+			let first_segment = &segments[0];
+			let second_segment = &segments[1];
+
+			if first_segment.parameters.is_empty() && first_segment.ident.as_ref() == "semver" && second_segment.parameters.is_empty() {
+				match second_segment.ident.as_ref() {
+					"Version" => Some(Type::SemverVersion),
+					"VersionReq" => Some(Type::SemverVersionReq),
+					_ => None,
+				}
+			}
+			else {
+				None
+			}
+		},
+
+		syn::Path { global: false, ref segments } if segments.len() == 1 => {
+			let segment = &segments[0];
+
+			match segment.parameters {
+				ref parameters if parameters.is_empty() => match segment.ident.as_ref() {
+					"bool" => Some(Type::Bool),
+					"String" => Some(Type::String),
+					"u64" => Some(Type::U64),
+					_ => None,
+				},
+
+				syn::PathParameters::AngleBracketed(syn::AngleBracketedParameterData {
+					ref lifetimes, ref types, ref bindings,
+				}) if lifetimes.is_empty() && types.len() == 1 && bindings.is_empty() => {
+					let wrapped_ty = &types[0];
+
+					match segment.ident.as_ref() {
+						"Option" => Some(Type::Option { ty: wrapped_ty }),
+						"Vec" => Some(Type::Vec { ty: wrapped_ty }),
+						_ => None,
+					}
+				},
+
+				_ => None,
+			}
+		},
+
+		_ => None,
 	}
 }
