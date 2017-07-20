@@ -40,7 +40,7 @@ impl ::util::SubCommand for DisableSubCommand {
 	}
 }
 
-fn enable_disable<'a, 'b, 'c>(
+fn enable_disable<'a>(
 	matches: &'a ::clap::ArgMatches<'a>,
 	local_api: ::Result<&'a ::factorio_mods_local::API>,
 	enable: bool,
