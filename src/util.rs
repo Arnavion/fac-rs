@@ -18,12 +18,13 @@ pub fn wrapping_println(s: &str, indent: &str) {
 				initial_indent: indent,
 				subsequent_indent: indent,
 				break_words: true,
-				squeeze_whitespace: true,
 				splitter: Box::new(::textwrap::NoHyphenation),
 			};
 
-			for line in wrapper.wrap(s) {
-				println!("{}", line);
+			for line in s.split('\n') {
+				for line in wrapper.wrap(line) {
+					println!("{}", line);
+				}
 			}
 		},
 
