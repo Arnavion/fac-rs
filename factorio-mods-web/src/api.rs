@@ -168,28 +168,27 @@ mod tests {
 	use super::*;
 	use ::futures::Stream;
 
-	#[test]
-	fn search_list_all_mods() {
+	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> Box<Future<Item = (), Error = ::Error> + 'r> {
 		let mut core = ::tokio_core::reactor::Core::new().unwrap();
 		let api = API::new(None, core.handle()).unwrap();
+		let result = test(&api);
+		core.run(result).unwrap();
+	}
 
-		let result =
+	#[test]
+	fn search_list_all_mods() {
+		run_test(|api| Box::new(
 			api.search("", &[], None, None, None)
 			.fold(0usize, |count, _| Ok::<_, ::Error>(count + 1usize))
 			.map(|count| {
 				println!("Found {} mods", count);
 				assert!(count > 1700); // 1700+ as of 2017-06-21
-			});
-
-		core.run(result).unwrap();
+			})));
 	}
 
 	#[test]
 	fn search_by_title() {
-		let mut core = ::tokio_core::reactor::Core::new().unwrap();
-		let api = API::new(None, core.handle()).unwrap();
-
-		let result =
+		run_test(|api| Box::new(
 			api.search("bob's functions library mod", &[], None, None, None)
 			.into_future()
 			.then(|result| match result {
@@ -204,17 +203,12 @@ mod tests {
 
 				Err((err, _)) =>
 					Err(err),
-			});
-
-		core.run(result).unwrap();
+			})));
 	}
 
 	#[test]
 	fn search_by_tag() {
-		let mut core = ::tokio_core::reactor::Core::new().unwrap();
-		let api = API::new(None, core.handle()).unwrap();
-
-		let result =
+		run_test(|api| Box::new(
 			api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None)
 			.into_future()
 			.then(|result| match result {
@@ -230,42 +224,30 @@ mod tests {
 
 				Err((err, _)) =>
 					Err(err),
-			});
-
-		core.run(result).unwrap();
+			})));
 	}
 
 	#[test]
 	fn search_non_existing() {
-		let mut core = ::tokio_core::reactor::Core::new().unwrap();
-		let api = API::new(None, core.handle()).unwrap();
-
-		let result =
+		run_test(|api| Box::new(
 			api.search("arnavion's awesome mod", &[], None, None, None)
 			.into_future()
 			.then(|result| match result {
 				Ok((Some(_), _)) => unreachable!(),
 				Ok((None, _)) => Ok(()),
 				Err((err, _)) => Err(err),
-			});
-
-		core.run(result).unwrap();
+			})));
 	}
 
 	#[test]
 	fn get() {
-		let mut core = ::tokio_core::reactor::Core::new().unwrap();
-		let api = API::new(None, core.handle()).unwrap();
-
 		let mod_name = ::factorio_mods_common::ModName::new("boblibrary".to_string());
 
-		let result =
+		run_test(|api| Box::new(
 			api.get(&mod_name)
 			.map(|mod_| {
 				println!("{:?}", mod_);
 				assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
-			});
-
-		core.run(result).unwrap();
+			})));
 	}
 }
