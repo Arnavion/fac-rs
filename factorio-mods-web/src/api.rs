@@ -157,9 +157,9 @@ impl SearchOrder {
 
 const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
-	static ref BASE_URL: ::reqwest::Url = ::reqwest::Url::parse("https://mods.factorio.com/").unwrap();
-	static ref MODS_URL: ::reqwest::Url = ::reqwest::Url::parse("https://mods.factorio.com/api/mods").unwrap();
-	static ref LOGIN_URL: ::reqwest::Url = ::reqwest::Url::parse("https://auth.factorio.com/api-login").unwrap();
+	static ref BASE_URL: ::reqwest::Url = "https://mods.factorio.com/".parse().unwrap();
+	static ref MODS_URL: ::reqwest::Url = "https://mods.factorio.com/api/mods".parse().unwrap();
+	static ref LOGIN_URL: ::reqwest::Url = "https://auth.factorio.com/api-login".parse().unwrap();
 	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
 }
 

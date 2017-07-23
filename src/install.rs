@@ -43,7 +43,7 @@ impl ::util::SubCommand for SubCommand {
 			};
 			let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
 			let requirement_string = captures.get(2).map_or("*", |m| m.as_str());
-			let requirement = match ::semver::VersionReq::parse(requirement_string) {
+			let requirement = match requirement_string.parse() {
 				Ok(requirement) => requirement,
 				Err(err) => return Box::new(Err(err).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string)).into_future()),
 			};

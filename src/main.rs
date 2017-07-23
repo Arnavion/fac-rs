@@ -87,11 +87,8 @@ quick_main!(|| -> Result<()> {
 		(@setting SubcommandRequiredElseHelp)
 		(@setting VersionlessSubcommands));
 
-	let app = subcommands.iter().fold(app, |app, (name, subcommand)| {
-		app.subcommand(
-			subcommand.build_subcommand(
-				clap::SubCommand::with_name(name)))
-	});
+	let app = subcommands.iter().fold(app, |app, (name, subcommand)|
+		app.subcommand(subcommand.build_subcommand(clap::SubCommand::with_name(name))));
 
 	let matches = app.get_matches();
 

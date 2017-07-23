@@ -174,7 +174,6 @@ fn expect_content_type(
 	url: ::reqwest::Url,
 	expected_mime: &::reqwest::mime::Mime,
 ) -> ::Result<(::reqwest::unstable::async::Response, ::reqwest::Url)> {
-	#[cfg_attr(feature = "cargo-clippy", allow(never_loop))]
 	match response.headers().get() {
 		Some(&::reqwest::header::ContentType(ref mime)) if mime == expected_mime =>
 			(),

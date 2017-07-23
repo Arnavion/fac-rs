@@ -122,7 +122,7 @@ impl ::serde::Serialize for ModVersionReq {
 }
 
 lazy_static! {
-	static ref DEFAULT_GAME_VERSION: ModVersionReq = ModVersionReq::new(::semver::VersionReq::parse("0.12").unwrap());
+	static ref DEFAULT_GAME_VERSION: ModVersionReq = ModVersionReq::new("0.12".parse().unwrap());
 }
 
 /// Generates a copy of the default game version.
@@ -134,24 +134,12 @@ fn default_game_version() -> ModVersionReq {
 
 /// Parses the given string as a `::semver::Version`
 fn parse_version(s: &str) -> Result<::semver::Version, ::semver::SemVerError> {
-	if let Ok(version) = ::semver::Version::parse(s) {
-		Ok(version)
-	}
-	else {
-		let fixed_version = fixup_version(s);
-		::semver::Version::parse(&fixed_version)
-	}
+	s.parse().or_else(|_| fixup_version(s).parse())
 }
 
 /// Parses the given string as a `::semver::VersionReq`
 fn parse_version_req(s: &str) -> Result<::semver::VersionReq, ::semver::ReqParseError> {
-	if let Ok(version_req) = ::semver::VersionReq::parse(s) {
-		Ok(version_req)
-	}
-	else {
-		let fixed_version = fixup_version(s);
-		::semver::VersionReq::parse(&fixed_version)
-	}
+	s.parse().or_else(|_| fixup_version(s).parse())
 }
 
 /// Fixes up some bad version strings returned by the web API into something valid for the `semver` crate.
@@ -201,14 +189,12 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::E
 
 	let version_req_string = captures.get(3).map_or("*", |m| m.as_str());
 	let version_req =
-		if let Ok(version_req) = parse_version_req(version_req_string) {
-			version_req
-		}
-		else {
+		parse_version_req(version_req_string)
+		.or_else(|_| {
 			let fixed_version = captures[4].to_string() + &fixup_version(&captures[5]);
-			::semver::VersionReq::parse(&fixed_version)
-				.map_err(|err| ::serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, ::std::error::Error::description(&err))))?
-		};
+			fixed_version.parse()
+				.map_err(|err| ::serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, ::std::error::Error::description(&err))))
+		})?;
 
 	Ok(Dependency { name: ModName(name.to_string()), version: ModVersionReq(version_req), required, })
 }
@@ -217,35 +203,35 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::E
 mod tests {
 	use super::*;
 
-	fn test_fixup_version_inner(s: &str, expected: &str) {
-		let actual = fixup_version(s);
+	fn test_deserialize_release_version_inner(s: &str, expected: &str) {
+		let expected = ReleaseVersion(expected.parse().unwrap());
+		let actual: ReleaseVersion = ::serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}
 
 	#[test]
-	fn test_fixup_version() {
-		test_fixup_version_inner("0.2.2", "0.2.2");
-		test_fixup_version_inner("0.14.0", "0.14.0");
-		test_fixup_version_inner("0.2.02", "0.2.2");
-		test_fixup_version_inner("0.14.00", "0.14.0");
+	fn test_deserialize_release_version() {
+		test_deserialize_release_version_inner(r#""0.2.2""#, "0.2.2");
+		test_deserialize_release_version_inner(r#""0.14.0""#, "0.14.0");
+		test_deserialize_release_version_inner(r#""0.2.02""#, "0.2.2");
+		test_deserialize_release_version_inner(r#""0.14.00""#, "0.14.0");
 	}
 
-	fn test_parse_dependency_inner(s: &str, name: &str, version: &str, required: bool) {
-		let result = parse_dependency::<::serde_json::error::Error>(s).unwrap();
-		assert_eq!(&**result.name(), name);
-		assert_eq!(&**result.version(), &::semver::VersionReq::parse(version).unwrap());
-		assert_eq!(result.required(), required);
+	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, required: bool) {
+		let expected = Dependency { name: ModName(name.to_string()), version: ModVersionReq(version.parse().unwrap()), required };
+		let actual: Dependency = ::serde_json::from_str(s).unwrap();
+		assert_eq!(actual, expected);
 	}
 
 	#[test]
-	fn test_parse_dependency() {
-		test_parse_dependency_inner("base", "base", "*", true);
-		test_parse_dependency_inner("? base", "base", "*", false);
-		test_parse_dependency_inner("?base", "base", "*", false);
-		test_parse_dependency_inner("base >= 0.14.0", "base", ">=0.14.0", true);
-		test_parse_dependency_inner("? base >= 0.14.0", "base", ">=0.14.0", false);
-		test_parse_dependency_inner("base >= 0.14.00", "base", ">=0.14.0", true);
-		test_parse_dependency_inner("some name with spaces >= 1.2.3", "some name with spaces", ">=1.2.3", true);
-		test_parse_dependency_inner("? some name with spaces >= 1.2.3", "some name with spaces", ">=1.2.3", false);
+	fn test_deserialize_dependency() {
+		test_deserialize_dependency_inner(r#""base""#, "base", "*", true);
+		test_deserialize_dependency_inner(r#""? base""#, "base", "*", false);
+		test_deserialize_dependency_inner(r#""?base""#, "base", "*", false);
+		test_deserialize_dependency_inner(r#""base >= 0.14.0""#, "base", ">=0.14.0", true);
+		test_deserialize_dependency_inner(r#""? base >= 0.14.0""#, "base", ">=0.14.0", false);
+		test_deserialize_dependency_inner(r#""base >= 0.14.00""#, "base", ">=0.14.0", true);
+		test_deserialize_dependency_inner(r#""some name with spaces >= 1.2.3""#, "some name with spaces", ">=1.2.3", true);
+		test_deserialize_dependency_inner(r#""? some name with spaces >= 1.2.3""#, "some name with spaces", ">=1.2.3", false);
 	}
 }

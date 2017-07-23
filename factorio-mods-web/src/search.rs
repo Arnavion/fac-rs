@@ -61,7 +61,7 @@ pub struct SearchResponseMod {
 	tags: Vec<::Tag>,
 }
 
-/// Constructs an iterator of search results.
+/// Constructs an stream of search results.
 pub fn search<'a>(
 	client: &'a ::client::Client,
 	url: ::reqwest::Url,
@@ -74,7 +74,7 @@ pub fn search<'a>(
 	}
 }
 
-/// An iterator of search results.
+/// A stream of search results.
 #[derive(Debug)]
 struct SearchResultsStream<'a> {
 	client: &'a ::client::Client,
@@ -192,14 +192,15 @@ struct SearchResponsePaginationLinks {
 	last: Option<::reqwest::Url>,
 }
 
-/// Deserializes a URL.
-pub fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer<'de> {
+// TODO: Remove when url supports serde 1.0 (https://github.com/servo/rust-url/pull/327) and reqwest enables or exposes its "serde" feature
+fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer<'de> {
 	let url: Option<String> = ::serde::Deserialize::deserialize(deserializer)?;
-	if let Some(url) = url {
-		::reqwest::Url::parse(&url).map(Some)
-		.map_err(|err| ::serde::de::Error::custom(format!("invalid URL {:?}: {}", &url, ::std::error::Error::description(&err))))
-	}
-	else {
-		Ok(None)
+	match url {
+		Some(url) => match url.parse() {
+			Ok(url) => Ok(Some(url)),
+			Err(err) => Err(::serde::de::Error::custom(format!("invalid URL {:?}: {}", url, ::std::error::Error::description(&err)))),
+		},
+
+		None => Ok(None),
 	}
 }
