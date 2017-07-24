@@ -1,15 +1,15 @@
 use ::futures::{ Async, Future, Poll, Stream };
 
 /// The page number of one page of a search response.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct PageNumber(u64);
 
 /// The response number within a page of a search response.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct ResponseNumber(u64);
 
 /// A mod object returned by `API::search`.
-#[derive(Clone, Debug, Deserialize, new, getters)]
+#[derive(Clone, Debug, Deserialize, PartialEq, new, getters)]
 pub struct SearchResponseMod {
 	/// The mod ID.
 	id: ::ModId,

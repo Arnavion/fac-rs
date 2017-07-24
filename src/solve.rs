@@ -205,7 +205,7 @@ impl Installable {
 	}
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Relation {
 	Requires,
 	Conflicts,

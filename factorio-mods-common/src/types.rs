@@ -1,9 +1,9 @@
 /// A URL.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct Url(String);
 
 /// The name of a mod.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct ModName(String);
 
 impl ::serde::Serialize for ModName {
@@ -13,19 +13,19 @@ impl ::serde::Serialize for ModName {
 }
 
 /// The name of an author of a mod.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct AuthorName(String);
 
 /// The title of a mod.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct ModTitle(String);
 
 /// The description of a mod.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct ModDescription(String);
 
 /// The version of a mod release.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_deserialize, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_deserialize, newtype_display, newtype_ref)]
 pub struct ReleaseVersion(::semver::Version);
 
 /// A username and token used with the parts of the web API that require authentication.
@@ -39,15 +39,15 @@ pub struct UserCredentials {
 }
 
 /// A username used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct ServiceUsername(String);
 
 /// A token used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord, new, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
 pub struct ServiceToken(String);
 
 /// Represents the contents of `info.json` of a mod release.
-#[derive(Clone, Debug, Deserialize, new, getters)]
+#[derive(Clone, Debug, Deserialize, PartialEq, new, getters)]
 pub struct ModInfo {
 	/// The name of the mod release.
 	name: ModName,

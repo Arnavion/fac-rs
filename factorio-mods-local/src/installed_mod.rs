@@ -1,5 +1,5 @@
 /// An installed mod object.
-#[derive(Clone, Debug, new, getters)]
+#[derive(Clone, Debug, PartialEq, new, getters)]
 pub struct InstalledMod {
 	/// The path of the mod.
 	path: ::std::path::PathBuf,
@@ -15,7 +15,7 @@ pub struct InstalledMod {
 }
 
 /// The type of an installed mod.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum InstalledModType {
 	/// A zipped mod.
 	Zipped,
