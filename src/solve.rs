@@ -12,7 +12,7 @@ pub fn compute_and_apply_diff<'a>(
 ) -> impl Future<Item = bool, Error = ::Error> + 'a {
 	solve(web_api, local_api.game_version(), reqs)
 	.and_then(|solution| solution.ok_or_else(|| "No solution found.".into()))
-	.and_then(move |solution| compute_diff(&solution, local_api))
+	.and_then(move |solution| compute_diff(solution, local_api))
 	.and_then(move |diff| if let Some((to_uninstall, to_install)) = diff {
 		if to_uninstall.is_empty() && to_install.is_empty() {
 			return future::Either::A(future::ok(true));
@@ -243,7 +243,7 @@ fn solve<'a>(
 }
 
 fn compute_diff(
-	solution: &::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>,
+	mut solution: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>,
 	local_api: &::factorio_mods_local::API,
 ) -> ::Result<Option<(Vec<::factorio_mods_local::InstalledMod>, Vec<::factorio_mods_web::ModRelease>)>> {
 	let all_installed_mods: ::Result<::multimap::MultiMap<_, _>> =
@@ -256,36 +256,53 @@ fn compute_diff(
 
 	let all_installed_mods = all_installed_mods.chain_err(|| "Could not enumerate installed mods")?;
 
-	let mut to_keep = vec![];
 	let mut to_uninstall = vec![];
-	let mut to_install = vec![];
-	let mut to_upgrade = vec![];
+	let mut to_install = ::std::collections::HashMap::new();
 
-	for (name, installed_mods) in all_installed_mods.iter_all() {
-		if let Some(release) = solution.get(name) {
-			for installed_mod in installed_mods {
-				if installed_mod.info().version() == release.version() {
-					to_keep.push(installed_mod);
+	for (name, installed_mods) in all_installed_mods {
+		match solution.remove(&name) {
+			Some(release) => {
+				let mut already_installed = false;
+
+				for installed_mod in installed_mods {
+					if release.version() == installed_mod.info().version() {
+						already_installed = true;
+					}
+					else {
+						to_uninstall.push(installed_mod);
+					}
 				}
-				else {
-					to_uninstall.push(installed_mod.clone());
-					to_upgrade.push((installed_mod, release));
+
+				if !already_installed {
+					to_install.insert(name.clone(), release);
 				}
-			}
-		}
-		else {
-			to_uninstall.extend(installed_mods.into_iter().cloned());
+			},
+
+			None =>
+				to_uninstall.extend(installed_mods),
 		}
 	}
 
-	for (name, release) in solution {
-		if let Some(installed_mods) = all_installed_mods.get_vec(name) {
-			if !installed_mods.iter().any(|installed_mod| installed_mod.info().version() == release.version()) {
-				to_install.push(release.clone());
+	to_install.extend(solution);
+
+	{
+		let to_upgrade =
+			::itertools::Itertools::sorted_by(
+				to_uninstall.iter().filter_map(|installed_mod|
+					to_install.get(installed_mod.info().name())
+					.map(|release| (installed_mod, release))),
+				|&(installed_mod1, release1), &(installed_mod2, release2)|
+					installed_mod1.info().name().cmp(installed_mod2.info().name())
+					.then_with(|| installed_mod1.info().version().cmp(installed_mod2.info().version()))
+					.then_with(|| release1.info_json().name().cmp(release2.info_json().name()))
+					.then_with(|| release1.version().cmp(release2.version())));
+
+		if !to_upgrade.is_empty() {
+			println!();
+			println!("The following mods will be upgraded:");
+			for (installed_mod, release) in to_upgrade {
+				println!("{} {} -> {}", installed_mod.info().name(), installed_mod.info().version(), release.version());
 			}
-		}
-		else {
-			to_install.push(release.clone());
 		}
 	}
 
@@ -293,23 +310,10 @@ fn compute_diff(
 		installed_mod1.info().name().cmp(installed_mod2.info().name())
 		.then_with(|| installed_mod1.info().version().cmp(installed_mod2.info().version())));
 
-	to_install.sort_by(|release1, release2|
-		release1.info_json().name().cmp(release2.info_json().name())
-		.then_with(|| release1.version().cmp(release2.version())));
-
-	to_upgrade.sort_by(|&(installed_mod1, release1), &(installed_mod2, release2)|
-		installed_mod1.info().name().cmp(installed_mod2.info().name())
-		.then_with(|| installed_mod1.info().version().cmp(installed_mod2.info().version()))
-		.then_with(|| release1.info_json().name().cmp(release2.info_json().name()))
-		.then_with(|| release1.version().cmp(release2.version())));
-
-	if !to_upgrade.is_empty() {
-		println!();
-		println!("The following mods will be upgraded:");
-		for &(installed_mod, release) in &to_upgrade {
-			println!("{} {} -> {}", installed_mod.info().name(), installed_mod.info().version(), release.version());
-		}
-	}
+	let to_install =
+		::itertools::Itertools::sorted_by(to_install.into_iter().map(|(_, release)| release), |release1, release2|
+			release1.info_json().name().cmp(release2.info_json().name())
+			.then_with(|| release1.version().cmp(release2.version())));
 
 	if !to_uninstall.is_empty() {
 		println!();
