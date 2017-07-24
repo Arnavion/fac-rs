@@ -497,7 +497,7 @@ fn compute_solution(
 	}
 
 	loop {
-		let mut node_indices_to_remove = ::std::collections::HashSet::<_>::new();
+		let mut node_indices_to_remove = ::std::collections::HashSet::new();
 
 		{
 			let name_to_node_indices: ::multimap::MultiMap<_, _> = graph.node_indices().map(|node_index| {

@@ -63,7 +63,7 @@ fn enable_disable<'a>(
 			}
 		}
 
-		let mut graph = ::petgraph::Graph::<_, _>::new();
+		let mut graph = ::petgraph::Graph::new();
 
 		let name_to_node_index: ::std::collections::HashMap<_, _> =
 			all_installed_mods.into_iter().map(|(name, mut installed_mods)| (name, graph.add_node(installed_mods.remove(0)))).collect();
@@ -92,12 +92,12 @@ fn enable_disable<'a>(
 			graph.add_edge(edge_to_add.0, edge_to_add.1, ());
 		}
 
-		let mut to_change = ::std::collections::HashSet::<_>::new();
+		let mut to_change = ::std::collections::HashSet::new();
 
 		for name in mods {
 			if let Some(&node_index) = name_to_node_index.get(&::factorio_mods_common::ModName::new(name.to_string())) {
 				let bfs = ::petgraph::visit::Bfs::new(&graph, node_index);
-				to_change.extend(::petgraph::visit::Walker::<_>::iter(bfs, &graph));
+				to_change.extend(::petgraph::visit::Walker::iter(bfs, &graph));
 			}
 			else {
 				println!("No match found for mod {}", name);
