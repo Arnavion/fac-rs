@@ -1,4 +1,4 @@
-use ::futures::{ future, Future, Poll, Stream };
+use ::futures::{ Future, IntoFuture, Poll, Stream };
 
 /// Entry-point to the https://mods.factorio.com API
 #[derive(Debug)]
@@ -81,21 +81,22 @@ impl API {
 		let release_download_url = release.download_url();
 		let expected_file_size = *release.file_size();
 
-		let mut download_url = match self.base_url.join(release_download_url) {
-			Ok(download_url) => download_url,
+		let download_url = match self.base_url.join(release_download_url) {
+			Ok(mut download_url) => {
+				download_url.query_pairs_mut()
+					.append_pair("username", user_credentials.username())
+					.append_pair("token", user_credentials.token());
+				Ok(download_url)
+			},
 
-			Err(err) => return
-				Box::new(
-					future::err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into())
-					.into_stream()),
+			Err(err) =>
+				Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into())
 		};
 
-		download_url.query_pairs_mut()
-			.append_pair("username", user_credentials.username())
-			.append_pair("token", user_credentials.token());
-
 		Box::new(
-			self.client.get_zip(download_url)
+			download_url
+			.into_future()
+			.and_then(move |download_url| self.client.get_zip(download_url))
 			.and_then(move |(response, download_url)| {
 				let file_size =
 					if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {

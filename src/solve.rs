@@ -93,8 +93,8 @@ pub fn compute_and_apply_diff<'a>(
 							}
 
 							let mut file = ::std::fs::OpenOptions::new();
-							let mut file = file.create(true).truncate(true);
-							let file = match file.write(true).open(&download_filename) {
+							let file = file.create(true).truncate(true).write(true);
+							let file = match file.open(&download_filename) {
 								Ok(file) =>
 									file,
 								Err(err) =>
@@ -131,7 +131,7 @@ struct DownloadFileFuture<S> {
 	download_displayable_filename: String,
 }
 
-impl<'a, S> Future for DownloadFileFuture<S> where S: Stream<Item = ::factorio_mods_web::reqwest::unstable::async::Chunk, Error = ::factorio_mods_web::Error> {
+impl<S> Future for DownloadFileFuture<S> where S: Stream<Item = ::factorio_mods_web::reqwest::unstable::async::Chunk, Error = ::factorio_mods_web::Error> {
 	type Item = ();
 	type Error = ::Error;
 
@@ -654,21 +654,11 @@ fn compute_solution(
 		let solution = values.iter().filter_map(|installable| installable.map(|installable| (installable.name(), installable))).collect();
 
 		if is_valid(&solution) {
-			best_solution =
-				Some(if let Some(best_solution) = best_solution {
-					let ordering = compare(&best_solution, &solution);
-					match ordering {
-						::std::cmp::Ordering::Less => solution,
-						::std::cmp::Ordering::Equal | ::std::cmp::Ordering::Greater => best_solution,
-					}
-				}
-				else {
-					solution
-				})
+			best_solution = ::std::cmp::max(best_solution, Some(Solution(solution)));
 		}
 	}
 
-	Ok(best_solution.map(|best_solution| best_solution.into_iter().filter_map(|(name, installable)| {
+	Ok(best_solution.map(|best_solution| best_solution.0.into_iter().filter_map(|(name, installable)| {
 		if let Installable::Mod(ref release) = *installable {
 			Some((name.clone(), release.clone()))
 		}
@@ -683,11 +673,11 @@ fn is_valid(solution: &::std::collections::HashMap<&::factorio_mods_common::ModN
 		for dep in installable.dependencies() {
 			if let Some(installable) = solution.get(dep.name()) {
 				if !dep.version().matches(installable.version()) {
-					return false
+					return false;
 				}
 			}
 			else if dep.required() {
-				return false
+				return false;
 			}
 		}
 	}
@@ -695,30 +685,47 @@ fn is_valid(solution: &::std::collections::HashMap<&::factorio_mods_common::ModN
 	true
 }
 
-fn compare<'a>(
-	s1: &::std::collections::HashMap<&'a ::factorio_mods_common::ModName, &'a Installable>,
-	s2: &::std::collections::HashMap<&'a ::factorio_mods_common::ModName, &'a Installable>
-) -> ::std::cmp::Ordering {
-	for (n1, i1) in s1 {
-		if let Some(i2) = s2.get(n1) {
-			match i1.version().cmp(i2.version()) {
+#[derive(Debug)]
+struct Solution<'a>(::std::collections::HashMap<&'a ::factorio_mods_common::ModName, &'a Installable>);
+
+impl<'a> Ord for Solution<'a> {
+	fn cmp(&self, other: &Self) -> ::std::cmp::Ordering {
+		for (n1, i1) in &self.0 {
+			if let Some(i2) = other.0.get(n1) {
+				match i1.version().cmp(i2.version()) {
 					::std::cmp::Ordering::Equal => (),
 					o => return o,
+				}
 			}
 		}
-	}
 
-	s1.len().cmp(&s2.len()).reverse()
+		self.0.len().cmp(&other.0.len()).reverse()
+	}
+}
+
+impl<'a> PartialOrd for Solution<'a> {
+	fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl<'a> PartialEq for Solution<'a> {
+	fn eq(&self, other: &Self) -> bool {
+		self.cmp(other) == ::std::cmp::Ordering::Equal
+	}
+}
+
+impl<'a> Eq for Solution<'a> {
 }
 
 struct Permutater<'a, T> where T: 'a {
 	state: Vec<usize>,
-	possibilities: &'a [&'a [Option<&'a T>]],
+	possibilities: &'a [&'a [T]],
 	run_once: bool,
 }
 
-impl<'a, T> Permutater<'a, T> {
-	fn new(possibilities: &'a [&'a [Option<&'a T>]]) -> Permutater<'a, T> {
+impl<'a, T> Permutater<'a, T> where T: Copy {
+	fn new(possibilities: &'a [&'a [T]]) -> Permutater<'a, T> {
 		Permutater {
 			state: vec![0; possibilities.len()],
 			possibilities,
@@ -726,8 +733,10 @@ impl<'a, T> Permutater<'a, T> {
 		}
 	}
 
-	fn next(&mut self, values: &mut [Option<&'a T>]) -> bool {
-		if self.advance(values, 0) {
+	fn next(&mut self, values: &mut [T]) -> bool {
+		assert_eq!(self.possibilities.len(), values.len());
+
+		if self.advance(0) {
 			for (value_index, &element_index) in self.state.iter().enumerate() {
 				values[value_index] = self.possibilities[value_index][element_index];
 			}
@@ -739,9 +748,9 @@ impl<'a, T> Permutater<'a, T> {
 		}
 	}
 
-	fn advance(&mut self, values: &mut [Option<&'a T>], index: usize) -> bool {
-		if index >= values.len() {
-			return false
+	fn advance(&mut self, index: usize) -> bool {
+		if index >= self.possibilities.len() {
+			return false;
 		}
 
 		if self.run_once {
@@ -751,12 +760,46 @@ impl<'a, T> Permutater<'a, T> {
 			}
 			else {
 				self.state[index] = 0;
-				self.advance(values, index + 1)
+				self.advance(index + 1)
 			}
 		}
 		else {
 			self.run_once = true;
 			true
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_permutater() {
+		let possibilities = vec![vec![None, Some("a"), Some("b")], vec![None, Some("c")]];
+		let possibilities: Vec<_> = possibilities.iter().map(AsRef::as_ref).collect();
+		let mut values = vec![None; possibilities.len()];
+
+		let mut permutater = Permutater::new(&possibilities);
+
+		assert!(permutater.next(&mut values));
+		assert_eq!(values, [None, None]);
+
+		assert!(permutater.next(&mut values));
+		assert_eq!(values, [Some("a"), None]);
+
+		assert!(permutater.next(&mut values));
+		assert_eq!(values, [Some("b"), None]);
+
+		assert!(permutater.next(&mut values));
+		assert_eq!(values, [None, Some("c")]);
+
+		assert!(permutater.next(&mut values));
+		assert_eq!(values, [Some("a"), Some("c")]);
+
+		assert!(permutater.next(&mut values));
+		assert_eq!(values, [Some("b"), Some("c")]);
+
+		assert!(!permutater.next(&mut values));
 	}
 }

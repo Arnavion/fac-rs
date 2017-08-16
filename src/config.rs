@@ -1,7 +1,7 @@
 use ::ResultExt;
 
 mod versions {
-	#[derive(Clone, Debug, Deserialize, Serialize, getters)]
+	#[derive(Clone, Debug, Default, Deserialize, Serialize, getters)]
 	pub struct ConfigV1 {
 		#[serde(serialize_with = "super::serialize_config_mods")]
 		mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
@@ -12,10 +12,6 @@ mod versions {
 			#[cfg_attr(feature = "cargo-clippy", allow(needless_update))]
 			ConfigV1 { mods, .. self }
 		}
-	}
-
-	lazy_static! {
-		pub static ref DEFAULT_CONFIG_V1: ConfigV1 = ConfigV1 { mods: Default::default() };
 	}
 }
 
@@ -58,7 +54,7 @@ impl Config {
 							.chain_err(|| "Could not process an installed mod"))
 						.collect();
 					let installed_mods = installed_mods.chain_err(|| "Could not enumerate installed mods")?;
-					Ok(versions::DEFAULT_CONFIG_V1.clone().with_mods(installed_mods))
+					Ok(versions::ConfigV1::default().with_mods(installed_mods))
 				},
 
 				_ => Err(err).chain_err(|| format!("Could not read config file {}", config_file_path_displayable)),
