@@ -1,4 +1,4 @@
-use ::futures::{ future, Async, Future, Poll, Stream };
+use ::futures::{ future, Future, stream, Stream };
 
 pub struct SubCommand;
 
@@ -26,7 +26,7 @@ impl ::util::SubCommand for SubCommand {
 		let names = names.into_iter().map(|name| ::factorio_mods_common::ModName::new(name.to_string()));
 
 		Box::new(
-			futures_ordered(
+			stream::futures_ordered(
 				names.map(move |name|
 					web_api.get(&name)
 					.or_else(move |err| Err(err).chain_err(|| format!("Could not retrieve mod {}", name)))))
@@ -71,58 +71,5 @@ impl ::util::SubCommand for SubCommand {
 
 				Ok(())
 			}))
-	}
-}
-
-// TODO: Should be replaced with `::futures::stream::futures_ordered()` when that's released
-fn futures_ordered<I>(futures: I) -> impl Stream<Item = <I::Item as Future>::Item, Error = <I::Item as Future>::Error> where I: IntoIterator, I::Item: Future {
-	let futures = futures.into_iter().map(FuturesOrderedElement::Pending).collect();
-	FuturesOrdered(futures)
-}
-
-struct FuturesOrdered<F>(::std::collections::VecDeque<FuturesOrderedElement<F>>) where F: Future;
-
-enum FuturesOrderedElement<F> where F: Future {
-	Pending(F),
-	Completed(Result<F::Item, F::Error>),
-	Invalid,
-}
-
-impl<F> Stream for FuturesOrdered<F> where F: Future {
-	type Item = F::Item;
-	type Error = F::Error;
-
-	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-		for pending_future in &mut self.0 {
-			*pending_future = match ::std::mem::replace(pending_future, FuturesOrderedElement::Invalid) {
-				FuturesOrderedElement::Pending(mut f) => match f.poll() {
-					Ok(Async::Ready(value)) => FuturesOrderedElement::Completed(Ok(value)),
-					Ok(Async::NotReady) => FuturesOrderedElement::Pending(f),
-					Err(err) => FuturesOrderedElement::Completed(Err(err)),
-				},
-
-				FuturesOrderedElement::Completed(r) =>
-					FuturesOrderedElement::Completed(r),
-
-				FuturesOrderedElement::Invalid =>
-					unreachable!(),
-			};
-		}
-
-		match self.0.pop_front() {
-			Some(FuturesOrderedElement::Pending(f)) => {
-				self.0.push_front(FuturesOrderedElement::Pending(f));
-				Ok(Async::NotReady)
-			},
-
-			Some(FuturesOrderedElement::Completed(r)) =>
-				r.map(|v| Async::Ready(Some(v))),
-
-			Some(FuturesOrderedElement::Invalid) =>
-				unreachable!(),
-
-			None =>
-				Ok(Async::Ready(None)),
-		}
 	}
 }
