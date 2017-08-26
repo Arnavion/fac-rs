@@ -42,7 +42,7 @@ extern crate serde_json;
 extern crate term_size;
 extern crate textwrap;
 
-use ::factorio_mods_web::futures;
+use ::factorio_mods_web::{ futures, reqwest };
 
 mod enable_disable;
 mod install;
@@ -85,12 +85,22 @@ quick_main!(|| -> Result<()> {
 
 	let app = clap_app!(@app (app_from_crate!())
 		(@setting SubcommandRequiredElseHelp)
-		(@setting VersionlessSubcommands));
+		(@setting VersionlessSubcommands)
+		(@arg proxy: --proxy +takes_value "HTTP proxy URL"));
 
 	let app = subcommands.iter().fold(app, |app, (name, subcommand)|
 		app.subcommand(subcommand.build_subcommand(clap::SubCommand::with_name(name))));
 
 	let matches = app.get_matches();
+
+	let client = if let Some(proxy_url) = matches.value_of("proxy") {
+		let mut builder = ::reqwest::unstable::async::ClientBuilder::new().chain_err(|| "Couldn't create HTTP client")?;
+		builder.proxy(::reqwest::Proxy::all(proxy_url).chain_err(|| "Couldn't parse proxy URL")?);
+		Some(builder)
+	}
+	else {
+		None
+	};
 
 	let (subcommand_name, subcommand_matches) = matches.subcommand();
 	let subcommand = subcommands[subcommand_name];
@@ -98,7 +108,7 @@ quick_main!(|| -> Result<()> {
 	let mut core = ::factorio_mods_web::tokio_core::reactor::Core::new().chain_err(|| "Could not create Tokio event loop")?;
 
 	let local_api = factorio_mods_local::API::new().chain_err(|| "Could not initialize local API");
-	let web_api = factorio_mods_web::API::new(None, core.handle()).chain_err(|| "Could not initialize web API");
+	let web_api = factorio_mods_web::API::new(client, core.handle()).chain_err(|| "Could not initialize web API");
 
 	let result = subcommand.run(
 		subcommand_matches.unwrap(),
