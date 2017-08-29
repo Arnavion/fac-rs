@@ -13,7 +13,6 @@
 ))]
 
 extern crate appdirs;
-extern crate backtrace;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
@@ -26,7 +25,6 @@ extern crate factorio_mods_common;
 extern crate globset;
 #[macro_use]
 extern crate lazy_static;
-extern crate semver;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
