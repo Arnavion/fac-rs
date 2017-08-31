@@ -14,7 +14,7 @@ impl API {
 	pub fn new(
 		builder: Option<::reqwest::unstable::async::ClientBuilder>,
 		handle: ::tokio_core::reactor::Handle,
-	) -> ::Result<API> {
+	) -> ::Result<Self> {
 		use ::error::ResultExt;
 
 		Ok(API {

@@ -8,7 +8,7 @@ mod versions {
 	}
 
 	impl ConfigV1 {
-		pub fn with_mods(self, mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>) -> ConfigV1 {
+		pub fn with_mods(self, mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>) -> Self {
 			#[cfg_attr(feature = "cargo-clippy", allow(needless_update))]
 			ConfigV1 { mods, .. self }
 		}
@@ -24,7 +24,7 @@ enum StoredConfig {
 pub type Config = versions::ConfigV1;
 
 impl Config {
-	pub fn load(api: &::factorio_mods_local::API) -> ::Result<Config> {
+	pub fn load(api: &::factorio_mods_local::API) -> ::Result<Self> {
 		let user_config_dir = ::appdirs::user_config_dir(Some("fac"), None, false).map_err(|_| "Could not derive path to config directory")?;
 
 		if let Err(err) = ::std::fs::create_dir(&user_config_dir) {

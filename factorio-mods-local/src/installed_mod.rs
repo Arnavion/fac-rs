@@ -29,7 +29,7 @@ impl InstalledMod {
 	pub fn parse(
 		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> ::Result<InstalledMod> {
+	) -> ::Result<Self> {
 		let (info, mod_type): (::factorio_mods_common::ModInfo, _) = if path.is_file() {
 			if match path.extension() {
 				Some(extension) if extension == "zip" => true,

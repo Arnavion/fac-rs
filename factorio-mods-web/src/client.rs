@@ -11,7 +11,7 @@ impl Client {
 	pub fn new(
 		builder: Option<::reqwest::unstable::async::ClientBuilder>,
 		handle: ::tokio_core::reactor::Handle,
-	) -> ::Result<Client> {
+	) -> ::Result<Self> {
 		use ::error::ResultExt;
 
 		let mut builder = match builder {

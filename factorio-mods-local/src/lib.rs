@@ -10,6 +10,7 @@
 	shadow_reuse,
 	stutter,
 	unseparated_literal_suffix,
+	use_self,
 ))]
 
 extern crate appdirs;

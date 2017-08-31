@@ -9,7 +9,7 @@ pub struct API {
 
 impl API {
 	/// Constructs an API object. Tries to detect the local Factorio install in some pre-defined locations.
-	pub fn new() -> ::Result<API> {
+	pub fn new() -> ::Result<Self> {
 		let base_info_file_path = FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
 			let search_path = ::std::path::Path::new(search_path);
 			let base_info_file_path = search_path.join("data").join("base").join("info.json");

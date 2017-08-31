@@ -12,6 +12,7 @@
 	result_unwrap_used,
 	shadow_reuse,
 	unseparated_literal_suffix,
+	use_self,
 ))]
 
 extern crate appdirs;

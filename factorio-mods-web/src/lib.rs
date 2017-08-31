@@ -13,6 +13,7 @@
 	too_many_arguments,
 	unseparated_literal_suffix,
 	use_debug,
+	use_self,
 ))]
 
 #[macro_use]
