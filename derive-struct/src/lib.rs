@@ -1,6 +1,5 @@
 //! A helper crate for easily deriving structs.
 
-#![crate_type = "proc-macro"]
 #![recursion_limit = "200"]
 
 extern crate proc_macro;
