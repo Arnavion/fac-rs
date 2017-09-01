@@ -214,13 +214,13 @@ lazy_static! {
 }
 
 /// Represents the contents of `mod-list.json`
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, ::serde_derive::Deserialize, ::serde_derive::Serialize)]
 struct ModList {
 	mods: Vec<ModListMod>,
 }
 
 /// A mod entry in the mod list
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, ::serde_derive::Deserialize, ::serde_derive::Serialize)]
 struct ModListMod {
 	name: ::factorio_mods_common::ModName,
 
@@ -229,13 +229,13 @@ struct ModListMod {
 }
 
 /// Represents the contents of `base/info.json`
-#[derive(Debug, Deserialize)]
+#[derive(Debug, ::serde_derive::Deserialize)]
 struct BaseInfo {
 	version: ::factorio_mods_common::ReleaseVersion,
 }
 
 /// Represents the contents of `player-data.json`
-#[derive(Debug, Deserialize)]
+#[derive(Debug, ::serde_derive::Deserialize)]
 struct PlayerData {
 	#[serde(rename(deserialize = "service-username"))]
 	service_username: Option<::factorio_mods_common::ServiceUsername>,

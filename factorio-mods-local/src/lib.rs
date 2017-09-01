@@ -1,7 +1,7 @@
 //! API to interface with the local Factorio installation.
 
 #![deny(missing_docs)]
-#![feature(conservative_impl_trait)]
+#![feature(conservative_impl_trait, proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -16,18 +16,14 @@
 extern crate appdirs;
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
 extern crate derive_error_chain;
-#[macro_use]
 extern crate derive_new;
-#[macro_use]
 extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate globset;
 #[macro_use]
 extern crate lazy_static;
 extern crate serde;
-#[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate zip;

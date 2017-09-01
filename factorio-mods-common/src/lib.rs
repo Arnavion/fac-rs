@@ -1,6 +1,7 @@
 //! Common types and functionality used by the other factorio-mods crates.
 
 #![deny(missing_docs)]
+#![feature(proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -13,9 +14,7 @@
 	use_debug,
 ))]
 
-#[macro_use]
 extern crate derive_new;
-#[macro_use]
 extern crate derive_struct;
 extern crate itertools;
 #[macro_use]
@@ -24,7 +23,6 @@ extern crate regex;
 extern crate semver;
 #[macro_use]
 extern crate serde;
-#[macro_use]
 extern crate serde_derive;
 #[cfg(test)]
 extern crate serde_json;

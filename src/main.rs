@@ -1,6 +1,6 @@
 //! A CLI tool to manage Factorio mods.
 
-#![feature(catch_expr, conservative_impl_trait)]
+#![feature(catch_expr, conservative_impl_trait, proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -20,9 +20,7 @@ extern crate appdirs;
 extern crate clap;
 #[macro_use]
 extern crate error_chain;
-#[macro_use]
 extern crate derive_error_chain;
-#[macro_use]
 extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
@@ -37,7 +35,6 @@ extern crate regex;
 extern crate rpassword;
 extern crate semver;
 extern crate serde;
-#[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate term_size;
@@ -57,7 +54,7 @@ mod config;
 mod solve;
 mod util;
 
-#[derive(Debug, error_chain)]
+#[derive(Debug, ::derive_error_chain::error_chain)]
 pub enum ErrorKind {
 	Msg(String),
 }

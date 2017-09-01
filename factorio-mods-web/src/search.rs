@@ -1,15 +1,25 @@
 use ::futures::{ Async, Future, Poll, Stream };
 
 /// The page number of one page of a search response.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct PageNumber(u64);
 
 /// The response number within a page of a search response.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ResponseNumber(u64);
 
 /// A mod object returned by `API::search`.
-#[derive(Clone, Debug, Deserialize, PartialEq, new, getters)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct SearchResponseMod {
 	/// The mod ID.
 	id: ::ModId,
@@ -158,14 +168,14 @@ impl<'a> Stream for SearchResultsStream<'a> {
 }
 
 /// A single search response.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, ::serde_derive::Deserialize)]
 struct SearchResponse {
 	pagination: SearchResponsePagination,
 	results: Vec<SearchResponseMod>,
 }
 
 /// Pagination information in a search response.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, ::serde_derive::Deserialize)]
 struct SearchResponsePagination {
 	page_count: PageNumber,
 	page: PageNumber,
@@ -177,7 +187,7 @@ struct SearchResponsePagination {
 }
 
 /// Pagination link information in a search response.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, ::serde_derive::Deserialize)]
 struct SearchResponsePaginationLinks {
 	#[serde(deserialize_with = "deserialize_url")]
 	prev: Option<::reqwest::Url>,

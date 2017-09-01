@@ -1,17 +1,32 @@
 /// A date and time string.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct DateTime(String);
 
 /// Number of ratings.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct RatingCount(u64);
 
 /// Number of downloads.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct DownloadCount(u64);
 
 /// A mod object returned by `API::get`.
-#[derive(Clone, Debug, Deserialize, PartialEq, new, getters)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct Mod {
 	/// The mod ID.
 	id: ModId,
@@ -73,23 +88,43 @@ pub struct Mod {
 }
 
 /// A mod ID.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ModId(u64);
 
 /// The summary of a mod.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ModSummary(String);
 
 /// The name of a mod's license.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct LicenseName(String);
 
 /// License flags.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct LicenseFlags(u64);
 
 /// A single mod release.
-#[derive(Clone, Debug, Deserialize, PartialEq, new, getters)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct ModRelease {
 	/// The ID of the mod release.
 	id: ReleaseId,
@@ -121,19 +156,34 @@ pub struct ModRelease {
 }
 
 /// The ID of a mod release.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ReleaseId(u64);
 
 /// The filename of a mod release.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct Filename(String);
 
 /// The file size of a mod release.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct FileSize(u64);
 
 /// A tag.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, new, getters)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct Tag {
 	/// The ID of the tag.
 	id: TagId,
@@ -153,21 +203,45 @@ pub struct Tag {
 }
 
 /// The ID of a tag.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct TagId(u64);
 
 /// The name of a tag.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct TagName(String);
 
 /// The title of a tag.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize)]
 pub struct TagTitle(String);
 
 /// The description of a tag.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct TagDescription(String);
 
 /// The type of a tag.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct TagType(String);

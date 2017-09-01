@@ -151,7 +151,7 @@ lazy_static! {
 }
 
 /// A login failure response.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, ::serde_derive::Deserialize)]
 struct LoginFailureResponse {
 	message: String,
 }

@@ -1,7 +1,7 @@
 use ::ResultExt;
 
 mod versions {
-	#[derive(Clone, Debug, Default, Deserialize, Serialize, getters)]
+	#[derive(Clone, Debug, Default, ::serde_derive::Deserialize, ::serde_derive::Serialize, ::derive_struct::getters)]
 	pub struct ConfigV1 {
 		#[serde(serialize_with = "super::serialize_config_mods")]
 		mods: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
@@ -15,7 +15,7 @@ mod versions {
 	}
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, ::serde_derive::Deserialize, ::serde_derive::Serialize)]
 #[serde(tag = "version")]
 enum StoredConfig {
 	V1(versions::ConfigV1),

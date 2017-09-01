@@ -1,9 +1,19 @@
 /// A URL.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct Url(String);
 
 /// The name of a mod.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ModName(String);
 
 impl ::serde::Serialize for ModName {
@@ -13,23 +23,42 @@ impl ::serde::Serialize for ModName {
 }
 
 /// The name of an author of a mod.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct AuthorName(String);
 
 /// The title of a mod.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ModTitle(String);
 
 /// The description of a mod.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ModDescription(String);
 
 /// The version of a mod release.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_deserialize, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_deserialize, ::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+)]
 pub struct ReleaseVersion(::semver::Version);
 
 /// A username and token used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, Deserialize, new, getters)]
+#[derive(Clone, Debug, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct UserCredentials {
 	/// The username.
 	username: ServiceUsername,
@@ -39,15 +68,25 @@ pub struct UserCredentials {
 }
 
 /// A username used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ServiceUsername(String);
 
 /// A token used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, new, newtype_display, newtype_ref)]
+#[derive(
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	::derive_new::new,
+	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
+	::serde_derive::Deserialize,
+)]
 pub struct ServiceToken(String);
 
 /// Represents the contents of `info.json` of a mod release.
-#[derive(Clone, Debug, Deserialize, PartialEq, new, getters)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct ModInfo {
 	/// The name of the mod release.
 	name: ModName,
@@ -79,7 +118,7 @@ pub struct ModInfo {
 }
 
 /// The specification of a dependency in a mod's info.json
-#[derive(Clone, Debug, PartialEq, new, getters)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters)]
 pub struct Dependency {
 	/// The name of the dependency.
 	name: ModName,
@@ -112,7 +151,7 @@ impl<'de> ::serde::Deserialize<'de> for Dependency {
 }
 
 /// A version requirement.
-#[derive(Clone, Debug, PartialEq, new, newtype_deserialize, newtype_display, newtype_ref)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::newtype_deserialize, ::derive_struct::newtype_display, ::derive_struct::newtype_ref)]
 pub struct ModVersionReq(::semver::VersionReq);
 
 impl ::serde::Serialize for ModVersionReq {

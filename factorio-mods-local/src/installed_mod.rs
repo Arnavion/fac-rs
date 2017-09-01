@@ -1,5 +1,5 @@
 /// An installed mod object.
-#[derive(Clone, Debug, PartialEq, new, getters)]
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters)]
 pub struct InstalledMod {
 	/// The path of the mod.
 	path: ::std::path::PathBuf,
