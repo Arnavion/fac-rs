@@ -8,7 +8,7 @@ extern crate quote;
 extern crate syn;
 
 /// Generates getters for every field of a non-tuple struct.
-#[proc_macro_derive(getters)]
+#[proc_macro_derive(getters, attributes(getter))]
 pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let source = input.to_string();
 	let ast = syn::parse_derive_input(&source).unwrap();
@@ -19,10 +19,22 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 			fields.into_iter().map(|field| {
 				let syn::Field { ident, attrs, ty, .. } = field;
 
-				let field_doc_attr = attrs.into_iter().filter(|attr| match attr.value {
-					syn::MetaItem::NameValue(ref ident, _) if ident.as_ref() == "doc" => true,
-					_ => false,
-				}).next();
+				let mut field_doc_attr = None;
+				let mut is_copy = false;
+				for attr in &attrs {
+					match attr.value {
+						syn::MetaItem::NameValue(ref ident, _) if ident.as_ref() == "doc" => field_doc_attr = Some(attr),
+						syn::MetaItem::List(ref ident, ref nested_meta_items) if ident.as_ref() == "getter" => {
+							for nested_meta_item in nested_meta_items {
+								match *nested_meta_item {
+									syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) if ident.as_ref() == "copy" => is_copy = true,
+									_ => panic!("Unrecognized meta item on field {}", ident),
+								}
+							}
+						},
+						_ => (),
+					}
+				}
 
 				match identify_type(&ty) {
 					Some(Type::Bool) => quote! {
@@ -50,6 +62,13 @@ pub fn derive_getters(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 						#field_doc_attr
 						pub fn #ident(&self) -> &[#ty] {
 							&self.#ident
+						}
+					},
+
+					_ if is_copy => quote! {
+						#field_doc_attr
+						pub fn #ident(&self) -> #ty {
+							self.#ident
 						}
 					},
 

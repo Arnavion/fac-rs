@@ -29,6 +29,7 @@ pub struct DownloadCount(u64);
 #[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct Mod {
 	/// The mod ID.
+	#[getter(copy)]
 	id: ModId,
 
 	/// The name of the mod.
@@ -60,6 +61,7 @@ pub struct Mod {
 	license_url: ::factorio_mods_common::Url,
 
 	/// The flags of the mod's license.
+	#[getter(copy)]
 	license_flags: LicenseFlags,
 
 	/// The versions of the game supported by the mod.
@@ -75,11 +77,13 @@ pub struct Mod {
 	releases: Vec<ModRelease>,
 
 	/// The number of user ratings the mod has received.
+	#[getter(copy)]
 	ratings_count: RatingCount,
 
 	// current_user_rating: ???, # Unknown type
 
 	/// The number of times the mod has been downloaded.
+	#[getter(copy)]
 	downloads_count: DownloadCount,
 
 	/// The tags of the mod.
@@ -127,6 +131,7 @@ pub struct LicenseFlags(u64);
 #[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct ModRelease {
 	/// The ID of the mod release.
+	#[getter(copy)]
 	id: ReleaseId,
 
 	/// The version of the mod release.
@@ -143,12 +148,14 @@ pub struct ModRelease {
 	filename: Filename,
 
 	/// The file size of the mod release.
+	#[getter(copy)]
 	file_size: FileSize,
 
 	/// The date and time at which the mod release was created.
 	released_at: DateTime,
 
 	/// The number of times the mod release has been downloaded.
+	#[getter(copy)]
 	downloads_count: DownloadCount,
 
 	/// The `info.json` of the mod release.
@@ -186,6 +193,7 @@ pub struct FileSize(u64);
 #[derive(Clone, Debug, Eq, Hash, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct Tag {
 	/// The ID of the tag.
+	#[getter(copy)]
 	id: TagId,
 
 	/// The name of the tag.

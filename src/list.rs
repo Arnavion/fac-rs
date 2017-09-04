@@ -38,7 +38,7 @@ impl ::util::SubCommand for SubCommand {
 					if !installed_mod.enabled() {
 						tags.push("disabled");
 					}
-					if let ::factorio_mods_local::InstalledModType::Unpacked = *installed_mod.mod_type() {
+					if let ::factorio_mods_local::InstalledModType::Unpacked = installed_mod.mod_type() {
 						tags.push("unpacked");
 					}
 

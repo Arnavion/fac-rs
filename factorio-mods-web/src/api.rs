@@ -106,7 +106,7 @@ impl API {
 						bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
 					};
 
-				if file_size != *expected_file_size {
+				if file_size != expected_file_size {
 					bail!(
 						::ErrorKind::MalformedResponse(
 							download_url,

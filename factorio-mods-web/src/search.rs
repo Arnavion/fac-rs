@@ -22,6 +22,7 @@ pub struct ResponseNumber(u64);
 #[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct SearchResponseMod {
 	/// The mod ID.
+	#[getter(copy)]
 	id: ::ModId,
 
 	/// The name of the mod.
@@ -64,6 +65,7 @@ pub struct SearchResponseMod {
 	// current_user_rating: ???, # Unknown type
 
 	/// The number of times the mod has been downloaded.
+	#[getter(copy)]
 	downloads_count: ::DownloadCount,
 
 	/// The tags of the mod.

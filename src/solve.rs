@@ -22,7 +22,7 @@ pub fn compute_and_apply_diff<'a>(
 			::util::ensure_user_credentials(local_api, web_api)
 			.and_then(move |user_credentials| {
 				for installed_mod in to_uninstall {
-					match *installed_mod.mod_type() {
+					match installed_mod.mod_type() {
 						::factorio_mods_local::InstalledModType::Zipped => {
 							let path = installed_mod.path();
 							println!("Removing file {}", path.display());

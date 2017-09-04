@@ -11,6 +11,7 @@ pub struct InstalledMod {
 	enabled: bool,
 
 	/// Whether the installed mod is zipped or unpacked.
+	#[getter(copy)]
 	mod_type: InstalledModType,
 }
 
