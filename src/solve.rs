@@ -230,15 +230,10 @@ fn solve<'a>(
 		.map(|_| (reqs, cache))
 	})
 	.and_then(|(reqs, cache)|
-		cache.lock()
-		.then(move |guard| match guard {
-			Ok(mut guard) => {
-				let graph = ::std::mem::replace(&mut (*guard).graph, Default::default());
-				compute_solution(graph, &reqs)
-			},
-
-			Err(()) =>
-				unreachable!(),
+		lock(cache)
+		.then(move |Ok(mut guard)| {
+			let graph = ::std::mem::replace(&mut (*guard).graph, Default::default());
+			compute_solution(graph, &reqs)
 		}))
 }
 
@@ -354,31 +349,18 @@ fn add_mod<'a, E>(
 	name: ::factorio_mods_common::ModName,
 ) -> Box<Future<Item = (), Error = ::Error> + 'a> where E: 'a {
 	Box::new(
-		cache.lock()
-		.then(|guard| match guard {
-			Ok(mut guard) => {
-				let need_to_fetch = {
-					let cache = &mut *guard;
+		lock(cache)
+		.then(move |Ok(mut guard)| {
+			{
+				let cache = &mut *guard;
 
-					match cache.name_to_node_indices.entry(name.clone()) {
-						::multimap::Entry::Occupied(_) => false,
-						::multimap::Entry::Vacant(entry) => {
-							entry.insert_vec(vec![]);
-							true
-						},
-					}
+				match cache.name_to_node_indices.entry(name.clone()) {
+					::multimap::Entry::Occupied(_) => return future::Either::A(future::ok(())),
+					::multimap::Entry::Vacant(entry) => entry.insert_vec(vec![]),
 				};
-
-				Ok((need_to_fetch, guard.unlock(), name))
-			},
-
-			Err(()) =>
-				unreachable!(),
-		})
-		.and_then(move |(need_to_fetch, cache, name)| {
-			if !need_to_fetch {
-				return future::Either::A(future::ok(()));
 			}
+
+			let cache = guard.unlock();
 
 			println!("    {} ...", name);
 
@@ -427,19 +409,14 @@ fn add_installable<E>(
 	cache: ::futures_mutex::FutMutex<Cache<E>>,
 	installable: Installable,
 ) -> impl Future<Item = ::futures_mutex::FutMutex<Cache<E>>, Error = ::Error> {
-	cache.lock()
-	.then(|guard| match guard {
-		Ok(mut guard) => {
-			{
-				let cache = &mut *guard;
-				cache.name_to_node_indices.insert(installable.name().clone(), cache.graph.add_node(installable));
-			}
+	lock(cache)
+	.then(|Ok(mut guard)| {
+		{
+			let cache = &mut *guard;
+			cache.name_to_node_indices.insert(installable.name().clone(), cache.graph.add_node(installable));
+		}
 
-			Ok(guard.unlock())
-		},
-
-		Err(()) =>
-			unreachable!(),
+		Ok(guard.unlock())
 	})
 }
 
@@ -768,6 +745,10 @@ impl<'a, T> Permutater<'a, T> where T: Copy {
 			true
 		}
 	}
+}
+
+fn lock<T>(mutex: ::futures_mutex::FutMutex<T>) -> impl Future<Item = ::futures_mutex::FutMutexAcquired<T>, Error = !> {
+	mutex.lock().map_err(|()| unreachable!())
 }
 
 #[cfg(test)]
