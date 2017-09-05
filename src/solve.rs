@@ -9,13 +9,22 @@ pub fn compute_and_apply_diff<'a>(
 	local_api: &'a ::factorio_mods_local::API,
 	web_api: &'a ::factorio_mods_web::API,
 	reqs: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
-) -> impl Future<Item = bool, Error = ::Error> + 'a {
+) -> impl Future<Item = (bool, ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>), Error = ::Error> + 'a {
 	solve(web_api, local_api.game_version(), reqs)
-	.and_then(|solution| solution.ok_or_else(|| "No solution found.".into()))
-	.and_then(move |solution| compute_diff(solution, local_api))
-	.and_then(move |diff| if let Some((to_uninstall, to_install)) = diff {
+	.and_then(move |(solution, reqs)| {
+		let solution = match solution {
+			Some(solution) => solution,
+			None => return future::Either::A(future::err("No solution found.".into())),
+		};
+
+		let (to_uninstall, to_install) = match compute_diff(solution, local_api) {
+			Ok(Some(diff)) => diff,
+			Ok(None) => return future::Either::A(future::ok((false, reqs))),
+			Err(err) => return future::Either::A(future::err(err)),
+		};
+
 		if to_uninstall.is_empty() && to_install.is_empty() {
-			return future::Either::A(future::ok(true));
+			return future::Either::A(future::ok((true, reqs)));
 		}
 
 		future::Either::B(
@@ -112,11 +121,8 @@ pub fn compute_and_apply_diff<'a>(
 								download_displayable_filename,
 							})
 						}))
-					.map(|_| true))
+					.map(|_| (true, reqs)))
 			}))
-	}
-	else {
-		future::Either::A(future::ok(false))
 	})
 }
 
@@ -215,7 +221,10 @@ fn solve<'a>(
 	api: &'a ::factorio_mods_web::API,
 	game_version: &'a ::factorio_mods_common::ReleaseVersion,
 	reqs: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
-) -> impl Future<Item = Option<::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>>, Error = ::Error> + 'a {
+) -> impl Future<Item = (
+	Option<::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_web::ModRelease>>,
+	::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_common::ModVersionReq>,
+), Error = ::Error> + 'a {
 	let cache = ::futures_mutex::FutMutex::new(Default::default());
 
 	add_installable(cache, Installable::Base(::factorio_mods_common::ModName::new("base".to_string()), game_version.clone()))
@@ -233,7 +242,10 @@ fn solve<'a>(
 		lock(cache)
 		.then(move |Ok(mut guard)| {
 			let graph = ::std::mem::replace(&mut (*guard).graph, Default::default());
-			compute_solution(graph, &reqs)
+			match compute_solution(graph, &reqs) {
+				Ok(solution) => Ok((solution, reqs)),
+				Err(err) => Err(err),
+			}
 		}))
 }
 

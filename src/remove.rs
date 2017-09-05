@@ -22,21 +22,21 @@ impl ::util::SubCommand for SubCommand {
 			(Err(err), _) | (_, Err(err)) => return Box::new(future::err(err)),
 		};
 
-		let config = match ::config::Config::load(local_api) {
+		let mut config = match ::config::Config::load(local_api) {
 			Ok(config) => config,
 			Err(err) => return Box::new(future::err(err)),
 		};
 
-		let mut reqs = config.mods().clone();
+		let mut reqs = ::std::mem::replace(&mut config.mods, Default::default());
 		for mod_ in mods {
 			let name = ::factorio_mods_common::ModName::new(mod_.to_string());
 			reqs.remove(&name);
 		}
 
 		Box::new(
-			::solve::compute_and_apply_diff(local_api, web_api, reqs.clone())
-			.and_then(|result| Ok(if result {
-				let config = config.with_mods(reqs);
+			::solve::compute_and_apply_diff(local_api, web_api, reqs)
+			.and_then(move |(result, reqs)| Ok(if result {
+				config.mods = reqs;
 				config.save()?
 			})))
 	}

@@ -25,7 +25,7 @@ impl ::util::SubCommand for SubCommand {
 		};
 
 		Box::new(
-			::solve::compute_and_apply_diff(local_api, web_api, config.mods().clone())
+			::solve::compute_and_apply_diff(local_api, web_api, config.mods)
 			.map(|_| ()))
 	}
 }

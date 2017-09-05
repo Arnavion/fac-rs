@@ -21,7 +21,6 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 extern crate derive_error_chain;
-extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;
