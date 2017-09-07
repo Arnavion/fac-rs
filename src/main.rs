@@ -53,7 +53,7 @@ mod config;
 mod solve;
 mod util;
 
-#[derive(Debug, ::derive_error_chain::error_chain)]
+#[derive(Debug, ::derive_error_chain::ErrorChain)]
 pub enum ErrorKind {
 	Msg(String),
 }

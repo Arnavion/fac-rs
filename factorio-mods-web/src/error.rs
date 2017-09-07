@@ -1,5 +1,5 @@
 /// Error kinds for errors returned by this crate.
-#[derive(Debug, ::derive_error_chain::error_chain)]
+#[derive(Debug, ::derive_error_chain::ErrorChain)]
 pub enum ErrorKind {
 	/// A generic error message
 	Msg(String),

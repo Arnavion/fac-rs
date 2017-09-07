@@ -7,8 +7,8 @@ description = "Mod manager for Factorio"
 [dependencies]
 appdirs = "0.2.x"
 clap = "2.26.x"
-derive-error-chain = "0.10.x"
-error-chain = "0.10.x"
+derive-error-chain = "0.11.x"
+error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
