@@ -49,14 +49,12 @@ impl API {
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get<'a>(&'a self, mod_name: &::factorio_mods_common::ModName) -> Box<Future<Item = ::Mod, Error = ::Error> + 'a> {
-		// TODO: `Box` instead of `impl trait` because of ICE https://github.com/rust-lang/rust/issues/41297
+	pub fn get<'a>(&'a self, mod_name: &::factorio_mods_common::ModName) -> impl Future<Item = ::Mod, Error = ::Error> + 'a {
 		let mut mod_url = self.mods_url.clone();
 		mod_url.path_segments_mut().unwrap().push(mod_name);
 
-		Box::new(
-			self.client.get_object(mod_url)
-			.map(|(mod_, _)| mod_))
+		self.client.get_object(mod_url)
+		.map(|(mod_, _)| mod_)
 	}
 
 	/// Logs in to the web API using the given username and password and returns a credentials object.
@@ -74,8 +72,7 @@ impl API {
 		&'a self,
 		release: &::ModRelease,
 		user_credentials: &::factorio_mods_common::UserCredentials,
-	) -> Box<Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'a> {
-		// TODO: `Box` instead of `impl trait` because of ICE https://github.com/rust-lang/rust/issues/41297
+	) -> impl Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'a {
 		let release_download_url = release.download_url();
 		let expected_file_size = *release.file_size();
 
@@ -91,28 +88,27 @@ impl API {
 				Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into())
 		};
 
-		Box::new(
-			download_url
-			.into_future()
-			.and_then(move |download_url| self.client.get_zip(download_url))
-			.and_then(move |(response, download_url)| {
-				let file_size =
-					if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
-						file_size
-					}
-					else {
-						bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
-					};
+		download_url
+		.into_future()
+		.and_then(move |download_url| self.client.get_zip(download_url))
+		.and_then(move |(response, download_url)| {
+			let file_size =
+				if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
+					file_size
+				}
+				else {
+					bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
+				};
 
-				ensure!(
-					file_size == expected_file_size,
-					::ErrorKind::MalformedResponse(
-						download_url,
-						format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
+			ensure!(
+				file_size == expected_file_size,
+				::ErrorKind::MalformedResponse(
+					download_url,
+					format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 
-				Ok(ResponseWithUrlContext { response, url: download_url })
-			})
-			.flatten_stream())
+			Ok(ResponseWithUrlContext { response, url: download_url })
+		})
+		.flatten_stream()
 	}
 }
 
