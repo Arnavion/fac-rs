@@ -32,45 +32,39 @@ impl InstalledMod {
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::Result<Self> {
 		let (info, mod_type): (::factorio_mods_common::ModInfo, _) = if path.is_file() {
-			if match path.extension() {
-				Some(extension) if extension == "zip" => true,
-				_ => false,
-			} {
-				let zip_file = match ::std::fs::File::open(&path) {
-					Ok(zip_file) => zip_file,
-					Err(err) => bail!(::ErrorKind::FileIO(path, err)),
-				};
+			ensure!(path.extension() == Some("zip".as_ref()), ::ErrorKind::UnknownModFormat(path));
 
-				let mut zip_file = match ::zip::ZipArchive::new(zip_file) {
-					Ok(zip_file) => zip_file,
+			let zip_file = match ::std::fs::File::open(&path) {
+				Ok(zip_file) => zip_file,
+				Err(err) => bail!(::ErrorKind::FileIO(path, err)),
+			};
+
+			let mut zip_file = match ::zip::ZipArchive::new(zip_file) {
+				Ok(zip_file) => zip_file,
+				Err(err) => bail!(::ErrorKind::Zip(path, err)),
+			};
+
+			ensure!(zip_file.len() != 0, ::ErrorKind::EmptyZippedMod(path));
+
+			let toplevel = {
+				let first_file = match zip_file.by_index(0) {
+					Ok(first_file) => first_file,
 					Err(err) => bail!(::ErrorKind::Zip(path, err)),
 				};
 
-				ensure!(zip_file.len() != 0, ::ErrorKind::EmptyZippedMod(path));
+				first_file.name().split('/').next().unwrap().to_string()
+			};
 
-				let toplevel = {
-					let first_file = match zip_file.by_index(0) {
-						Ok(first_file) => first_file,
-						Err(err) => bail!(::ErrorKind::Zip(path, err)),
-					};
+			let info_json_file_path = format!("{}/info.json", toplevel);
 
-					first_file.name().split('/').next().unwrap().to_string()
-				};
+			let info_json_file = match zip_file.by_name(&info_json_file_path) {
+				Ok(info_json_file) => info_json_file,
+				Err(err) => bail!(::ErrorKind::Zip(path, err)),
+			};
 
-				let info_json_file_path = format!("{}/info.json", toplevel);
-
-				let info_json_file = match zip_file.by_name(&info_json_file_path) {
-					Ok(info_json_file) => info_json_file,
-					Err(err) => bail!(::ErrorKind::Zip(path, err)),
-				};
-
-				match ::serde_json::from_reader(info_json_file) {
-					Ok(info) => (info, InstalledModType::Zipped),
-					Err(err) => bail!(::ErrorKind::ReadJSONFile(path, err)),
-				}
-			}
-			else {
-				bail!(::ErrorKind::UnknownModFormat(path));
+			match ::serde_json::from_reader(info_json_file) {
+				Ok(info) => (info, InstalledModType::Zipped),
+				Err(err) => bail!(::ErrorKind::ReadJSONFile(path, err)),
 			}
 		}
 		else {

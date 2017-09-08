@@ -1,4 +1,4 @@
-use ::futures::{ future, Async, Future, IntoFuture, Poll, Stream };
+use ::futures::{ Async, future, Future, IntoFuture, Poll, Stream };
 use ::ResultExt;
 
 /// Computes which old mods to uninstall and which new mods to install based on the given reqs.

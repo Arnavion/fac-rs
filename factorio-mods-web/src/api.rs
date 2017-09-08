@@ -15,13 +15,11 @@ impl API {
 		builder: Option<::reqwest::unstable::async::ClientBuilder>,
 		handle: ::tokio_core::reactor::Handle,
 	) -> ::Result<Self> {
-		use ::error::ResultExt;
-
 		Ok(API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
 			login_url: LOGIN_URL.clone(),
-			client: ::client::Client::new(builder, handle).chain_err(|| "Could not initialize HTTP client")?,
+			client: ::client::Client::new(builder, handle)?,
 		})
 	}
 
@@ -106,12 +104,11 @@ impl API {
 						bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
 					};
 
-				if file_size != expected_file_size {
-					bail!(
-						::ErrorKind::MalformedResponse(
-							download_url,
-							format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
-				}
+				ensure!(
+					file_size == expected_file_size,
+					::ErrorKind::MalformedResponse(
+						download_url,
+						format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 
 				Ok(ResponseWithUrlContext { response, url: download_url })
 			})

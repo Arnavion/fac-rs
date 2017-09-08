@@ -3,7 +3,7 @@ use ::futures::{ future, Future, IntoFuture };
 /// Wraps a `reqwest::unstable::async::Client` to only allow limited operations on it.
 #[derive(Debug)]
 pub struct Client {
-	client: ::reqwest::unstable::async::Client,
+	inner: ::reqwest::unstable::async::Client,
 }
 
 impl Client {
@@ -12,14 +12,12 @@ impl Client {
 		builder: Option<::reqwest::unstable::async::ClientBuilder>,
 		handle: ::tokio_core::reactor::Handle,
 	) -> ::Result<Self> {
-		use ::error::ResultExt;
-
 		let mut builder = match builder {
 			Some(builder) => builder,
-			None => ::reqwest::unstable::async::ClientBuilder::new().chain_err(|| "Could not create HTTP client")?,
+			None => ::reqwest::unstable::async::ClientBuilder::new().map_err(::ErrorKind::CreateClient)?,
 		};
 
-		let client =
+		let inner =
 			builder
 			.redirect(::reqwest::RedirectPolicy::custom(|attempt| {
 				if match attempt.url().host_str() {
@@ -33,16 +31,16 @@ impl Client {
 				}
 			}))
 			.build(&handle)
-			.chain_err(|| "Could not create HTTP client")?;
+			.map_err(::ErrorKind::CreateClient)?;
 
-		Ok(Client { client })
+		Ok(Client { inner })
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
 	pub fn get_object<'a, T>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'a
 		where T: Send + 'a, for<'de> T: ::serde::Deserialize<'de> {
 
-		match self.client.get(url.clone()) {
+		match self.inner.get(url.clone()) {
 			Ok(mut builder) => {
 				builder.header(::reqwest::header::Accept::json());
 
@@ -58,7 +56,7 @@ impl Client {
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
 	pub fn get_zip<'a>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'a {
-		match self.client.get(url.clone()) {
+		match self.inner.get(url.clone()) {
 			Ok(mut builder) => {
 				builder.header(ACCEPT_APPLICATION_ZIP.clone());
 
@@ -77,10 +75,9 @@ impl Client {
 		where B: ::serde::Serialize, T: Send + 'a, for<'de> T: ::serde::Deserialize<'de> {
 
 		// TODO: Box because of bug in `conservative_impl_trait` that somehow requires `body` to be `'a` too
-		// Repro: http://play.integer32.com/?gist=c4baba83cc00a45ddeed9b799222358f&version=nightly
-		// which works when changed to not use impl trait: http://play.integer32.com/?gist=cf52c03896a6b24d48d26c365ea6a5a6&version=nightly
+		// https://github.com/rust-lang/rust/issues/42940
 
-		match self.client.post(url.clone()) {
+		match self.inner.post(url.clone()) {
 			Ok(mut builder) => {
 				match builder.header(::reqwest::header::Accept::json()).form(body) {
 					Ok(_) =>

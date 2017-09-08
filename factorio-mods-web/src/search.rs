@@ -106,8 +106,9 @@ impl<'a> ::std::fmt::Debug for SearchResultsStreamState<'a> {
 				f.debug_tuple("WaitingForPage")
 				.finish(),
 
-			SearchResultsStreamState::HavePage(_, ref next_page_url) =>
+			SearchResultsStreamState::HavePage(ref results, ref next_page_url) =>
 				f.debug_tuple("HavePage")
+				.field(&results.len())
 				.field(next_page_url)
 				.finish(),
 

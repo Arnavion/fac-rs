@@ -4,6 +4,12 @@ pub enum ErrorKind {
 	/// A generic error message
 	Msg(String),
 
+	/// Could not create HTTP client
+	#[error_chain(custom)]
+	#[error_chain(display = r#"|_| write!(f, "Could not create HTTP client")"#)]
+	#[error_chain(cause = "|err| err")]
+	CreateClient(::reqwest::Error),
+
 	/// Could not perform HTTP request
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|url, _| write!(f, "Could not fetch URL {}", url)"#)]
