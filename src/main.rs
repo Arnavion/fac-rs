@@ -4,6 +4,7 @@
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
+	clone_on_ref_ptr,
 	cyclomatic_complexity,
 	large_enum_variant,
 	missing_docs_in_private_items,
@@ -25,6 +26,7 @@ extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;
 extern crate futures_mutex;
+extern crate indicatif;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
