@@ -185,7 +185,7 @@ fn parse_version_req(s: &str) -> Result<::semver::VersionReq, ::semver::ReqParse
 pub fn fixup_version(s: &str) -> String {
 	::itertools::join(s.split('.').enumerate().map(|(i, part)| {
 		let part =
-			if i == 0 && part.len() >= 1 && part.chars().next().unwrap() == '0' {
+			if i == 0 && part.starts_with('0') {
 				"0".to_string() + part.trim_matches('0')
 			}
 			else {
