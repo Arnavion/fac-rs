@@ -30,9 +30,9 @@ impl ::util::SubCommand for SubCommand {
 				println!("{}", mod_.title());
 				println!("    Name: {}", mod_.name());
 				println!("    Tags: {}", ::itertools::join(mod_.tags().iter().map(|t| t.name()), ", "));
-				println!("");
+				println!();
 				::util::wrapping_println(mod_.summary(), "    ");
-				println!("");
+				println!();
 
 				Ok(())
 			})

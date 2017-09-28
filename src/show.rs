@@ -67,7 +67,7 @@ impl ::util::SubCommand for SubCommand {
 					}
 				}
 
-				println!("");
+				println!();
 
 				Ok(())
 			}))
