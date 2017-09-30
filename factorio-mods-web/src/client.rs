@@ -38,7 +38,7 @@ impl Client {
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
 	pub fn get_object<'a, T>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'a
-		where T: 'a, for<'de> T: ::serde::Deserialize<'de> {
+		where T: ::serde::de::DeserializeOwned + 'a {
 
 		match self.inner.get(url.clone()) {
 			Ok(mut builder) => {
@@ -72,7 +72,7 @@ impl Client {
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
 	pub fn post_object<'a, B, T>(&'a self, url: ::reqwest::Url, body: &B) -> Box<Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'a>
-		where B: ::serde::Serialize, T: 'a, for<'de> T: ::serde::Deserialize<'de> {
+		where B: ::serde::Serialize, T: ::serde::de::DeserializeOwned + 'a {
 
 		// TODO: Box because of bug in `conservative_impl_trait` that somehow requires `body` to be `'a` too
 		// https://github.com/rust-lang/rust/issues/42940
@@ -154,7 +154,7 @@ struct LoginFailureResponse {
 }
 
 fn json<T>(response: ::reqwest::unstable::async::Response, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error>
-	where for<'de> T: ::serde::Deserialize<'de> {
+	where T: ::serde::de::DeserializeOwned {
 
 	expect_content_type(response, url, &::reqwest::mime::APPLICATION_JSON)
 	.into_future()
