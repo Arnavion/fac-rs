@@ -12,10 +12,7 @@ impl Client {
 		builder: Option<::reqwest::unstable::async::ClientBuilder>,
 		handle: ::tokio_core::reactor::Handle,
 	) -> ::Result<Self> {
-		let mut builder = match builder {
-			Some(builder) => builder,
-			None => ::reqwest::unstable::async::ClientBuilder::new().map_err(::ErrorKind::CreateClient)?,
-		};
+		let mut builder = builder.unwrap_or_else(::reqwest::unstable::async::ClientBuilder::new);
 
 		let inner =
 			builder
@@ -40,34 +37,18 @@ impl Client {
 	pub fn get_object<'a, T>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'a
 		where T: ::serde::de::DeserializeOwned + 'a {
 
-		match self.inner.get(url.clone()) {
-			Ok(mut builder) => {
-				builder.header(::reqwest::header::Accept::json());
-
-				future::Either::A(
-					self.send(builder, url)
-					.and_then(|(response, url)| json(response, url)))
-			},
-
-			Err(err) =>
-				future::Either::B(future::err(::ErrorKind::HTTP(url, err).into())),
-		}
+		let mut builder = self.inner.get(url.clone());
+		builder.header(::reqwest::header::Accept::json());
+		self.send(builder, url)
+		.and_then(|(response, url)| json(response, url))
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
 	pub fn get_zip<'a>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'a {
-		match self.inner.get(url.clone()) {
-			Ok(mut builder) => {
-				builder.header(ACCEPT_APPLICATION_ZIP.clone());
-
-				future::Either::A(
-					self.send(builder, url)
-					.and_then(|(response, url)| expect_content_type(response, url, &APPLICATION_ZIP)))
-			},
-
-			Err(err) =>
-				future::Either::B(future::err(::ErrorKind::HTTP(url, err).into())),
-		}
+		let mut builder = self.inner.get(url.clone());
+		builder.header(ACCEPT_APPLICATION_ZIP.clone());
+		self.send(builder, url)
+		.and_then(|(response, url)| expect_content_type(response, url, &APPLICATION_ZIP))
 	}
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
@@ -77,22 +58,11 @@ impl Client {
 		// TODO: Box because of bug in `conservative_impl_trait` that somehow requires `body` to be `'a` too
 		// https://github.com/rust-lang/rust/issues/42940
 
-		match self.inner.post(url.clone()) {
-			Ok(mut builder) => {
-				match builder.header(::reqwest::header::Accept::json()).form(body) {
-					Ok(_) =>
-						Box::new(
-							self.send(builder, url)
-							.and_then(|(response, url)| json(response, url))),
-
-					Err(err) =>
-						Box::new(future::err(::ErrorKind::HTTP(url, err).into())),
-				}
-			},
-
-			Err(err) =>
-				Box::new(future::err(::ErrorKind::HTTP(url, err).into())),
-		}
+		let mut builder = self.inner.post(url.clone());
+		builder.header(::reqwest::header::Accept::json()).form(body);
+		Box::new(
+			self.send(builder, url)
+			.and_then(|(response, url)| json(response, url)))
 	}
 
 	fn send<'a>(

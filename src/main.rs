@@ -93,7 +93,7 @@ quick_main!(|| -> Result<()> {
 	let matches = app.get_matches();
 
 	let client = if let Some(proxy_url) = matches.value_of("proxy") {
-		let mut builder = ::reqwest::unstable::async::ClientBuilder::new().chain_err(|| "Couldn't create HTTP client")?;
+		let mut builder = ::reqwest::unstable::async::ClientBuilder::new();
 		builder.proxy(::reqwest::Proxy::all(proxy_url).chain_err(|| "Couldn't parse proxy URL")?);
 		Some(builder)
 	}
