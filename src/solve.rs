@@ -192,8 +192,8 @@ impl<S> Future for DownloadFileFuture<S> where S: Stream<Item = ::factorio_mods_
 	}
 }
 
-struct Cache<E> {
-	graph: ::petgraph::Graph<Installable, E>,
+struct Cache {
+	graph: ::petgraph::Graph<Installable, Relation>,
 	already_fetching: ::std::collections::HashSet<::factorio_mods_common::ModName>,
 }
 
@@ -372,13 +372,13 @@ fn compute_diff(
 	Ok(Some((to_uninstall, to_install)))
 }
 
-fn add_mod<'a, E>(
+fn add_mod<'a>(
 	api: &'a ::factorio_mods_web::API,
 	game_version: &'a ::factorio_mods_common::ReleaseVersion,
-	cache: ::futures_mutex::FutMutex<Cache<E>>,
+	cache: ::futures_mutex::FutMutex<Cache>,
 	name: ::factorio_mods_common::ModName,
 	fetch_mods_multi_progress: ::std::sync::Arc<::indicatif::MultiProgress>,
-) -> Box<Future<Item = (), Error = ::Error> + 'a> where E: 'a {
+) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 	Box::new(
 		lock(cache)
 		.then(move |Ok(mut guard)| {
@@ -439,10 +439,10 @@ fn add_mod<'a, E>(
 		}))
 }
 
-fn add_installable<E>(
-	cache: ::futures_mutex::FutMutex<Cache<E>>,
+fn add_installable(
+	cache: ::futures_mutex::FutMutex<Cache>,
 	installable: Installable,
-) -> impl Future<Item = ::futures_mutex::FutMutex<Cache<E>>, Error = ::Error> {
+) -> impl Future<Item = ::futures_mutex::FutMutex<Cache>, Error = ::Error> + 'static {
 	lock(cache)
 	.then(|Ok(mut guard)| {
 		{

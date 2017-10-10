@@ -34,76 +34,35 @@ impl Client {
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
-	pub fn get_object<'a, T>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'a
-		where T: ::serde::de::DeserializeOwned + 'a {
+	pub fn get_object<T>(&self, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'static
+		where T: ::serde::de::DeserializeOwned + 'static {
 
 		let mut builder = self.inner.get(url.clone());
 		builder.header(::reqwest::header::Accept::json());
-		self.send(builder, url)
+		send(builder, url)
 		.and_then(|(response, url)| json(response, url))
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
-	pub fn get_zip<'a>(&'a self, url: ::reqwest::Url) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'a {
+	pub fn get_zip(&self, url: ::reqwest::Url) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'static {
 		let mut builder = self.inner.get(url.clone());
 		builder.header(ACCEPT_APPLICATION_ZIP.clone());
-		self.send(builder, url)
+		send(builder, url)
 		.and_then(|(response, url)| expect_content_type(response, url, &APPLICATION_ZIP))
 	}
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
-	pub fn post_object<'a, B, T>(&'a self, url: ::reqwest::Url, body: &B) -> Box<Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'a>
-		where B: ::serde::Serialize, T: ::serde::de::DeserializeOwned + 'a {
+	pub fn post_object<B, T>(&self, url: ::reqwest::Url, body: B) -> Box<Future<Item = (T, ::reqwest::Url), Error = ::Error>>
+		where B: ::serde::Serialize, T: ::serde::de::DeserializeOwned + 'static {
 
-		// TODO: Box because of bug in `conservative_impl_trait` that somehow requires `body` to be `'a` too
+		// TODO: `Box` and `'static` because of bug in `conservative_impl_trait` that somehow requires `body` to be `'static` too
 		// https://github.com/rust-lang/rust/issues/42940
 
 		let mut builder = self.inner.post(url.clone());
-		builder.header(::reqwest::header::Accept::json()).form(body);
+		builder.header(::reqwest::header::Accept::json()).form(&body);
 		Box::new(
-			self.send(builder, url)
+			send(builder, url)
 			.and_then(|(response, url)| json(response, url)))
-	}
-
-	fn send<'a>(
-		&'a self,
-		mut builder: ::reqwest::unstable::async::RequestBuilder,
-		url: ::reqwest::Url,
-	) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'a {
-		builder.header(USER_AGENT.clone());
-
-		let is_whitelisted_host = match url.host_str() {
-			Some(host) if WHITELISTED_HOSTS.contains(host) => true,
-			_ => false,
-		};
-
-		if !is_whitelisted_host {
-			return future::Either::A(future::err(::ErrorKind::NotWhitelistedHost(url).into()))
-		}
-
-		future::Either::B(
-			builder.send()
-			.then(move |response| match response {
-				Ok(response) => match response.status() {
-					::reqwest::StatusCode::Ok =>
-						future::Either::A(future::ok((response, url))),
-
-					::reqwest::StatusCode::Unauthorized =>
-						future::Either::B(
-							json(response, url)
-							.and_then(|(object, _): (LoginFailureResponse, _)|
-								future::err(::Error::from(::ErrorKind::LoginFailure(object.message))))),
-
-					::reqwest::StatusCode::Found =>
-						future::Either::A(future::err(::ErrorKind::NotWhitelistedHost(url).into())),
-
-					code =>
-						future::Either::A(future::err(::ErrorKind::StatusCode(url, code).into())),
-				},
-
-				Err(err) =>
-					future::Either::A(future::err(::ErrorKind::HTTP(url, err).into())),
-			}))
 	}
 }
 
@@ -123,8 +82,48 @@ struct LoginFailureResponse {
 	message: String,
 }
 
-fn json<T>(response: ::reqwest::unstable::async::Response, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error>
-	where T: ::serde::de::DeserializeOwned {
+fn send(
+	mut builder: ::reqwest::unstable::async::RequestBuilder,
+	url: ::reqwest::Url,
+) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'static {
+	builder.header(USER_AGENT.clone());
+
+	let is_whitelisted_host = match url.host_str() {
+		Some(host) if WHITELISTED_HOSTS.contains(host) => true,
+		_ => false,
+	};
+
+	if !is_whitelisted_host {
+		return future::Either::A(future::err(::ErrorKind::NotWhitelistedHost(url).into()))
+	}
+
+	future::Either::B(
+		builder.send()
+		.then(move |response| match response {
+			Ok(response) => match response.status() {
+				::reqwest::StatusCode::Ok =>
+					future::Either::A(future::ok((response, url))),
+
+				::reqwest::StatusCode::Unauthorized =>
+					future::Either::B(
+						json(response, url)
+						.and_then(|(object, _): (LoginFailureResponse, _)|
+							future::err(::Error::from(::ErrorKind::LoginFailure(object.message))))),
+
+				::reqwest::StatusCode::Found =>
+					future::Either::A(future::err(::ErrorKind::NotWhitelistedHost(url).into())),
+
+				code =>
+					future::Either::A(future::err(::ErrorKind::StatusCode(url, code).into())),
+			},
+
+			Err(err) =>
+				future::Either::A(future::err(::ErrorKind::HTTP(url, err).into())),
+		}))
+}
+
+fn json<T>(response: ::reqwest::unstable::async::Response, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'static
+	where T: ::serde::de::DeserializeOwned + 'static {
 
 	expect_content_type(response, url, &::reqwest::mime::APPLICATION_JSON)
 	.into_future()

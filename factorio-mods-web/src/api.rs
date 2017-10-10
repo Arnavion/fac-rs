@@ -1,4 +1,4 @@
-use ::futures::{ Future, IntoFuture, Poll, Stream };
+use ::futures::{ Future, Poll, stream, Stream };
 
 /// Entry-point to the https://mods.factorio.com API
 #[derive(Debug)]
@@ -49,7 +49,7 @@ impl API {
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get<'a>(&'a self, mod_name: &::factorio_mods_common::ModName) -> impl Future<Item = ::Mod, Error = ::Error> + 'a {
+	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> impl Future<Item = ::Mod, Error = ::Error> + 'static {
 		let mut mod_url = self.mods_url.clone();
 		mod_url.path_segments_mut().unwrap().push(mod_name);
 
@@ -58,21 +58,21 @@ impl API {
 	}
 
 	/// Logs in to the web API using the given username and password and returns a credentials object.
-	pub fn login<'a>(
-		&'a self,
+	pub fn login(
+		&self,
 		username: ::factorio_mods_common::ServiceUsername,
 		password: &str,
-	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'a {
+	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'static {
 		self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)])
 		.map(|(response, _): ([::factorio_mods_common::ServiceToken; 1], _)| ::factorio_mods_common::UserCredentials::new(username, response[0].clone()))
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
-	pub fn download<'a>(
-		&'a self,
+	pub fn download(
+		&self,
 		release: &::ModRelease,
 		user_credentials: &::factorio_mods_common::UserCredentials,
-	) -> impl Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'a {
+	) -> impl Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'static {
 		let release_download_url = release.download_url();
 		let expected_file_size = *release.file_size();
 
@@ -81,34 +81,34 @@ impl API {
 				download_url.query_pairs_mut()
 					.append_pair("username", user_credentials.username())
 					.append_pair("token", user_credentials.token());
-				Ok(download_url)
+
+				download_url
 			},
 
 			Err(err) =>
-				Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into())
+				return Either::A(stream::once(Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into()))),
 		};
 
-		download_url
-		.into_future()
-		.and_then(move |download_url| self.client.get_zip(download_url))
-		.and_then(move |(response, download_url)| {
-			let file_size =
-				if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
-					file_size
-				}
-				else {
-					bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
-				};
+		Either::B(
+			self.client.get_zip(download_url)
+			.and_then(move |(response, download_url)| {
+				let file_size =
+					if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
+						file_size
+					}
+					else {
+						bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
+					};
 
-			ensure!(
-				file_size == expected_file_size,
-				::ErrorKind::MalformedResponse(
-					download_url,
-					format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
+				ensure!(
+					file_size == expected_file_size,
+					::ErrorKind::MalformedResponse(
+						download_url,
+						format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 
-			Ok(ResponseWithUrlContext { response, url: download_url })
-		})
-		.flatten_stream()
+				Ok(ResponseWithUrlContext { response, url: download_url })
+			})
+			.flatten_stream())
 	}
 }
 
@@ -123,6 +123,23 @@ impl Stream for ResponseWithUrlContext {
 
 	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
 		self.response.body_mut().poll().map_err(|err| ::ErrorKind::HTTP(self.url.clone(), err).into())
+	}
+}
+
+enum Either<A, B> {
+	A(A),
+	B(B),
+}
+
+impl<A, B> Stream for Either<A, B> where A: Stream, B: Stream<Item = A::Item, Error = A::Error> {
+	type Item = A::Item;
+	type Error = A::Error;
+
+	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+		match *self {
+			Either::A(ref mut a) => a.poll(),
+			Either::B(ref mut b) => b.poll(),
+		}
 	}
 }
 

@@ -96,7 +96,7 @@ pub fn find(
 	name_pattern: Option<&str>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>>> {
+) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'static> {
 	let directory_entries = ::std::fs::read_dir(mods_directory)?;
 
 	let name_pattern = name_pattern.unwrap_or("*");

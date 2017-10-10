@@ -65,7 +65,7 @@ impl API {
 	}
 
 	/// Returns an iterator over all the locally installed mods, matching the given name pattern if any.
-	pub fn installed_mods<'a>(&'a self) -> ::Result<impl Iterator<Item = ::Result<::InstalledMod>> + 'a> {
+	pub fn installed_mods(&self) -> ::Result<impl Iterator<Item = ::Result<::InstalledMod>> + 'static> {
 		let mod_status = self.load_mod_status()?;
 		::installed_mod::find(&self.mods_directory, None, None, mod_status)
 	}
