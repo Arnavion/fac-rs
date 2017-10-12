@@ -64,7 +64,7 @@ impl API {
 		password: &str,
 	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'static {
 		self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)])
-		.map(|(response, _): ([::factorio_mods_common::ServiceToken; 1], _)| ::factorio_mods_common::UserCredentials::new(username, response[0].clone()))
+		.map(|((response,), _)| ::factorio_mods_common::UserCredentials::new(username, response))
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
