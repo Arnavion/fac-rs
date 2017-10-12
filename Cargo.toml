@@ -14,7 +14,7 @@ factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
 futures-mutex = "0.2.x"
 indicatif = "0.8.x"
-itertools = "0.6.x"
+itertools = "0.7.x"
 lazy_static = "0.2.x"
 multimap = "0.4.x"
 petgraph = "0.4.x"

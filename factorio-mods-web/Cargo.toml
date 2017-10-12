@@ -10,7 +10,7 @@ derive-struct = { version = "0.1.0", path = "../derive-struct" }
 error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 futures = "^0.1.15"
-itertools = "0.6.x"
+itertools = "0.7.x"
 lazy_static = "0.2.x"
 reqwest = { version = "=0.8.0", features = ["unstable"] }
 serde = "1.0.x"

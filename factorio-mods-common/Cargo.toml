@@ -6,7 +6,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 [dependencies]
 derive-new = "0.5.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
-itertools = "0.6.x"
+itertools = "0.7.x"
 lazy_static = "0.2.x"
 regex = "0.2.x"
 semver = "0.8.x"
