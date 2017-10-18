@@ -59,7 +59,19 @@ impl Client {
 		// https://github.com/rust-lang/rust/issues/42940
 
 		let mut builder = self.inner.post(url.clone());
-		builder.header(::reqwest::header::Accept::json()).form(&body);
+
+		// TODO: Workaround for https://github.com/seanmonstar/reqwest/issues/214
+		// builder.header(::reqwest::header::Accept::json()).form(&body);
+		let body = match ::serde_urlencoded::to_string(body) {
+			Ok(body) => body,
+			Err(err) => return Box::new(future::err(::ErrorKind::Serialize(url, err).into())),
+		};
+		builder
+		.header(::reqwest::header::Accept::json())
+		.header(::reqwest::header::ContentType::form_url_encoded())
+		.header(::reqwest::header::ContentLength(body.len() as u64))
+		.body(body);
+
 		Box::new(
 			send(builder, url)
 			.and_then(|(response, url)| json(response, url)))
@@ -68,6 +80,7 @@ impl Client {
 
 lazy_static! {
 	static ref WHITELISTED_HOSTS: ::std::collections::HashSet<&'static str> = vec![
+		"auth.factorio.com",
 		"mods.factorio.com",
 		"mods-data.factorio.com",
 	].into_iter().collect();

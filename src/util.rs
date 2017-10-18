@@ -58,28 +58,22 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 			};
 
 			future::Either::B(
-				future::loop_fn((), move |()| {
+				future::loop_fn(existing_username, move |existing_username| {
 					println!("You need a Factorio account to download mods.");
 					println!("Please provide your username and password to authenticate yourself.");
-					match existing_username {
-						Some(ref username) => print!("Username [{}]: ", username),
-						None => print!("Username: "),
-					}
-					let mut stdout = ::std::io::stdout();
-					if let Err(err) = ::std::io::Write::flush(&mut stdout) {
-						return future::Either::A(Err(err).chain_err(|| "Could not write to stdout").into_future());
-					}
 
-					let mut username = String::new();
-					if let Err(err) = ::std::io::stdin().read_line(&mut username) {
-						return future::Either::A(Err(err).chain_err(|| "Could not read from stdin").into_future());
-					}
+					let username = {
+						let prompt = existing_username.as_ref().map_or("Username: ".to_string(), |username| format!("Username [{}]: ", username));
+						match ::rprompt::prompt_reply_stdout(&prompt) {
+							Ok(username) => username,
+							Err(err) => return future::Either::A(Err(err).chain_err(|| "Could not read username").into_future()),
+						}
+					};
 
-					let username = username.trim().to_string();
-					let username = match(username.is_empty(), existing_username.as_ref()) {
-						(false, _) => ::std::borrow::Cow::Owned(::factorio_mods_common::ServiceUsername::new(username)),
-						(true, Some(username)) => ::std::borrow::Cow::Borrowed(username),
-						_ => return future::Either::A(future::ok(future::Loop::Continue(()))),
+					let username = match(username.is_empty(), existing_username) {
+						(false, _) => ::factorio_mods_common::ServiceUsername::new(username),
+						(true, Some(existing_username)) => existing_username,
+						(true, None) => return future::Either::A(future::ok(future::Loop::Continue(None))),
 					};
 
 					let password = match ::rpassword::prompt_password_stdout("Password (not shown): ") {
@@ -88,7 +82,7 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 					};
 
 					future::Either::B(
-						web_api.login(username.into_owned(), &password)
+						web_api.login(username.clone(), &password)
 						.then(move |user_credentials| match user_credentials {
 							Ok(user_credentials) => {
 								println!("Logged in successfully.");
@@ -99,6 +93,11 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 									Err(err) =>
 										Err(err).chain_err(|| "Could not save player-data.json"),
 								}
+							},
+
+							Err(::factorio_mods_web::Error(::factorio_mods_web::ErrorKind::LoginFailure(message), _)) => {
+								println!("Authentication error: {}", message);
+								Ok(future::Loop::Continue(Some(username)))
 							},
 
 							Err(err) =>

@@ -29,6 +29,7 @@ extern crate lazy_static;
 pub extern crate reqwest;
 extern crate serde;
 extern crate serde_derive;
+extern crate serde_urlencoded;
 pub extern crate tokio_core;
 
 mod api;

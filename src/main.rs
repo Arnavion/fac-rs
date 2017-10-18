@@ -34,6 +34,7 @@ extern crate multimap;
 extern crate petgraph;
 extern crate regex;
 extern crate rpassword;
+extern crate rprompt;
 extern crate semver;
 extern crate serde;
 extern crate serde_derive;

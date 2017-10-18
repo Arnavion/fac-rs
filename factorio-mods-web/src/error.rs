@@ -41,4 +41,10 @@ pub enum ErrorKind {
 	#[error_chain(custom)]
 	#[error_chain(display = r#"|url| write!(f, "Host {} is not whitelisted", url)"#)]
 	NotWhitelistedHost(::reqwest::Url),
+
+	/// Could not serialize HTTP POST request body
+	#[error_chain(custom)]
+	#[error_chain(display = r#"|url, _| write!(f, "Could not serialize request body for URL {}", url)"#)]
+	#[error_chain(cause = "|_, err| err")]
+	Serialize(::reqwest::Url, ::serde_urlencoded::ser::Error),
 }
