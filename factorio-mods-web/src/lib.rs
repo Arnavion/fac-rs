@@ -1,4 +1,4 @@
-//! API to interface with https://mods.factorio.com/
+//! API to interface with <https://mods.factorio.com/>
 
 #![deny(missing_docs)]
 #![feature(conservative_impl_trait, proc_macro)]

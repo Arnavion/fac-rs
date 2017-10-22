@@ -1,6 +1,6 @@
 use ::futures::{ Future, Poll, stream, Stream };
 
-/// Entry-point to the https://mods.factorio.com API
+/// Entry-point to the <https://mods.factorio.com/> API
 #[derive(Debug)]
 pub struct API {
 	base_url: ::reqwest::Url,
