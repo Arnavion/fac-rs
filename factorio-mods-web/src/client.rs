@@ -8,6 +8,7 @@ pub struct Client {
 
 impl Client {
 	/// Creates a new `Client` object.
+	#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))] // reqwest::ClientBuilder::build violates API guidelines. Don't perpetuate it.
 	pub fn new(
 		builder: Option<::reqwest::unstable::async::ClientBuilder>,
 		handle: ::tokio_core::reactor::Handle,
