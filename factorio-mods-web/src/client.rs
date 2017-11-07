@@ -14,6 +14,10 @@ impl Client {
 	) -> ::Result<Self> {
 		let mut builder = builder.unwrap_or_else(::reqwest::unstable::async::ClientBuilder::new);
 
+		let mut default_headers = ::reqwest::header::Headers::new();
+		default_headers.set(::reqwest::header::UserAgent::new(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))));
+		builder.default_headers(default_headers);
+
 		let inner =
 			builder
 			.redirect(::reqwest::RedirectPolicy::custom(|attempt| {
@@ -84,7 +88,6 @@ lazy_static! {
 		"mods.factorio.com",
 		"mods-data.factorio.com",
 	].into_iter().collect();
-	static ref USER_AGENT: ::reqwest::header::UserAgent = ::reqwest::header::UserAgent::new(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")));
 	static ref APPLICATION_ZIP: ::reqwest::mime::Mime = "application/zip".parse().unwrap();
 	static ref ACCEPT_APPLICATION_ZIP: ::reqwest::header::Accept = ::reqwest::header::Accept(vec![::reqwest::header::qitem(APPLICATION_ZIP.clone())]);
 }
@@ -99,8 +102,6 @@ fn send(
 	mut builder: ::reqwest::unstable::async::RequestBuilder,
 	url: ::reqwest::Url,
 ) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'static {
-	builder.header(USER_AGENT.clone());
-
 	let is_whitelisted_host = match url.host_str() {
 		Some(host) if WHITELISTED_HOSTS.contains(host) => true,
 		_ => false,
