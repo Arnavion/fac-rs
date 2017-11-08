@@ -102,75 +102,53 @@ pub fn find(
 	let name_pattern = name_pattern.unwrap_or("*");
 	let matcher = ::globset::Glob::new(name_pattern).map_err(|err| ::ErrorKind::Pattern(name_pattern.to_string(), err))?.compile_matcher();
 
-	Ok(InstalledModIterator {
-		directory_entries,
-		matcher,
-		version,
-		mod_status,
-		ended: false,
-	})
-}
+	Ok(GenIterator(move || for directory_entry in directory_entries {
+		match directory_entry {
+			Ok(directory_entry) => {
+				let path = directory_entry.path();
 
-/// An iterator over all the locally installed mods.
-struct InstalledModIterator {
-	directory_entries: ::std::fs::ReadDir,
-	matcher: ::globset::GlobMatcher,
-	version: Option<::factorio_mods_common::ReleaseVersion>,
-	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	ended: bool,
-}
+				let matches = path.file_name().map_or(false, |filename| matcher.is_match(filename));
+				if !matches {
+					continue;
+				}
 
-impl Iterator for InstalledModIterator {
-	type Item = ::Result<InstalledMod>;
+				// TODO: Workaround for https://github.com/rust-lang/rust/issues/44197
+				let installed_mod = InstalledMod::parse(path, &mod_status);
+				let installed_mod = match installed_mod {
+					Ok(installed_mod) => installed_mod,
 
-	fn next(&mut self) -> Option<Self::Item> {
-		if self.ended {
-			return None;
-		}
+					Err(::Error(::ErrorKind::UnknownModFormat(_), _)) => continue,
 
-		loop {
-			match self.directory_entries.next() {
-				Some(Ok(directory_entry)) => {
-					let path = directory_entry.path();
+					Err(err) => {
+						yield Err(err);
+						continue;
+					},
+				};
 
-					let matches =
-						if let Some(filename) = path.file_name() {
-							self.matcher.is_match(filename)
-						}
-						else {
-							false
-						};
-
-					if !matches {
+				if let Some(ref version) = version {
+					if version != installed_mod.info().version() {
 						continue;
 					}
+				}
 
-					let installed_mod = match InstalledMod::parse(path, &self.mod_status) {
-						Ok(installed_mod) => installed_mod,
+				yield Ok(installed_mod);
+			},
 
-						Err(::Error(::ErrorKind::UnknownModFormat(_), _)) => continue,
+			Err(err) =>
+				yield Err(err.into()),
+		}
+	}))
+}
 
-						Err(err) => {
-							self.ended = true;
-							return Some(Err(err));
-						},
-					};
+struct GenIterator<G>(G);
 
-					if let Some(ref version) = self.version {
-						if version != installed_mod.info().version() {
-							continue;
-						}
-					}
+impl<G> Iterator for GenIterator<G> where G: ::std::ops::Generator<Return = ()> {
+	type Item = G::Yield;
 
-					return Some(Ok(installed_mod));
-				},
-
-				Some(Err(err)) =>
-					return Some(Err(::ErrorKind::IO(err).into())),
-
-				None =>
-					return None,
-			}
+	fn next(&mut self) -> Option<Self::Item> {
+		match ::std::ops::Generator::resume(&mut self.0) {
+			::std::ops::GeneratorState::Yielded(value) => Some(value),
+			::std::ops::GeneratorState::Complete(()) => None,
 		}
 	}
 }

@@ -52,9 +52,12 @@ impl API {
 	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> impl Future<Item = ::Mod, Error = ::Error> + 'static {
 		let mut mod_url = self.mods_url.clone();
 		mod_url.path_segments_mut().unwrap().push(mod_name);
+		let future = self.client.get_object(mod_url);
 
-		self.client.get_object(mod_url)
-		.map(|(mod_, _)| mod_)
+		::async_block! {
+			let (mod_, _) = ::await!(future)?;
+			Ok(mod_)
+		}
 	}
 
 	/// Logs in to the web API using the given username and password and returns a credentials object.
@@ -63,8 +66,12 @@ impl API {
 		username: ::factorio_mods_common::ServiceUsername,
 		password: &str,
 	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'static {
-		self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)])
-		.map(|((response,), _)| ::factorio_mods_common::UserCredentials::new(username, response))
+		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)]);
+
+		::async_block! {
+			let ((response,), _) = ::await!(future)?;
+			Ok(::factorio_mods_common::UserCredentials::new(username, response))
+		}
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
@@ -89,40 +96,35 @@ impl API {
 				return Either::A(stream::once(Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into()))),
 		};
 
-		Either::B(
-			self.client.get_zip(download_url)
-			.and_then(move |(response, download_url)| {
-				let file_size =
-					if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
-						file_size
-					}
-					else {
-						bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
-					};
+		let future = self.client.get_zip(download_url);
 
-				ensure!(
-					file_size == expected_file_size,
-					::ErrorKind::MalformedResponse(
-						download_url,
-						format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
+		Either::B(::async_stream_block! {
+			let (response, download_url) = ::await!(future)?;
 
-				Ok(ResponseWithUrlContext { response, url: download_url })
-			})
-			.flatten_stream())
-	}
-}
+			let file_size =
+				if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
+					file_size
+				}
+				else {
+					bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
+				};
 
-struct ResponseWithUrlContext {
-	response: ::reqwest::unstable::async::Response,
-	url: ::reqwest::Url,
-}
+			ensure!(
+				file_size == expected_file_size,
+				::ErrorKind::MalformedResponse(
+					download_url,
+					format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 
-impl Stream for ResponseWithUrlContext {
-	type Item = ::reqwest::unstable::async::Chunk;
-	type Error = ::Error;
+			let result = do catch {
+				#[async] for chunk in response.into_body() {
+					::stream_yield!(chunk);
+				}
 
-	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-		self.response.body_mut().poll().map_err(|err| ::ErrorKind::HTTP(self.url.clone(), err).into())
+				Ok(())
+			};
+
+			result.map_err(|err| ::ErrorKind::HTTP(download_url, err).into())
+		})
 	}
 }
 

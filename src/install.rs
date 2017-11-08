@@ -1,4 +1,4 @@
-use ::futures::{ future, Future, IntoFuture };
+use ::futures::Future;
 
 lazy_static! {
 	static ref REQUIREMENT_REGEX: ::regex::Regex = ::regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap();
@@ -21,41 +21,37 @@ impl ::util::SubCommand for SubCommand {
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
-		let requirements = matches.values_of("requirements").unwrap();
+		Box::new(::async_block! {
+			let requirements = matches.values_of("requirements").unwrap();
 
-		let (local_api, web_api) = match (local_api, web_api) {
-			(Ok(local_api), Ok(web_api)) => (local_api, web_api),
-			(Err(err), _) | (_, Err(err)) => return Box::new(future::err(err)),
-		};
+			let local_api = local_api?;
+			let web_api = web_api?;
 
-		let mut config = match ::config::Config::load(local_api) {
-			Ok(config) => config,
-			Err(err) => return Box::new(future::err(err)),
-		};
+			let mut config = ::config::Config::load(local_api)?;
 
-		let mut reqs = ::std::mem::replace(&mut config.mods, Default::default());
-		for requirement in requirements {
-			let captures = if let Some(captures) = REQUIREMENT_REGEX.captures(requirement) {
-				captures
+			let mut reqs = config.mods;
+			for requirement in requirements {
+				let captures = match REQUIREMENT_REGEX.captures(requirement) {
+					Some(captures) => captures,
+					None => bail!(r#"Could not parse requirement "{}""#, requirement),
+				};
+				let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
+				let requirement_string = captures.get(2).map_or("*", |m| m.as_str());
+				let requirement = match requirement_string.parse() {
+					Ok(requirement) => requirement,
+					Err(err) => return Err(err).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string)),
+				};
+
+				reqs.insert(name, ::factorio_mods_common::ModVersionReq::new(requirement));
 			}
-			else {
-				return Box::new(future::err(format!(r#"Could not parse requirement "{}""#, requirement).into()));
-			};
-			let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
-			let requirement_string = captures.get(2).map_or("*", |m| m.as_str());
-			let requirement = match requirement_string.parse() {
-				Ok(requirement) => requirement,
-				Err(err) => return Box::new(Err(err).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string)).into_future()),
-			};
 
-			reqs.insert(name, ::factorio_mods_common::ModVersionReq::new(requirement));
-		}
-
-		Box::new(
-			::solve::compute_and_apply_diff(local_api, web_api, reqs)
-			.and_then(move |(result, reqs)| Ok(if result {
+			let (result, reqs) = ::await!(::solve::compute_and_apply_diff(local_api, web_api, reqs))?;
+			if result {
 				config.mods = reqs;
-				config.save()?
-			})))
+				config.save()?;
+			}
+
+			Ok(())
+		})
 	}
 }

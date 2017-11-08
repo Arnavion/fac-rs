@@ -1,7 +1,7 @@
 //! API to interface with <https://mods.factorio.com/>
 
 #![deny(missing_docs)]
-#![feature(conservative_impl_trait, proc_macro)]
+#![feature(catch_expr, conservative_impl_trait, generators, generator_trait, proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -22,7 +22,7 @@ extern crate derive_error_chain;
 extern crate derive_new;
 extern crate derive_struct;
 extern crate factorio_mods_common;
-pub extern crate futures;
+extern crate futures_await as futures;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
@@ -31,6 +31,8 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_urlencoded;
 pub extern crate tokio_core;
+
+use futures::prelude::{ async_block, async_stream_block, await, stream_yield };
 
 mod api;
 pub use api::{ API, SearchOrder };

@@ -1,4 +1,4 @@
-use ::futures::{ future, Future, Stream };
+use ::futures::Future;
 
 pub struct SubCommand;
 
@@ -17,25 +17,25 @@ impl ::util::SubCommand for SubCommand {
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
-		let web_api = match web_api {
-			Ok(web_api) => web_api,
-			Err(err) => return Box::new(future::err(err)),
-		};
+		Box::new(::async_block! {
+			let web_api = web_api?;
 
-		let query = matches.value_of("query").unwrap_or("");
+			let query = matches.value_of("query").unwrap_or("");
 
-		Box::new(
-			web_api.search(query, &[], None, None, None)
-			.for_each(|mod_| {
-				println!("{}", mod_.title());
-				println!("    Name: {}", mod_.name());
-				println!("    Tags: {}", ::itertools::join(mod_.tags().iter().map(|t| t.name()), ", "));
-				println!();
-				::util::wrapping_println(mod_.summary(), "    ");
-				println!();
+			let r: Result<_, ::factorio_mods_web::Error> = do catch {
+				#[async] for mod_ in web_api.search(query, &[], None, None, None) {
+					println!("{}", mod_.title());
+					println!("    Name: {}", mod_.name());
+					println!("    Tags: {}", ::itertools::join(mod_.tags().iter().map(|t| t.name()), ", "));
+					println!();
+					::util::wrapping_println(mod_.summary(), "    ");
+					println!();
+				}
 
 				Ok(())
-			})
-			.or_else(|err| Err(err).chain_err(|| "Could not retrieve mods")))
+			};
+
+			r.chain_err(|| "Could not retrieve mods")
+		})
 	}
 }

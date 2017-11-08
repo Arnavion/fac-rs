@@ -14,9 +14,9 @@ impl ::util::SubCommand for SubCommand {
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		_: ::Result<&'a ::factorio_mods_web::API>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-		Box::new((do catch {
-			use ::ResultExt;
+		use ::ResultExt;
 
+		Box::new((do catch {
 			let local_api = local_api?;
 
 			let installed_mods: Result<Vec<_>, _> = local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?.collect();

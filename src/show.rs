@@ -1,4 +1,4 @@
-use ::futures::{ future, Future, stream, Stream };
+use ::futures::{ Future, stream };
 
 pub struct SubCommand;
 
@@ -17,20 +17,19 @@ impl ::util::SubCommand for SubCommand {
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
-		let web_api = match web_api {
-			Ok(web_api) => web_api,
-			Err(err) => return Box::new(future::err(err)),
-		};
+		Box::new(::async_block! {
+			let web_api = web_api?;
 
-		let names = matches.values_of("mods").unwrap();
-		let names = names.into_iter().map(|name| ::factorio_mods_common::ModName::new(name.to_string()));
+			let names = matches.values_of("mods").unwrap();
+			let names = names.into_iter().map(|name| ::factorio_mods_common::ModName::new(name.to_string()));
 
-		Box::new(
-			stream::futures_ordered(
-				names.map(move |name|
-					web_api.get(&name)
-					.or_else(move |err| Err(err).chain_err(|| format!("Could not retrieve mod {}", name)))))
-			.for_each(|mod_| {
+			let mods =
+				stream::futures_ordered(names.map(|name| ::async_block! {
+					::await!(web_api.get(&name))
+					.chain_err(|| format!("Could not retrieve mod {}", name))
+				}));
+
+			#[async] for mod_ in mods {
 				println!("Name: {}", mod_.name());
 				println!("Author: {}", ::itertools::join(mod_.owner(), ", "));
 				println!("Title: {}", mod_.title());
@@ -68,8 +67,9 @@ impl ::util::SubCommand for SubCommand {
 				}
 
 				println!();
+			}
 
-				Ok(())
-			}))
+			Ok(())
+		})
 	}
 }

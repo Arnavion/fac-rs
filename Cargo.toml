@@ -12,6 +12,7 @@ error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
+futures-await = "0.1.x"
 futures-mutex = "0.2.x"
 indicatif = "0.8.x"
 itertools = "0.7.x"

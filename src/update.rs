@@ -1,4 +1,4 @@
-use ::futures::{ future, Future };
+use ::futures::Future;
 
 pub struct SubCommand;
 
@@ -14,18 +14,14 @@ impl ::util::SubCommand for SubCommand {
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		web_api: ::Result<&'a ::factorio_mods_web::API>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-		let (local_api, web_api) = match (local_api, web_api) {
-			(Ok(local_api), Ok(web_api)) => (local_api, web_api),
-			(Err(err), _) | (_, Err(err)) => return Box::new(future::err(err)),
-		};
+		Box::new(::async_block! {
+			let local_api = local_api?;
+			let web_api = web_api?;
 
-		let config = match ::config::Config::load(local_api) {
-			Ok(config) => config,
-			Err(err) => return Box::new(future::err(err)),
-		};
+			let config = ::config::Config::load(local_api)?;
 
-		Box::new(
-			::solve::compute_and_apply_diff(local_api, web_api, config.mods)
-			.map(|_| ()))
+			let _ = ::await!(::solve::compute_and_apply_diff(local_api, web_api, config.mods))?;
+			Ok(())
+		})
 	}
 }

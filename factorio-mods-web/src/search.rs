@@ -1,4 +1,4 @@
-use ::futures::{ Async, Future, Poll, Stream };
+use ::futures::Stream;
 
 /// The page number of one page of a search response.
 #[derive(
@@ -78,95 +78,27 @@ pub fn search<'a>(
 	client: &'a ::client::Client,
 	url: ::reqwest::Url,
 ) -> impl Stream<Item = ::SearchResponseMod, Error = ::Error> + 'a {
-	let page_future = client.get_object(url);
+	::async_stream_block! {
+		let mut next_page_url = Some(url);
 
-	SearchResultsStream {
-		client,
-		state: SearchResultsStreamState::WaitingForPage(Box::new(page_future)),
-	}
-}
+		while let Some(url) = next_page_url {
+			match ::await!(client.get_object::<SearchResponse>(url)) {
+				Ok((page, _)) => {
+					for mod_ in page.results {
+						::stream_yield!(mod_);
+					}
 
-/// A stream of search results.
-#[derive(Debug)]
-struct SearchResultsStream<'a> {
-	client: &'a ::client::Client,
-	state: SearchResultsStreamState<'a>,
-}
+					next_page_url = page.pagination.links.next;
+				},
 
-enum SearchResultsStreamState<'a> {
-	WaitingForPage(Box<Future<Item = (SearchResponse, ::reqwest::Url), Error = ::Error> + 'a>),
-	HavePage(::std::vec::IntoIter<SearchResponseMod>, Option<::reqwest::Url>),
-	Ended,
-}
+				Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) =>
+					break,
 
-impl<'a> ::std::fmt::Debug for SearchResultsStreamState<'a> {
-	fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-		match *self {
-			SearchResultsStreamState::WaitingForPage(_) =>
-				f.debug_tuple("WaitingForPage")
-				.finish(),
-
-			SearchResultsStreamState::HavePage(ref results, ref next_page_url) =>
-				f.debug_tuple("HavePage")
-				.field(&results.len())
-				.field(next_page_url)
-				.finish(),
-
-			SearchResultsStreamState::Ended =>
-				f.debug_tuple("Ended")
-				.finish(),
+				Err(err) => return Err(err),
+			}
 		}
-	}
-}
 
-impl<'a> Stream for SearchResultsStream<'a> {
-	type Item = SearchResponseMod;
-	type Error = ::Error;
-
-	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-		let mut state = ::std::mem::replace(&mut self.state, SearchResultsStreamState::Ended);
-
-		let (next_state, result) = loop {
-			state = match state {
-				SearchResultsStreamState::WaitingForPage(mut page_future) => match page_future.poll() {
-					Ok(Async::Ready((page, _))) =>
-						SearchResultsStreamState::HavePage(page.results.into_iter(), page.pagination.links.next),
-
-					Ok(Async::NotReady) => break (
-						SearchResultsStreamState::WaitingForPage(page_future),
-						Ok(Async::NotReady)),
-
-					Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) => break (
-						SearchResultsStreamState::Ended,
-						Ok(Async::Ready(None))),
-
-					Err(err) => break (
-						SearchResultsStreamState::Ended,
-						Err(err)),
-				},
-
-				SearchResultsStreamState::HavePage(mut results, next_page_url) => match (results.next(), next_page_url) {
-					(Some(mod_), next_page_url) => break (
-						SearchResultsStreamState::HavePage(results, next_page_url),
-						Ok(Async::Ready(Some(mod_)))),
-
-					(None, Some(next_page_url)) =>
-						SearchResultsStreamState::WaitingForPage(Box::new(self.client.get_object(next_page_url))),
-
-					(None, None) => break (
-						SearchResultsStreamState::Ended,
-						Ok(Async::Ready(None))),
-				},
-
-				SearchResultsStreamState::Ended => break (
-					SearchResultsStreamState::Ended,
-					Ok(Async::Ready(None))),
-			};
-		};
-
-		self.state = next_state;
-
-		result
+		Ok(())
 	}
 }
 

@@ -1,6 +1,6 @@
 //! A CLI tool to manage Factorio mods.
 
-#![feature(catch_expr, conservative_impl_trait, never_type, proc_macro)]
+#![feature(catch_expr, conservative_impl_trait, generators, never_type, proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -25,6 +25,7 @@ extern crate derive_error_chain;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;
+extern crate futures_await as futures;
 extern crate futures_mutex;
 extern crate indicatif;
 extern crate itertools;
@@ -42,7 +43,8 @@ extern crate serde_json;
 extern crate term_size;
 extern crate textwrap;
 
-use ::factorio_mods_web::{ futures, reqwest };
+use factorio_mods_web::reqwest;
+use futures::prelude::{ async_block, await };
 
 mod enable_disable;
 mod install;

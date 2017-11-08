@@ -1,4 +1,4 @@
-use ::futures::{ future, Future, IntoFuture };
+use ::futures::{ future, Future };
 
 /// Wraps a `reqwest::unstable::async::Client` to only allow limited operations on it.
 #[derive(Debug)]
@@ -43,17 +43,24 @@ impl Client {
 		where T: ::serde::de::DeserializeOwned + 'static {
 
 		let mut builder = self.inner.get(url.clone());
-		builder.header(::reqwest::header::Accept::json());
-		send(builder, url)
-		.and_then(|(response, url)| json(response, url))
+
+		::async_block! {
+			builder.header(::reqwest::header::Accept::json());
+			let (response, url) = ::await!(send(builder, url))?;
+			Ok(::await!(json(response, url))?)
+		}
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
 	pub fn get_zip(&self, url: ::reqwest::Url) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'static {
 		let mut builder = self.inner.get(url.clone());
-		builder.header(ACCEPT_APPLICATION_ZIP.clone());
-		send(builder, url)
-		.and_then(|(response, url)| expect_content_type(response, url, &APPLICATION_ZIP))
+
+		::async_block! {
+			builder.header(ACCEPT_APPLICATION_ZIP.clone());
+			let (response, url) = ::await!(send(builder, url))?;
+			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
+			Ok((response, url))
+		}
 	}
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
@@ -65,21 +72,23 @@ impl Client {
 
 		let mut builder = self.inner.post(url.clone());
 
-		// TODO: Workaround for https://github.com/seanmonstar/reqwest/issues/214
-		// builder.header(::reqwest::header::Accept::json()).form(&body);
 		let body = match ::serde_urlencoded::to_string(body) {
 			Ok(body) => body,
 			Err(err) => return Box::new(future::err(::ErrorKind::Serialize(url, err).into())),
 		};
-		builder
-		.header(::reqwest::header::Accept::json())
-		.header(::reqwest::header::ContentType::form_url_encoded())
-		.header(::reqwest::header::ContentLength(body.len() as u64))
-		.body(body);
 
-		Box::new(
-			send(builder, url)
-			.and_then(|(response, url)| json(response, url)))
+		Box::new(::async_block! {
+			// TODO: Workaround for https://github.com/seanmonstar/reqwest/issues/214
+			// builder.header(::reqwest::header::Accept::json()).form(&body);
+			builder
+			.header(::reqwest::header::Accept::json())
+			.header(::reqwest::header::ContentType::form_url_encoded())
+			.header(::reqwest::header::ContentLength(body.len() as u64))
+			.body(body);
+
+			let (response, url) = ::await!(send(builder, url))?;
+			Ok(::await!(json(response, url))?)
+		})
 	}
 }
 
@@ -103,66 +112,59 @@ fn send(
 	mut builder: ::reqwest::unstable::async::RequestBuilder,
 	url: ::reqwest::Url,
 ) -> impl Future<Item = (::reqwest::unstable::async::Response, ::reqwest::Url), Error = ::Error> + 'static {
-	let is_whitelisted_host = match url.host_str() {
-		Some(host) if WHITELISTED_HOSTS.contains(host) => true,
-		_ => false,
-	};
+	::async_block! {
+		let is_whitelisted_host = match url.host_str() {
+			Some(host) if WHITELISTED_HOSTS.contains(host) => true,
+			_ => false,
+		};
 
-	if !is_whitelisted_host {
-		return future::Either::A(future::err(::ErrorKind::NotWhitelistedHost(url).into()))
-	}
+		ensure!(is_whitelisted_host, ::ErrorKind::NotWhitelistedHost(url));
 
-	future::Either::B(
-		builder.send()
-		.then(move |response| match response {
-			Ok(response) => match response.status() {
-				::reqwest::StatusCode::Ok =>
-					future::Either::A(future::ok((response, url))),
+		let response = match ::await!(builder.send()) {
+			Ok(response) => response,
+			Err(err) => bail!(::ErrorKind::HTTP(url, err)),
+		};
 
-				::reqwest::StatusCode::Unauthorized =>
-					future::Either::B(
-						json(response, url)
-						.and_then(|(object, _): (LoginFailureResponse, _)|
-							future::err(::Error::from(::ErrorKind::LoginFailure(object.message))))),
+		// TODO: Workaround for https://github.com/rust-lang/rust/issues/44197
+		let status = response.status();
+		match status {
+			::reqwest::StatusCode::Ok => Ok((response, url)),
 
-				::reqwest::StatusCode::Found =>
-					future::Either::A(future::err(::ErrorKind::NotWhitelistedHost(url).into())),
-
-				code =>
-					future::Either::A(future::err(::ErrorKind::StatusCode(url, code).into())),
+			::reqwest::StatusCode::Unauthorized => {
+				let (object, _): (LoginFailureResponse, _) = ::await!(json(response, url))?;
+				bail!(::ErrorKind::LoginFailure(object.message));
 			},
 
-			Err(err) =>
-				future::Either::A(future::err(::ErrorKind::HTTP(url, err).into())),
-		}))
+			::reqwest::StatusCode::Found => bail!(::ErrorKind::NotWhitelistedHost(url)),
+
+			code => bail!(::ErrorKind::StatusCode(url, code)),
+		}
+	}
 }
 
-fn json<T>(response: ::reqwest::unstable::async::Response, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'static
+fn json<T>(mut response: ::reqwest::unstable::async::Response, url: ::reqwest::Url) -> impl Future<Item = (T, ::reqwest::Url), Error = ::Error> + 'static
 	where T: ::serde::de::DeserializeOwned + 'static {
 
-	expect_content_type(response, url, &::reqwest::mime::APPLICATION_JSON)
-	.into_future()
-	.and_then(|(mut response, url)|
-		response.json()
-		.then(|object| match object {
+	::async_block! {
+		let url = expect_content_type(&response, url, &::reqwest::mime::APPLICATION_JSON)?;
+		match ::await!(response.json()) {
 			Ok(object) => Ok((object, url)),
-			Err(err) => Err(::ErrorKind::HTTP(url, err).into()),
-		}))
+			Err(err) => bail!(::ErrorKind::HTTP(url, err)),
+		}
+	}
 }
 
 fn expect_content_type(
-	response: ::reqwest::unstable::async::Response,
+	response: &::reqwest::unstable::async::Response,
 	url: ::reqwest::Url,
 	expected_mime: &::reqwest::mime::Mime,
-) -> ::Result<(::reqwest::unstable::async::Response, ::reqwest::Url)> {
+) -> ::Result<::reqwest::Url> {
 	match response.headers().get() {
 		Some(&::reqwest::header::ContentType(ref mime)) if mime == expected_mime =>
-			(),
+			Ok(url),
 		Some(&::reqwest::header::ContentType(ref mime)) =>
 			bail!(::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {}", mime))),
 		None =>
 			bail!(::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string())),
-	};
-
-	Ok((response, url))
+	}
 }
