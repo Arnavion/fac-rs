@@ -66,56 +66,59 @@ pub enum ErrorKind {
 quick_main!(|| -> Result<()> {
 	std::env::set_var("RUST_BACKTRACE", "1");
 
-	let disable_subcommand = enable_disable::DisableSubCommand;
-	let enable_subcommand = enable_disable::EnableSubCommand;
-	let install_subcommand = install::SubCommand;
-	let list_subcommand = list::SubCommand;
-	let remove_subcommand = remove::SubCommand;
-	let search_subcommand = search::SubCommand;
-	let show_subcommand = show::SubCommand;
-	let update_subcommand = update::SubCommand;
-	let mut subcommands = std::collections::HashMap::<_, &util::SubCommand>::new();
-	subcommands.insert("disable", &disable_subcommand);
-	subcommands.insert("enable", &enable_subcommand);
-	subcommands.insert("install", &install_subcommand);
-	subcommands.insert("list", &list_subcommand);
-	subcommands.insert("remove", &remove_subcommand);
-	subcommands.insert("search", &search_subcommand);
-	subcommands.insert("show", &show_subcommand);
-	subcommands.insert("update", &update_subcommand);
-	let subcommands = subcommands;
+	// Run everything in a separate thread because the default Windows main thread stack isn't big enough (1 MiB)
+	::std::thread::spawn(|| {
+		let disable_subcommand = enable_disable::DisableSubCommand;
+		let enable_subcommand = enable_disable::EnableSubCommand;
+		let install_subcommand = install::SubCommand;
+		let list_subcommand = list::SubCommand;
+		let remove_subcommand = remove::SubCommand;
+		let search_subcommand = search::SubCommand;
+		let show_subcommand = show::SubCommand;
+		let update_subcommand = update::SubCommand;
+		let mut subcommands = std::collections::HashMap::<_, &util::SubCommand>::new();
+		subcommands.insert("disable", &disable_subcommand);
+		subcommands.insert("enable", &enable_subcommand);
+		subcommands.insert("install", &install_subcommand);
+		subcommands.insert("list", &list_subcommand);
+		subcommands.insert("remove", &remove_subcommand);
+		subcommands.insert("search", &search_subcommand);
+		subcommands.insert("show", &show_subcommand);
+		subcommands.insert("update", &update_subcommand);
+		let subcommands = subcommands;
 
-	let app = clap_app!(@app (app_from_crate!())
-		(@setting SubcommandRequiredElseHelp)
-		(@setting VersionlessSubcommands)
-		(@arg proxy: --proxy +takes_value "HTTP proxy URL"));
+		let app = clap_app!(@app (app_from_crate!())
+			(@setting SubcommandRequiredElseHelp)
+			(@setting VersionlessSubcommands)
+			(@arg proxy: --proxy +takes_value "HTTP proxy URL"));
 
-	let app = subcommands.iter().fold(app, |app, (name, subcommand)|
-		app.subcommand(subcommand.build_subcommand(clap::SubCommand::with_name(name))));
+		let app = subcommands.iter().fold(app, |app, (name, subcommand)|
+			app.subcommand(subcommand.build_subcommand(clap::SubCommand::with_name(name))));
 
-	let matches = app.get_matches();
+		let matches = app.get_matches();
 
-	let client = if let Some(proxy_url) = matches.value_of("proxy") {
-		let mut builder = ::reqwest::unstable::async::ClientBuilder::new();
-		builder.proxy(::reqwest::Proxy::all(proxy_url).chain_err(|| "Couldn't parse proxy URL")?);
-		Some(builder)
-	}
-	else {
-		None
-	};
+		let client = if let Some(proxy_url) = matches.value_of("proxy") {
+			let mut builder = ::reqwest::unstable::async::ClientBuilder::new();
+			builder.proxy(::reqwest::Proxy::all(proxy_url).chain_err(|| "Couldn't parse proxy URL")?);
+			Some(builder)
+		}
+		else {
+			None
+		};
 
-	let (subcommand_name, subcommand_matches) = matches.subcommand();
-	let subcommand = subcommands[subcommand_name];
+		let (subcommand_name, subcommand_matches) = matches.subcommand();
+		let subcommand = subcommands[subcommand_name];
 
-	let mut core = ::factorio_mods_web::tokio_core::reactor::Core::new().chain_err(|| "Could not create Tokio event loop")?;
+		let mut core = ::factorio_mods_web::tokio_core::reactor::Core::new().chain_err(|| "Could not create Tokio event loop")?;
 
-	let local_api = factorio_mods_local::API::new().chain_err(|| "Could not initialize local API");
-	let web_api = factorio_mods_web::API::new(client, core.handle()).chain_err(|| "Could not initialize web API");
+		let local_api = factorio_mods_local::API::new().chain_err(|| "Could not initialize local API");
+		let web_api = factorio_mods_web::API::new(client, core.handle()).chain_err(|| "Could not initialize web API");
 
-	let result = subcommand.run(
-		subcommand_matches.unwrap(),
-		match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err), },
-		match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err), });
+		let result = subcommand.run(
+			subcommand_matches.unwrap(),
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err), },
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err), });
 
-	core.run(result)
+		core.run(result)
+	}).join().unwrap()
 });
