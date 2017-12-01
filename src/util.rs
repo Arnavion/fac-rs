@@ -65,7 +65,7 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 			println!("Please provide your username and password to authenticate yourself.");
 
 			let username = {
-				let prompt = existing_username.as_ref().map_or("Username: ".to_string(), |username| format!("Username [{}]: ", username));
+				let prompt: ::std::borrow::Cow<_> = existing_username.as_ref().map_or("Username: ".into(), |username| format!("Username [{}]: ", username).into());
 				::rprompt::prompt_reply_stdout(&prompt).chain_err(|| "Could not read username")?
 			};
 
@@ -103,16 +103,8 @@ pub fn prompt_continue() -> ::Result<bool> {
 	use ::ResultExt;
 
 	loop {
-		let mut choice = String::new();
-
-		print!("Continue? [y/n]: ");
-
-		let mut stdout = ::std::io::stdout();
-		::std::io::Write::flush(&mut stdout).chain_err(|| "Could not write to stdout")?;
-
-		::std::io::stdin().read_line(&mut choice).chain_err(|| "Could not read from stdin")?;
-
-		match choice.trim() {
+		let choice = ::rprompt::prompt_reply_stdout("Continue? [y/n]: ").chain_err(|| "Could not read continue response")?;
+		match &*choice {
 			"y" | "Y" => return Ok(true),
 			"n" | "N" => return Ok(false),
 			_ => continue,
