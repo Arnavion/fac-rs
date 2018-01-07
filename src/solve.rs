@@ -1,4 +1,4 @@
-use ::futures::{ future, Future, Stream };
+use ::futures::{ future, Future, IntoFuture, Stream };
 use ::ResultExt;
 
 /// Computes which old mods to uninstall and which new mods to install based on the given reqs.
@@ -26,115 +26,130 @@ pub fn compute_and_apply_diff<'a>(
 
 		println!();
 
-		Ok(::await!(with_multi_progress("Applying solution...", move |apply_diff_multi_progress| ::async_block! {
-			let mods_directory = local_api.mods_directory();
-			let mods_directory_canonicalized = mods_directory.canonicalize().chain_err(|| format!("Could not canonicalize {}", mods_directory.display()))?;
+		println!("Applying solution...");
 
-			let uninstall_futures = {
-				let apply_diff_multi_progress = apply_diff_multi_progress.clone();
-				to_uninstall.into_iter().map(move |installed_mod| future::Either::A(with_progress_bar(
-					&apply_diff_multi_progress,
-					&format!("    Removing {} {}", installed_mod.info().name(), installed_mod.info().version()),
-					|uninstall_progress_bar| ::async_block! {
-						let result = match installed_mod.mod_type() {
-							::factorio_mods_local::InstalledModType::Zipped => {
-								let path = installed_mod.path();
-								uninstall_progress_bar.set_message(&format!("removing file {}", path.display()));
-								::std::fs::remove_file(path).chain_err(|| format!("Could not remove file {}", path.display()))
-							},
+		let mods_directory = local_api.mods_directory();
+		let mods_directory_canonicalized = mods_directory.canonicalize().chain_err(|| format!("Could not canonicalize {}", mods_directory.display()))?;
 
-							::factorio_mods_local::InstalledModType::Unpacked => {
-								let path = installed_mod.path();
-								uninstall_progress_bar.set_message(&format!("removing directory {}", path.display()));
-								::std::fs::remove_dir_all(path).chain_err(|| format!("Could not remove directory {}", path.display()))
-							},
-						};
+		let uninstall_futures = to_uninstall.into_iter().map(move |installed_mod| {
+			println!(
+				"    Removing {} {} ...",
+				installed_mod.info().name(), installed_mod.info().version());
+			let result = match installed_mod.mod_type() {
+				::factorio_mods_local::InstalledModType::Zipped => {
+					let path = installed_mod.path();
+					println!(
+						"    Removing {} {} ... removing file {} ...",
+						installed_mod.info().name(), installed_mod.info().version(),
+						path.display());
+					::std::fs::remove_file(path).chain_err(|| format!("Could not remove file {}", path.display()))
+				},
 
-						match result {
-							Ok(()) => Ok((uninstall_progress_bar, ())),
-							Err(err) => Err((uninstall_progress_bar, err)),
-						}
-					})))
+				::factorio_mods_local::InstalledModType::Unpacked => {
+					let path = installed_mod.path();
+					println!(
+						"    Removing {} {} ... removing directory {} ...",
+						installed_mod.info().name(), installed_mod.info().version(),
+						path.display());
+					::std::fs::remove_dir_all(path).chain_err(|| format!("Could not remove directory {}", path.display()))
+				},
 			};
 
-			let install_futures =
-				to_install
-				.into_iter()
-				.map(move |release| {
-					let chunk_stream = web_api.download(&release, &user_credentials);
+			match result {
+				Ok(()) => println!(
+					"    Removing {} {} ... done",
+					installed_mod.info().name(), installed_mod.info().version()),
+				Err(_) => println!(
+					"    Removing {} {} ... failed",
+					installed_mod.info().name(), installed_mod.info().version()),
+			}
 
-					let filename = mods_directory.join(release.filename());
-					let displayable_filename = filename.display().to_string();
+			future::Either::A(result.into_future())
+		});
 
-					let result = do catch {
-						let mut download_filename: ::std::ffi::OsString =
-							filename.file_name()
-							.ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?
-							.into();
+		let install_futures =
+			to_install.into_iter().map(move |release| {
+				let chunk_stream = web_api.download(&release, &user_credentials);
 
-						download_filename.push(".new");
-						let download_filename = filename.with_file_name(download_filename);
-						let download_displayable_filename = download_filename.display().to_string();
+				let filename = mods_directory.join(release.filename());
+				let displayable_filename = filename.display().to_string();
 
-						{
-							let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
-							let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
-							if parent_canonicalized != mods_directory_canonicalized {
-								Err(format!("Filename {} is malformed", download_displayable_filename))?;
-							}
+				let result: ::Result<_> = do catch {
+					let mut download_filename: ::std::ffi::OsString =
+						filename.file_name()
+						.ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?
+						.into();
+
+					download_filename.push(".new");
+					let download_filename = filename.with_file_name(download_filename);
+					let download_displayable_filename = download_filename.display().to_string();
+
+					{
+						let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
+						let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
+						if parent_canonicalized != mods_directory_canonicalized {
+							Err(format!("Filename {} is malformed", download_displayable_filename))?;
 						}
+					}
 
-						let mut file = ::std::fs::OpenOptions::new();
-						let file = file.create(true).truncate(true).write(true);
-						let file = file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
-						let writer = ::std::io::BufWriter::new(file);
+					let mut file = ::std::fs::OpenOptions::new();
+					let file = file.create(true).truncate(true).write(true);
+					let file = file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
+					let writer = ::std::io::BufWriter::new(file);
 
-						Ok((download_filename, download_displayable_filename, writer))
+					Ok((download_filename, download_displayable_filename, writer))
+				};
+
+				future::Either::B(::async_block! {
+					let (download_filename, download_displayable_filename, mut writer) = result?;
+
+					println!(
+						"    Installing {} {} ... downloading to {} ...",
+						release.info_json().name(), release.info_json().version(),
+						download_displayable_filename);
+
+					let mut chunk_stream = chunk_stream;
+
+					let result = loop {
+						match ::await!(chunk_stream.into_future()) {
+							Ok((Some(chunk), rest)) => {
+								if let Err(err) = ::std::io::Write::write_all(&mut writer, &chunk) {
+									break Err(err).chain_err(|| format!("Could not write to file {}", download_displayable_filename));
+								}
+
+								chunk_stream = rest;
+							},
+
+							Ok((None, _)) => {
+								println!(
+									"    Installing {} {} ... renaming {} to {} ...",
+									release.info_json().name(), release.info_json().version(),
+									download_displayable_filename, displayable_filename);
+								break ::std::fs::rename(&download_filename, &filename)
+								.chain_err(|| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename));
+							},
+
+							Err((err, _)) =>
+								break Err(err).chain_err(|| format!("Could not download release {} {}", release.info_json().name(), release.version())),
+						}
 					};
 
-					future::Either::B(with_progress_bar(
-						&apply_diff_multi_progress,
-						&format!("    Installing {} {}", release.info_json().name(), release.info_json().version()),
-						|install_progress_bar| ::async_block! {
-							let (download_filename, download_displayable_filename, mut writer) = match result {
-								Ok(value) => value,
-								Err(err) => return Err((install_progress_bar, err)),
-							};
+					match result {
+						Ok(()) => println!(
+							"    Installing {} {} ... done",
+							release.info_json().name(), release.info_json().version()),
+						Err(_) => println!(
+							"    Installing {} {} ... failed",
+							release.info_json().name(), release.info_json().version()),
+					}
 
-							install_progress_bar.set_message(&format!("downloading to {} ...", download_displayable_filename));
+					result
+				})
+			});
 
-							let mut chunk_stream = chunk_stream;
-							let result = loop {
-								match ::await!(chunk_stream.into_future()) {
-									Ok((Some(chunk), rest)) => {
-										if let Err(err) = ::std::io::Write::write_all(&mut writer, &chunk) {
-											break Err(err).chain_err(|| format!("Could not write to file {}", download_displayable_filename));
-										}
+		let _: Vec<()> = ::await!(future::join_all(uninstall_futures.chain(install_futures)))?;
 
-										chunk_stream = rest;
-									},
-
-									Ok((None, _)) => {
-										install_progress_bar.set_message(&format!("renaming {} to {} ...", download_displayable_filename, displayable_filename));
-										break ::std::fs::rename(&download_filename, &filename)
-										.chain_err(|| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename));
-									},
-
-									Err((err, _)) =>
-										break Err(err).chain_err(|| format!("Could not download release {} {}", release.info_json().name(), release.version())),
-								}
-							};
-							match result {
-								Ok(()) => Ok((install_progress_bar, ())),
-								Err(err) => Err((install_progress_bar, err)),
-							}
-						}))
-				});
-
-			let _: Vec<()> = ::await!(future::join_all(uninstall_futures.chain(install_futures)))?;
-
-			Ok::<_, ::Error>((true, reqs))
-		}))?)
+		Ok::<_, ::Error>((true, reqs))
 	}
 }
 
@@ -192,17 +207,19 @@ fn solve<'a>(
 			already_fetching: Default::default(),
 		});
 
-		let (reqs, cache) = ::await!(with_multi_progress("Fetching releases...", move |fetch_mods_multi_progress| ::async_block! {
+		println!("Fetching releases...");
+		let (reqs, cache) = {
 			let cache = ::await!(add_installable(cache, Installable::Base(::factorio_mods_common::ModName::new("base".to_string()), game_version.clone())))?;
 			let futures: Vec<_> =
 				reqs.keys()
-				.map(|name| add_mod(api, game_version, cache.clone(), name.clone(), fetch_mods_multi_progress.clone()))
+				.map(|name| add_mod(api, game_version, cache.clone(), name.clone()))
 				.collect();
 
 			let _: Vec<()> = ::await!(future::join_all(futures))?;
 
 			Ok::<_, ::Error>((reqs, cache))
-		}))?;
+		}?;
+		println!("Fetching releases... done");
 
 		#[allow(unreachable_code, unreachable_patterns)]
 		let Ok(mut guard) = ::await!(lock(cache));
@@ -319,7 +336,6 @@ fn add_mod<'a>(
 	game_version: &'a ::factorio_mods_common::ReleaseVersion,
 	cache: ::futures_mutex::FutMutex<Cache>,
 	name: ::factorio_mods_common::ModName,
-	fetch_mods_multi_progress: ::std::sync::Arc<::indicatif::MultiProgress>,
 ) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 	Box::new(::async_block! {
 		#[allow(unreachable_code, unreachable_patterns)]
@@ -335,52 +351,50 @@ fn add_mod<'a>(
 
 		let cache = guard.unlock();
 
-		::await!(with_progress_bar(&fetch_mods_multi_progress.clone(), &format!("    {}", name), move |progress_bar| ::async_block! {
-			progress_bar.set_message("fetching...");
+		println!("    {} fetching...", name);
 
-			let result = match ::await!(api.get(&name)) {
-				Ok(mod_) => {
-					let add_releases_and_deps_futures: Vec<_> =
-						mod_.releases().into_iter()
-						.flat_map(|release| if release.factorio_version().matches(game_version) {
-							let mut futures: Vec<_> =
-								release.info_json().dependencies()
-								.into_iter()
-								.filter_map(|dep| if dep.required() && &**dep.name() != "base" {
-									Some(add_mod(api, game_version, cache.clone(), dep.name().clone(), fetch_mods_multi_progress.clone()))
-								}
-								else {
-									None
-								})
-								.collect();
+		let result = match ::await!(api.get(&name)) {
+			Ok(mod_) => {
+				let add_releases_and_deps_futures: Vec<_> =
+					mod_.releases().into_iter()
+					.flat_map(|release| if release.factorio_version().matches(game_version) {
+						let mut futures: Vec<_> =
+							release.info_json().dependencies()
+							.into_iter()
+							.filter_map(|dep| if dep.required() && &**dep.name() != "base" {
+								Some(add_mod(api, game_version, cache.clone(), dep.name().clone()))
+							}
+							else {
+								None
+							})
+							.collect();
 
-							futures.push(Box::new(add_installable(cache.clone(), Installable::Mod(release.clone())).map(|_| ())));
+						futures.push(Box::new(add_installable(cache.clone(), Installable::Mod(release.clone())).map(|_| ())));
 
-							futures
-						}
-						else {
-							vec![]
-						})
-						.collect(); // Force eager evaluation to remove dependency on lifetime of `mod_`
+						futures
+					}
+					else {
+						vec![]
+					})
+					.collect(); // Force eager evaluation to remove dependency on lifetime of `mod_`
 
-					::await!(future::join_all(add_releases_and_deps_futures).map(|_: Vec<()>| ()))
-				},
+				::await!(future::join_all(add_releases_and_deps_futures).map(|_: Vec<()>| ()))
+			},
 
-				Err(err) => match *err.kind() {
-					// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
-					::factorio_mods_web::ErrorKind::StatusCode(_, ::factorio_mods_web::reqwest::StatusCode::NotFound) => Ok(()),
+			Err(err) => match *err.kind() {
+				// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
+				::factorio_mods_web::ErrorKind::StatusCode(_, ::factorio_mods_web::reqwest::StatusCode::NotFound) => Ok(()),
 
-					_ => Err(err).chain_err(|| format!("Could not get mod info for {}", name)),
-				},
-			};
+				_ => Err(err).chain_err(|| format!("Could not get mod info for {}", name)),
+			},
+		};
 
-			match result {
-				Ok(()) => Ok((progress_bar, ())),
-				Err(err) => Err((progress_bar, err)),
-			}
-		}))?;
+		match result {
+			Ok(()) => println!("    {} done", name),
+			Err(_) => println!("    {} failed", name),
+		}
 
-		Ok(())
+		result
 	})
 }
 
@@ -731,77 +745,6 @@ impl<'a, T> Permutater<'a, T> where T: Copy {
 
 fn lock<T>(mutex: ::futures_mutex::FutMutex<T>) -> impl Future<Item = ::futures_mutex::FutMutexAcquired<T>, Error = !> {
 	mutex.lock().map_err(|()| unreachable!())
-}
-
-fn with_multi_progress<F, A>(
-	title: &str,
-	f: F,
-) -> impl Future<Item = A::Item, Error = A::Error>
-where
-	F: FnOnce(::std::sync::Arc<::indicatif::MultiProgress>) -> A,
-	A: Future,
-{
-	let multi_progress = ::std::sync::Arc::new(::indicatif::MultiProgress::new());
-
-	// ProgressBars will be add()ed to the MultiProgress dynamically, but it needs to be join()ed immediately to be able to draw itself.
-	// To prevent it from finishing before any ProgressBars are actually added to it, add one ProgressBar that doesn't finish
-	// until signaled.
-	let title_progress_bar = {
-		let title_progress_bar = multi_progress.add(::indicatif::ProgressBar::new(1));
-		title_progress_bar.set_style(::indicatif::ProgressStyle::default_bar().template("{prefix}"));
-		title_progress_bar.set_prefix(title);
-		title_progress_bar
-	};
-
-	::async_block! {
-		let multi_progress_receiver = {
-			let (multi_progress_sender, multi_progress_receiver) = ::futures::sync::oneshot::channel();
-			let multi_progress = multi_progress.clone();
-
-			::std::thread::spawn(move || {
-				multi_progress.join().unwrap();
-				multi_progress_sender.send(()).unwrap();
-			});
-
-			multi_progress_receiver
-		};
-
-		let result = ::await!(f(multi_progress));
-
-		title_progress_bar.finish();
-
-		::await!(multi_progress_receiver).unwrap();
-
-		result
-	}
-}
-
-fn with_progress_bar<F, A, T, E>(
-	multi_progress: &::indicatif::MultiProgress,
-	prefix: &str,
-	f: F,
-) -> impl Future<Item = T, Error = E>
-where
-	F: FnOnce(::indicatif::ProgressBar) -> A,
-	A: Future<Item = (::indicatif::ProgressBar, T), Error = (::indicatif::ProgressBar, E)>,
-{
-	let progress_bar = multi_progress.add(::indicatif::ProgressBar::new(1));
-	progress_bar.set_style(::indicatif::ProgressStyle::default_bar().template("{prefix} {wide_msg:>}"));
-	progress_bar.set_prefix(prefix);
-
-	::async_block! {
-		match ::await!(f(progress_bar)) {
-			Ok((progress_bar, value)) => {
-				progress_bar.finish_with_message("done");
-				Ok(value)
-			},
-
-			Err((progress_bar, err)) => {
-				progress_bar.finish_with_message("failed");
-				Err(err)
-			},
-		}
-	}
 }
 
 #[cfg(test)]
