@@ -85,38 +85,6 @@ pub struct ServiceUsername(String);
 )]
 pub struct ServiceToken(String);
 
-/// Represents the contents of `info.json` of a mod release.
-#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
-pub struct ModInfo {
-	/// The name of the mod release.
-	name: ModName,
-
-	/// The authors of the mod release.
-	#[serde(deserialize_with = "::deserialize_string_or_seq_string")]
-	author: Vec<AuthorName>,
-
-	/// The title of the mod release.
-	title: ModTitle,
-
-	/// A longer description of the mod release.
-	description: Option<ModDescription>,
-
-	/// The version of the mod release.
-	version: ReleaseVersion,
-
-	/// The versions of the game supported by the mod release.
-	#[serde(default = "default_game_version")]
-	factorio_version: ModVersionReq,
-
-	/// The URL of the homepage of the mod release.
-	homepage: Option<Url>,
-
-	/// Dependencies
-	#[serde(default = "default_dependencies")]
-	#[serde(deserialize_with = "::deserialize_string_or_seq_string")]
-	dependencies: Vec<Dependency>,
-}
-
 /// The specification of a dependency in a mod's info.json
 #[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters)]
 pub struct Dependency {
@@ -160,17 +128,6 @@ impl ::serde::Serialize for ModVersionReq {
 	}
 }
 
-lazy_static! {
-	static ref DEFAULT_GAME_VERSION: ModVersionReq = ModVersionReq::new("0.12".parse().unwrap());
-}
-
-/// Generates a copy of the default game version.
-///
-/// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
-fn default_game_version() -> ModVersionReq {
-	DEFAULT_GAME_VERSION.clone()
-}
-
 /// Parses the given string as a `::semver::Version`
 fn parse_version(s: &str) -> Result<::semver::Version, ::semver::SemVerError> {
 	s.parse().or_else(|_| fixup_version(s).parse())
@@ -201,20 +158,8 @@ pub fn fixup_version(s: &str) -> String {
 	}), ".")
 }
 
-/// The default dependencies of a mod.
-///
-/// Used as the default value of the `dependencies` field in a mod's `info.json` if the field doesn't exist.
-fn default_dependencies() -> Vec<Dependency> {
-	DEFAULT_DEPENDENCIES.clone()
-}
-
 lazy_static! {
 	static ref DEPENDENCY_REGEX: ::regex::Regex = ::regex::Regex::new(r"^(\??)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
-	static ref DEFAULT_DEPENDENCIES: Vec<Dependency> = vec![Dependency {
-		name: ModName("base".to_string()),
-		version: ModVersionReq(::semver::VersionReq::any()),
-		required: true,
-	}];
 }
 
 /// Parses the given string as a Dependency

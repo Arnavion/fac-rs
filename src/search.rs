@@ -23,10 +23,9 @@ impl ::util::SubCommand for SubCommand {
 			let query = matches.value_of("query").unwrap_or("");
 
 			let r: Result<_, ::factorio_mods_web::Error> = do catch {
-				#[async] for mod_ in web_api.search(query, &[], None, None, None) {
+				#[async] for mod_ in web_api.search(query) {
 					println!("{}", mod_.title());
 					println!("    Name: {}", mod_.name());
-					println!("    Tags: {}", ::itertools::join(mod_.tags().iter().map(|t| t.name()), ", "));
 					println!();
 					::util::wrapping_println(mod_.summary(), "    ");
 					println!();

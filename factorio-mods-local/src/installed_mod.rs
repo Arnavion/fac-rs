@@ -5,7 +5,7 @@ pub struct InstalledMod {
 	path: ::std::path::PathBuf,
 
 	/// The info.json of the mod
-	info: ::factorio_mods_common::ModInfo,
+	info: ModInfo,
 
 	/// Whether the installed mod is enabled or not in `mod-list.json`
 	enabled: bool,
@@ -13,6 +13,38 @@ pub struct InstalledMod {
 	/// Whether the installed mod is zipped or unpacked.
 	#[getter(copy)]
 	mod_type: InstalledModType,
+}
+
+/// Represents the contents of `info.json` of a mod release.
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
+pub struct ModInfo {
+	/// The name of the mod release.
+	name: ::factorio_mods_common::ModName,
+
+	/// The authors of the mod release.
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	author: Vec<::factorio_mods_common::AuthorName>,
+
+	/// The title of the mod release.
+	title: ::factorio_mods_common::ModTitle,
+
+	/// A longer description of the mod release.
+	description: Option<::factorio_mods_common::ModDescription>,
+
+	/// The version of the mod release.
+	version: ::factorio_mods_common::ReleaseVersion,
+
+	/// The versions of the game supported by the mod release.
+	#[serde(default = "default_game_version")]
+	factorio_version: ::factorio_mods_common::ModVersionReq,
+
+	/// The URL of the homepage of the mod release.
+	homepage: Option<::factorio_mods_common::Url>,
+
+	/// Dependencies
+	#[serde(default = "default_dependencies")]
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	dependencies: Vec<::factorio_mods_common::Dependency>,
 }
 
 /// The type of an installed mod.
@@ -31,7 +63,7 @@ impl InstalledMod {
 		path: ::std::path::PathBuf,
 		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 	) -> ::Result<Self> {
-		let (info, mod_type): (::factorio_mods_common::ModInfo, _) = if path.is_file() {
+		let (info, mod_type): (ModInfo, _) = if path.is_file() {
 			ensure!(path.extension() == Some("zip".as_ref()), ::ErrorKind::UnknownModFormat(path));
 
 			let zip_file = match ::std::fs::File::open(&path) {
@@ -138,6 +170,29 @@ pub fn find(
 				yield Err(err.into()),
 		}
 	}))
+}
+
+lazy_static! {
+	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::ModVersionReq = ::factorio_mods_common::ModVersionReq::new("0.12".parse().unwrap());
+	static ref DEFAULT_DEPENDENCIES: Vec<::factorio_mods_common::Dependency> = vec![::factorio_mods_common::Dependency::new(
+		::factorio_mods_common::ModName::new("base".to_string()),
+		::factorio_mods_common::ModVersionReq::new(::semver::VersionReq::any()),
+		true,
+	)];
+}
+
+/// Generates a copy of the default game version.
+///
+/// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
+fn default_game_version() -> ::factorio_mods_common::ModVersionReq {
+	DEFAULT_GAME_VERSION.clone()
+}
+
+/// The default dependencies of a mod.
+///
+/// Used as the default value of the `dependencies` field in a mod's `info.json` if the field doesn't exist.
+fn default_dependencies() -> Vec<::factorio_mods_common::Dependency> {
+	DEFAULT_DEPENDENCIES.clone()
 }
 
 struct GenIterator<G>(G);

@@ -7,15 +7,6 @@
 )]
 pub struct DateTime(String);
 
-/// Number of ratings.
-#[derive(
-	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct RatingCount(u64);
-
 /// Number of downloads.
 #[derive(
 	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -28,77 +19,26 @@ pub struct DownloadCount(u64);
 /// A mod object returned by `API::get`.
 #[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct Mod {
-	/// The mod ID.
-	#[getter(copy)]
-	id: ModId,
-
 	/// The name of the mod.
 	name: ::factorio_mods_common::ModName,
+
+	/// The title of the mod.
+	title: ::factorio_mods_common::ModTitle,
 
 	/// The authors of the mod.
 	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
 	owner: Vec<::factorio_mods_common::AuthorName>,
 
-	/// The title of the mod.
-	title: ::factorio_mods_common::ModTitle,
-
 	/// A short summary of the mod.
 	summary: ModSummary,
-
-	/// A longer description of the mod.
-	description: ::factorio_mods_common::ModDescription,
-
-	/// The URL of the GitHub repository of the mod.
-	github_path: ::factorio_mods_common::Url,
-
-	/// The URL of the homepage of the mod.
-	homepage: ::factorio_mods_common::Url,
-
-	/// The name of the mod's license.
-	license_name: LicenseName,
-
-	/// The URL of the mod's license.
-	license_url: ::factorio_mods_common::Url,
-
-	/// The flags of the mod's license.
-	#[getter(copy)]
-	license_flags: LicenseFlags,
-
-	/// The versions of the game supported by the mod.
-	game_versions: Vec<::factorio_mods_common::ModVersionReq>,
-
-	/// The date and time at which the mod was created.
-	created_at: DateTime,
-
-	/// The date and time at which the mod was last updated.
-	updated_at: DateTime,
 
 	/// All the releases of the mod.
 	releases: Vec<ModRelease>,
 
-	/// The number of user ratings the mod has received.
-	#[getter(copy)]
-	ratings_count: RatingCount,
-
-	// current_user_rating: ???, # Unknown type
-
 	/// The number of times the mod has been downloaded.
 	#[getter(copy)]
 	downloads_count: DownloadCount,
-
-	/// The tags of the mod.
-	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
-	tags: Vec<Tag>,
 }
-
-/// A mod ID.
-#[derive(
-	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct ModId(u64);
 
 /// The summary of a mod.
 #[derive(
@@ -109,36 +49,14 @@ pub struct ModId(u64);
 )]
 pub struct ModSummary(String);
 
-/// The name of a mod's license.
-#[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct LicenseName(String);
-
-/// License flags.
-#[derive(
-	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct LicenseFlags(u64);
-
 /// A single mod release.
 #[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
 pub struct ModRelease {
-	/// The ID of the mod release.
-	#[getter(copy)]
-	id: ReleaseId,
-
 	/// The version of the mod release.
 	version: ::factorio_mods_common::ReleaseVersion,
 
-	/// The versions of the game supported by the mod release.
-	factorio_version: ::factorio_mods_common::ModVersionReq,
+	/// The `info.json` of the mod release.
+	info_json: ModReleaseInfo,
 
 	/// The URL to download the mod release.
 	download_url: ::factorio_mods_common::Url,
@@ -147,29 +65,28 @@ pub struct ModRelease {
 	#[serde(rename(deserialize = "file_name"))]
 	filename: Filename,
 
-	/// The file size of the mod release.
-	#[getter(copy)]
-	file_size: FileSize,
-
 	/// The date and time at which the mod release was created.
 	released_at: DateTime,
 
-	/// The number of times the mod release has been downloaded.
-	#[getter(copy)]
-	downloads_count: DownloadCount,
-
-	/// The `info.json` of the mod release.
-	info_json: ::factorio_mods_common::ModInfo,
+	/// The hash of the mod release file.
+	sha1: ModHash,
 }
 
-/// The ID of a mod release.
+/// Extra information about a single mod release.
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
+pub struct ModReleaseInfo {
+	/// The versions of the game supported by the mod release.
+	factorio_version: ::factorio_mods_common::ModVersionReq,
+}
+
+/// The hash of a mod release file.
 #[derive(
-	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	::derive_new::new,
 	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
 	::serde_derive::Deserialize,
 )]
-pub struct ReleaseId(u64);
+pub struct ModHash(String);
 
 /// The filename of a mod release.
 #[derive(
@@ -180,76 +97,26 @@ pub struct ReleaseId(u64);
 )]
 pub struct Filename(String);
 
-/// The file size of a mod release.
-#[derive(
-	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct FileSize(u64);
+/// A mod object returned by `API::search`.
+#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
+pub struct SearchResponseMod {
+	/// The name of the mod.
+	name: ::factorio_mods_common::ModName,
 
-/// A tag.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
-pub struct Tag {
-	/// The ID of the tag.
+	/// The title of the mod.
+	title: ::factorio_mods_common::ModTitle,
+
+	/// The authors of the mod.
+	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
+	owner: Vec<::factorio_mods_common::AuthorName>,
+
+	/// A short summary of the mod.
+	summary: ModSummary,
+
+	/// The latest release of the mod.
+	latest_release: ModRelease,
+
+	/// The number of times the mod has been downloaded.
 	#[getter(copy)]
-	id: TagId,
-
-	/// The name of the tag.
-	name: TagName,
-
-	/// The title of the tag.
-	title: TagTitle,
-
-	/// The description of the tag.
-	description: TagDescription,
-
-	/// The type of the tag.
-	#[serde(rename(deserialize = "type"))]
-	type_name: TagType,
+	downloads_count: DownloadCount,
 }
-
-/// The ID of a tag.
-#[derive(
-	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct TagId(u64);
-
-/// The name of a tag.
-#[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct TagName(String);
-
-/// The title of a tag.
-#[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize)]
-pub struct TagTitle(String);
-
-/// The description of a tag.
-#[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct TagDescription(String);
-
-/// The type of a tag.
-#[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_new::new,
-	::derive_struct::newtype_display, ::derive_struct::newtype_ref,
-	::serde_derive::Deserialize,
-)]
-pub struct TagType(String);

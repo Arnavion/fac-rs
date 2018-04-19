@@ -47,15 +47,15 @@ use factorio_mods_web::reqwest;
 use futures::prelude::{ async_block, await };
 
 mod enable_disable;
-mod install;
+// mod install;
 mod list;
-mod remove;
+// mod remove;
 mod search;
 mod show;
-mod update;
+// mod update;
 
 mod config;
-mod solve;
+// mod solve;
 mod util;
 
 #[derive(Debug, ::derive_error_chain::ErrorChain)]
@@ -70,21 +70,21 @@ quick_main!(|| -> Result<()> {
 	::std::thread::spawn(|| {
 		let disable_subcommand = enable_disable::DisableSubCommand;
 		let enable_subcommand = enable_disable::EnableSubCommand;
-		let install_subcommand = install::SubCommand;
+		// let install_subcommand = install::SubCommand;
 		let list_subcommand = list::SubCommand;
-		let remove_subcommand = remove::SubCommand;
+		// let remove_subcommand = remove::SubCommand;
 		let search_subcommand = search::SubCommand;
 		let show_subcommand = show::SubCommand;
-		let update_subcommand = update::SubCommand;
+		// let update_subcommand = update::SubCommand;
 		let mut subcommands = std::collections::HashMap::<_, &util::SubCommand>::new();
 		subcommands.insert("disable", &disable_subcommand);
 		subcommands.insert("enable", &enable_subcommand);
-		subcommands.insert("install", &install_subcommand);
+		// subcommands.insert("install", &install_subcommand);
 		subcommands.insert("list", &list_subcommand);
-		subcommands.insert("remove", &remove_subcommand);
+		// subcommands.insert("remove", &remove_subcommand);
 		subcommands.insert("search", &search_subcommand);
 		subcommands.insert("show", &show_subcommand);
-		subcommands.insert("update", &update_subcommand);
+		// subcommands.insert("update", &update_subcommand);
 		let subcommands = subcommands;
 
 		let app = clap_app!(@app (app_from_crate!())

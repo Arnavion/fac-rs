@@ -239,6 +239,7 @@ struct BaseInfo {
 struct PlayerData {
 	#[serde(rename(deserialize = "service-username"))]
 	service_username: Option<::factorio_mods_common::ServiceUsername>,
+
 	#[serde(rename(deserialize = "service-token"))]
 	service_token: Option<::factorio_mods_common::ServiceToken>,
 }

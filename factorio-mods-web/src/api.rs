@@ -26,26 +26,39 @@ impl API {
 	/// Searches for mods matching the given criteria.
 	pub fn search<'a>(
 		&'a self,
-		query: &str,
-		tags: &[&::TagName],
-		order: Option<&SearchOrder>,
-		page_size: Option<&::ResponseNumber>,
-		page: Option<::PageNumber>
+		query: &'a str,
 	) -> impl Stream<Item = ::SearchResponseMod, Error = ::Error> + 'a {
-		let tags_query = ::itertools::join(tags, ",");
-		let order = order.unwrap_or(&DEFAULT_ORDER).to_query_parameter();
-		let page_size = (page_size.unwrap_or(&DEFAULT_PAGE_SIZE)).to_string();
-		let page = page.unwrap_or_else(|| ::PageNumber::new(1));
+		::async_stream_block! {
+			let query = query.to_lowercase();
 
-		let mut starting_url = self.mods_url.clone();
-		starting_url.query_pairs_mut()
-			.append_pair("q", query)
-			.append_pair("tags", &tags_query)
-			.append_pair("order", order)
-			.append_pair("page_size", &page_size)
-			.append_pair("page", &page.to_string());
+			let mut next_page_url = Some(self.mods_url.clone());
 
-		::search::search(&self.client, starting_url)
+			while let Some(url) = next_page_url {
+				match ::await!(self.client.get_object::<PagedResponse<::SearchResponseMod>>(url)) {
+					Ok((page, _)) => {
+						for mod_ in page.results {
+							if
+								mod_.name().to_lowercase().contains(&query) ||
+								mod_.title().to_lowercase().contains(&query) ||
+								mod_.owner().into_iter().any(|owner| owner.to_lowercase().contains(&query)) ||
+								mod_.summary().to_lowercase().contains(&query)
+							{
+								::stream_yield!(mod_);
+							}
+						}
+
+						next_page_url = page.pagination.links.next;
+					},
+
+					Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) =>
+						break,
+
+					Err(err) => return Err(err),
+				}
+			}
+
+			Ok(())
+		}
 	}
 
 	/// Gets information about the specified mod.
@@ -81,7 +94,6 @@ impl API {
 		user_credentials: &::factorio_mods_common::UserCredentials,
 	) -> impl Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'static {
 		let release_download_url = release.download_url();
-		let expected_file_size = *release.file_size();
 
 		let download_url = match self.base_url.join(release_download_url) {
 			Ok(mut download_url) => {
@@ -101,20 +113,6 @@ impl API {
 		Either::B(::async_stream_block! {
 			let (response, download_url) = ::await!(future)?;
 
-			let file_size =
-				if let Some(&::reqwest::header::ContentLength(file_size)) = response.headers().get() {
-					file_size
-				}
-				else {
-					bail!(::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_string()));
-				};
-
-			ensure!(
-				file_size == expected_file_size,
-				::ErrorKind::MalformedResponse(
-					download_url,
-					format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
-
 			let result: Result<_, ::reqwest::Error> = do catch {
 				#[async] for chunk in response.into_body() {
 					::stream_yield!(chunk);
@@ -123,6 +121,39 @@ impl API {
 
 			result.map_err(|err| ::ErrorKind::HTTP(download_url, err).into())
 		})
+	}
+}
+
+/// A single page of a paged response.
+#[derive(Debug, ::serde_derive::Deserialize)]
+struct PagedResponse<T> {
+	pagination: Pagination,
+	results: Vec<T>,
+}
+
+/// Pagination information in a paged response.
+#[derive(Debug, ::serde_derive::Deserialize)]
+struct Pagination {
+	links: PaginationLinks,
+}
+
+/// Pagination link information in a paged response.
+#[derive(Debug, ::serde_derive::Deserialize)]
+struct PaginationLinks {
+	#[serde(deserialize_with = "deserialize_url")]
+	next: Option<::reqwest::Url>,
+}
+
+// TODO: Remove when url supports serde 1.0 (https://github.com/servo/rust-url/pull/327) and reqwest enables or exposes its "serde" feature
+fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer<'de> {
+	let url: Option<String> = ::serde::Deserialize::deserialize(deserializer)?;
+	match url {
+		Some(url) => match url.parse() {
+			Ok(url) => Ok(Some(url)),
+			Err(err) => Err(::serde::de::Error::custom(format!("invalid URL {:?}: {}", url, ::std::error::Error::description(&err)))),
+		},
+
+		None => Ok(None),
 	}
 }
 
@@ -143,35 +174,10 @@ impl<A, B> Stream for Either<A, B> where A: Stream, B: Stream<Item = A::Item, Er
 	}
 }
 
-/// Search order
-pub enum SearchOrder {
-	/// A to Z
-	Alphabetically,
-
-	/// Most to least
-	MostDownloaded,
-
-	/// Newest to oldest
-	RecentlyUpdated,
-}
-
-impl SearchOrder {
-	/// Converts the SearchOrder to a string that can be ised in the search URL's querystring
-	fn to_query_parameter(&self) -> &'static str {
-		match *self {
-			SearchOrder::Alphabetically => "alpha",
-			SearchOrder::MostDownloaded => "top",
-			SearchOrder::RecentlyUpdated => "updated",
-		}
-	}
-}
-
-const DEFAULT_ORDER: SearchOrder = SearchOrder::MostDownloaded;
 lazy_static! {
 	static ref BASE_URL: ::reqwest::Url = "https://mods.factorio.com/".parse().unwrap();
-	static ref MODS_URL: ::reqwest::Url = "https://mods.factorio.com/api/mods".parse().unwrap();
+	static ref MODS_URL: ::reqwest::Url = "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap();
 	static ref LOGIN_URL: ::reqwest::Url = "https://auth.factorio.com/api-login".parse().unwrap();
-	static ref DEFAULT_PAGE_SIZE: ::ResponseNumber = ::ResponseNumber::new(25);
 }
 
 #[cfg(test)]
@@ -189,7 +195,7 @@ mod tests {
 	#[test]
 	fn search_list_all_mods() {
 		run_test(|api| Box::new(
-			api.search("", &[], None, None, None)
+			api.search("")
 			.fold(0usize, |count, _| Ok::<_, ::Error>(count + 1usize))
 			.map(|count| {
 				println!("Found {} mods", count);
@@ -200,7 +206,7 @@ mod tests {
 	#[test]
 	fn search_by_title() {
 		run_test(|api| Box::new(
-			api.search("bob's functions library mod", &[], None, None, None)
+			api.search("bob's functions library mod")
 			.into_future()
 			.then(|result| match result {
 				Ok((Some(mod_), _)) => {
@@ -218,30 +224,9 @@ mod tests {
 	}
 
 	#[test]
-	fn search_by_tag() {
-		run_test(|api| Box::new(
-			api.search("", &vec![&::TagName::new("logistics".to_string())], None, None, None)
-			.into_future()
-			.then(|result| match result {
-				Ok((Some(mod_), _)) => {
-					println!("{:?}", mod_);
-					let tag = mod_.tags().iter().find(|tag| &**tag.name() == "logistics").unwrap();
-					println!("{:?}", tag);
-					Ok(())
-				},
-
-				Ok((None, _)) =>
-					unreachable!(),
-
-				Err((err, _)) =>
-					Err(err),
-			})));
-	}
-
-	#[test]
 	fn search_non_existing() {
 		run_test(|api| Box::new(
-			api.search("arnavion's awesome mod", &[], None, None, None)
+			api.search("arnavion's awesome mod")
 			.into_future()
 			.then(|result| match result {
 				Ok((Some(_), _)) => unreachable!(),

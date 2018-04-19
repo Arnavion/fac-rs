@@ -35,15 +35,12 @@ pub extern crate tokio_core;
 use futures::prelude::{ async_block, async_stream_block, await, stream_yield };
 
 mod api;
-pub use api::{ API, SearchOrder };
+pub use api::{ API };
 
 mod client;
 
 mod error;
 pub use error::{ Error, ErrorKind, Result };
-
-mod search;
-pub use search::{ PageNumber, ResponseNumber, SearchResponseMod };
 
 mod types;
 pub use types::*;

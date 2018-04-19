@@ -24,6 +24,7 @@ extern crate factorio_mods_common;
 extern crate globset;
 #[macro_use]
 extern crate lazy_static;
+extern crate semver;
 extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
