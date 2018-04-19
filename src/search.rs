@@ -31,8 +31,6 @@ impl ::util::SubCommand for SubCommand {
 					::util::wrapping_println(mod_.summary(), "    ");
 					println!();
 				}
-
-				Ok(())
 			};
 
 			r.chain_err(|| "Could not retrieve mods")

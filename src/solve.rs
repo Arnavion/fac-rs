@@ -97,7 +97,7 @@ pub fn compute_and_apply_diff<'a>(
 					let file = file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
 					let writer = ::std::io::BufWriter::new(file);
 
-					Ok((download_filename, download_displayable_filename, writer))
+					(download_filename, download_displayable_filename, writer)
 				};
 
 				future::Either::B(::async_block! {

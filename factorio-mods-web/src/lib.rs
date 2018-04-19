@@ -1,7 +1,7 @@
 //! API to interface with <https://mods.factorio.com/>
 
 #![deny(missing_docs)]
-#![feature(catch_expr, conservative_impl_trait, generators, generator_trait, proc_macro)]
+#![feature(catch_expr, generators, generator_trait, proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -16,9 +16,9 @@
 	use_self,
 ))]
 
+extern crate derive_error_chain;
 #[macro_use]
 extern crate error_chain;
-extern crate derive_error_chain;
 extern crate derive_new;
 extern crate derive_struct;
 extern crate factorio_mods_common;

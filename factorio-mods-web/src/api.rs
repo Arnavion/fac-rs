@@ -115,12 +115,10 @@ impl API {
 					download_url,
 					format!("Mod file has incorrect size {} bytes, expected {} bytes.", file_size, expected_file_size)));
 
-			let result = do catch {
+			let result: Result<_, ::reqwest::Error> = do catch {
 				#[async] for chunk in response.into_body() {
 					::stream_yield!(chunk);
 				}
-
-				Ok(())
 			};
 
 			result.map_err(|err| ::ErrorKind::HTTP(download_url, err).into())

@@ -16,7 +16,7 @@ impl ::util::SubCommand for SubCommand {
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
-		Box::new((do catch {
+		let result: ::Result<_> = do catch {
 			let local_api = local_api?;
 
 			let installed_mods: Result<Vec<_>, _> = local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?.collect();
@@ -47,9 +47,7 @@ impl ::util::SubCommand for SubCommand {
 					println!("    {} {}{}", installed_mod.info().name(), installed_mod.info().version(), tags_string);
 				}
 			}
-
-			Ok(())
-		})
-		.into_future())
+		};
+		Box::new(result.into_future())
 	}
 }

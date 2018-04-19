@@ -1,6 +1,8 @@
+#![feature(proc_macro)]
+
 //! A CLI tool to manage Factorio mods.
 
-#![feature(catch_expr, conservative_impl_trait, generators, never_type, proc_macro)]
+#![feature(catch_expr, exhaustive_patterns, generators, never_type, proc_macro)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
@@ -18,9 +20,9 @@
 extern crate appdirs;
 #[macro_use]
 extern crate clap;
+extern crate derive_error_chain;
 #[macro_use]
 extern crate error_chain;
-extern crate derive_error_chain;
 extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;

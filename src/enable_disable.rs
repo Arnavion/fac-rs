@@ -45,7 +45,7 @@ fn enable_disable<'a>(
 	local_api: ::Result<&'a ::factorio_mods_local::API>,
 	enable: bool,
 ) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-	Box::new((do catch {
+	let result: ::Result<_> = do catch {
 		let local_api = local_api?;
 
 		let mods = matches.values_of("mods").unwrap();
@@ -118,7 +118,7 @@ fn enable_disable<'a>(
 			return Box::new(future::ok(()));
 		}
 
-		local_api.set_enabled(to_change, enable).chain_err(|| format!("Could not {} mods", if enable { "enable" } else { "disable" }))
-	})
-	.into_future())
+		local_api.set_enabled(to_change, enable).chain_err(|| format!("Could not {} mods", if enable { "enable" } else { "disable" }))?;
+	};
+	Box::new(result.into_future())
 }

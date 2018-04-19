@@ -146,7 +146,7 @@ impl<G> Iterator for GenIterator<G> where G: ::std::ops::Generator<Return = ()> 
 	type Item = G::Yield;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		match ::std::ops::Generator::resume(&mut self.0) {
+		match unsafe { ::std::ops::Generator::resume(&mut self.0) } {
 			::std::ops::GeneratorState::Yielded(value) => Some(value),
 			::std::ops::GeneratorState::Complete(()) => None,
 		}

@@ -67,7 +67,7 @@ impl Client {
 	pub fn post_object<B, T>(&self, url: ::reqwest::Url, body: B) -> Box<Future<Item = (T, ::reqwest::Url), Error = ::Error>>
 		where B: ::serde::Serialize, T: ::serde::de::DeserializeOwned + 'static {
 
-		// TODO: `Box` and `'static` because of bug in `conservative_impl_trait` that somehow requires `body` to be `'static` too
+		// TODO: `Box` and `'static` because of bug in impl trait that somehow requires `body` to be `'static` too
 		// https://github.com/rust-lang/rust/issues/42940
 
 		let mut builder = self.inner.post(url.clone());
