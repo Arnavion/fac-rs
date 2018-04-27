@@ -1,7 +1,7 @@
 //! Common types and functionality used by the other factorio-mods crates.
 
 #![deny(missing_docs)]
-#![feature(proc_macro)]
+#![feature(proc_macro, proc_macro_path_invoc)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(

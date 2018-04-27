@@ -1,7 +1,7 @@
 //! API to interface with the local Factorio installation.
 
 #![deny(missing_docs)]
-#![feature(generators, generator_trait, proc_macro)]
+#![feature(generators, generator_trait, proc_macro, proc_macro_path_invoc)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
