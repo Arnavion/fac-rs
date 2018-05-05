@@ -1,50 +1,49 @@
 /// An installed mod object.
-#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InstalledMod {
 	/// The path of the mod.
-	path: ::std::path::PathBuf,
+	pub path: ::std::path::PathBuf,
 
 	/// The info.json of the mod
-	info: ModInfo,
+	pub info: ModInfo,
 
 	/// Whether the installed mod is enabled or not in `mod-list.json`
-	enabled: bool,
+	pub enabled: bool,
 
 	/// Whether the installed mod is zipped or unpacked.
-	#[getter(copy)]
-	mod_type: InstalledModType,
+	pub mod_type: InstalledModType,
 }
 
 /// Represents the contents of `info.json` of a mod release.
-#[derive(Clone, Debug, PartialEq, ::derive_new::new, ::derive_struct::getters, ::serde_derive::Deserialize)]
+#[derive(Clone, Debug, PartialEq, ::serde_derive::Deserialize)]
 pub struct ModInfo {
 	/// The name of the mod release.
-	name: ::factorio_mods_common::ModName,
+	pub name: ::factorio_mods_common::ModName,
 
 	/// The authors of the mod release.
 	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
-	author: Vec<::factorio_mods_common::AuthorName>,
+	pub author: Vec<::factorio_mods_common::AuthorName>,
 
 	/// The title of the mod release.
-	title: ::factorio_mods_common::ModTitle,
+	pub title: ::factorio_mods_common::ModTitle,
 
 	/// A longer description of the mod release.
-	description: Option<::factorio_mods_common::ModDescription>,
+	pub description: Option<::factorio_mods_common::ModDescription>,
 
 	/// The version of the mod release.
-	version: ::factorio_mods_common::ReleaseVersion,
+	pub version: ::factorio_mods_common::ReleaseVersion,
 
 	/// The versions of the game supported by the mod release.
 	#[serde(default = "default_game_version")]
-	factorio_version: ::factorio_mods_common::ModVersionReq,
+	pub factorio_version: ::factorio_mods_common::ModVersionReq,
 
 	/// The URL of the homepage of the mod release.
-	homepage: Option<::factorio_mods_common::Url>,
+	pub homepage: Option<::factorio_mods_common::Url>,
 
 	/// Dependencies
 	#[serde(default = "default_dependencies")]
 	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
-	dependencies: Vec<::factorio_mods_common::Dependency>,
+	pub dependencies: Vec<::factorio_mods_common::Dependency>,
 }
 
 /// The type of an installed mod.
@@ -116,23 +115,23 @@ impl InstalledMod {
 			}
 		};
 
-		let enabled = mod_status.get(info.name());
+		let enabled = mod_status.get(&info.name);
 
-		Ok(InstalledMod::new(path, info, enabled.cloned().unwrap_or(true), mod_type))
+		Ok(InstalledMod { path, info, enabled: enabled.cloned().unwrap_or(true), mod_type })
 	}
 }
 
 /// Constructs an iterator over all the locally installed mods.
 pub fn find(
 	mods_directory: &::std::path::Path,
-	name_pattern: Option<&str>,
+	name_pattern: Option<String>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
 	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 ) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'static> {
 	let directory_entries = ::std::fs::read_dir(mods_directory)?;
 
-	let name_pattern = name_pattern.unwrap_or("*");
-	let matcher = ::globset::Glob::new(name_pattern).map_err(|err| ::ErrorKind::Pattern(name_pattern.to_string(), err))?.compile_matcher();
+	let name_pattern = name_pattern.map_or(::std::borrow::Cow::Borrowed("*"), ::std::borrow::Cow::Owned);
+	let matcher = ::globset::Glob::new(&name_pattern).map_err(|err| ::ErrorKind::Pattern(name_pattern.into_owned(), err))?.compile_matcher();
 
 	Ok(GenIterator(move || for directory_entry in directory_entries {
 		match directory_entry {
@@ -158,7 +157,7 @@ pub fn find(
 				};
 
 				if let Some(ref version) = version {
-					if version != installed_mod.info().version() {
+					if version != &installed_mod.info.version {
 						continue;
 					}
 				}
@@ -173,12 +172,12 @@ pub fn find(
 }
 
 lazy_static! {
-	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::ModVersionReq = ::factorio_mods_common::ModVersionReq::new("0.12".parse().unwrap());
-	static ref DEFAULT_DEPENDENCIES: Vec<::factorio_mods_common::Dependency> = vec![::factorio_mods_common::Dependency::new(
-		::factorio_mods_common::ModName::new("base".to_string()),
-		::factorio_mods_common::ModVersionReq::new(::semver::VersionReq::any()),
-		true,
-	)];
+	static ref DEFAULT_GAME_VERSION: ::factorio_mods_common::ModVersionReq = ::factorio_mods_common::ModVersionReq("0.12".parse().unwrap());
+	static ref DEFAULT_DEPENDENCIES: Vec<::factorio_mods_common::Dependency> = vec![::factorio_mods_common::Dependency {
+		name: ::factorio_mods_common::ModName("base".to_string()),
+		version: ::factorio_mods_common::ModVersionReq(::semver::VersionReq::any()),
+		required: true,
+	}];
 }
 
 /// Generates a copy of the default game version.

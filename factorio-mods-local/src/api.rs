@@ -1,3 +1,8 @@
+#![cfg_attr(feature = "cargo-clippy", allow(
+	identity_op,
+	single_match_else,
+))]
+
 /// Entry-point to the local Factorio API
 #[derive(Debug)]
 pub struct API {
@@ -82,13 +87,13 @@ impl API {
 		let player_data: PlayerData = ::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?;
 
 		Ok(match (player_data.service_username, player_data.service_token) {
-			(Some(username), Some(token)) => ::factorio_mods_common::UserCredentials::new(username, token),
+			(Some(username), Some(token)) => ::factorio_mods_common::UserCredentials { username, token },
 			(username, _) => bail!(::ErrorKind::IncompleteUserCredentials(username)),
 		})
 	}
 
 	/// Saves the given user credentials to `player-data.json`
-	pub fn save_user_credentials(&self, user_credentials: &::factorio_mods_common::UserCredentials) -> ::Result<()> {
+	pub fn save_user_credentials(&self, user_credentials: ::factorio_mods_common::UserCredentials) -> ::Result<()> {
 		let player_data_json_file_path = &self.player_data_json_file_path;
 
 		let mut player_data: ::serde_json::Map<_, _> = {
@@ -100,8 +105,8 @@ impl API {
 			::serde_json::from_reader(player_data_json_file).map_err(|err| ::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?
 		};
 
-		player_data.insert("service-username".to_string(), ::serde_json::Value::String(user_credentials.username().to_string()));
-		player_data.insert("service-token".to_string(), ::serde_json::Value::String(user_credentials.token().to_string()));
+		player_data.insert("service-username".to_string(), ::serde_json::Value::String(user_credentials.username.0));
+		player_data.insert("service-token".to_string(), ::serde_json::Value::String(user_credentials.token.0));
 
 		let player_data = player_data;
 
@@ -118,7 +123,7 @@ impl API {
 		let mut mod_status = self.load_mod_status()?;
 
 		for installed_mod in installed_mods {
-			mod_status.insert(installed_mod.info().name().clone(), enabled);
+			mod_status.insert(installed_mod.info.name.clone(), enabled);
 		}
 
 		self.save_mod_status(&mod_status)
@@ -245,7 +250,7 @@ struct PlayerData {
 }
 
 /// Deserializes the `enabled` field of a mod in `mod-list.json`, which can be a JSON string or a JSON boolean.
-pub fn deserialize_mod_list_mod_enabled<'de, D>(deserializer: D) -> Result<bool, D::Error>
+fn deserialize_mod_list_mod_enabled<'de, D>(deserializer: D) -> Result<bool, D::Error>
 	where D: ::serde::Deserializer<'de> {
 
 	struct Visitor;

@@ -5,21 +5,14 @@
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
-	large_enum_variant,
-	missing_docs_in_private_items,
-	result_unwrap_used,
-	shadow_reuse,
+	const_static_lifetime,
 	stutter,
-	too_many_arguments,
-	unseparated_literal_suffix,
-	use_debug,
 	use_self,
 ))]
 
 extern crate derive_error_chain;
 #[macro_use]
 extern crate error_chain;
-extern crate derive_new;
 extern crate derive_struct;
 extern crate factorio_mods_common;
 extern crate futures_await as futures;

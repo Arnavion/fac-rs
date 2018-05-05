@@ -1,3 +1,7 @@
+#![cfg_attr(feature = "cargo-clippy", allow(
+	single_match_else,
+))]
+
 use ::futures::{ Future, Poll, stream, Stream };
 
 /// Entry-point to the <https://mods.factorio.com/> API
@@ -38,10 +42,10 @@ impl API {
 					Ok((page, _)) => {
 						for mod_ in page.results {
 							if
-								mod_.name().to_lowercase().contains(&query) ||
-								mod_.title().to_lowercase().contains(&query) ||
-								mod_.owner().into_iter().any(|owner| owner.to_lowercase().contains(&query)) ||
-								mod_.summary().to_lowercase().contains(&query)
+								mod_.name.0.to_lowercase().contains(&query) ||
+								mod_.title.0.to_lowercase().contains(&query) ||
+								mod_.owner.iter().any(|owner| owner.0.to_lowercase().contains(&query)) ||
+								mod_.summary.0.to_lowercase().contains(&query)
 							{
 								::stream_yield!(mod_);
 							}
@@ -64,7 +68,7 @@ impl API {
 	/// Gets information about the specified mod.
 	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> impl Future<Item = ::Mod, Error = ::Error> + 'static {
 		let mut mod_url = self.mods_url.clone();
-		mod_url.path_segments_mut().unwrap().push(mod_name);
+		mod_url.path_segments_mut().unwrap().push(&mod_name.0);
 		let future = self.client.get_object(mod_url);
 
 		::async_block! {
@@ -79,11 +83,11 @@ impl API {
 		username: ::factorio_mods_common::ServiceUsername,
 		password: &str,
 	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'static {
-		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username), ("password", password)]);
+		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
 		::async_block! {
-			let ((response,), _) = ::await!(future)?;
-			Ok(::factorio_mods_common::UserCredentials::new(username, response))
+			let ((token,), _) = ::await!(future)?;
+			Ok(::factorio_mods_common::UserCredentials { username, token })
 		}
 	}
 
@@ -93,23 +97,22 @@ impl API {
 		release: &::ModRelease,
 		user_credentials: &::factorio_mods_common::UserCredentials,
 	) -> impl Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'static {
-		let release_download_url = release.download_url();
-
-		let download_url = match self.base_url.join(release_download_url) {
+		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
-					.append_pair("username", user_credentials.username())
-					.append_pair("token", user_credentials.token());
+					.append_pair("username", &user_credentials.username.0)
+					.append_pair("token", &user_credentials.token.0);
 
 				download_url
 			},
 
 			Err(err) =>
-				return Either::A(stream::once(Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release_download_url), err).into()))),
+				return Either::A(stream::once(Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into()))),
 		};
 
 		let future = self.client.get_zip(download_url);
 
+		#[cfg_attr(feature = "cargo-clippy", allow(unit_arg))]
 		Either::B(::async_stream_block! {
 			let (response, download_url) = ::await!(future)?;
 
@@ -211,7 +214,7 @@ mod tests {
 			.then(|result| match result {
 				Ok((Some(mod_), _)) => {
 					println!("{:?}", mod_);
-					assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
+					assert_eq!(mod_.title.0, "Bob's Functions Library mod");
 					Ok(())
 				},
 
@@ -237,13 +240,13 @@ mod tests {
 
 	#[test]
 	fn get() {
-		let mod_name = ::factorio_mods_common::ModName::new("boblibrary".to_string());
+		let mod_name = ::factorio_mods_common::ModName("boblibrary".to_string());
 
 		run_test(|api| Box::new(
 			api.get(&mod_name)
 			.map(|mod_| {
 				println!("{:?}", mod_);
-				assert_eq!(&**mod_.title(), "Bob's Functions Library mod");
+				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
 			})));
 	}
 }

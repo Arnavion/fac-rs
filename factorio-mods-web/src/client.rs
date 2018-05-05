@@ -1,3 +1,7 @@
+#![cfg_attr(feature = "cargo-clippy", allow(
+	single_match_else,
+))]
+
 use ::futures::{ future, Future };
 
 /// Wraps a `reqwest::unstable::async::Client` to only allow limited operations on it.

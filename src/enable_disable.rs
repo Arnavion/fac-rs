@@ -52,7 +52,7 @@ fn enable_disable<'a>(
 
 		let all_installed_mods: ::Result<::multimap::MultiMap<_, _>> =
 			local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
-			.map(|mod_| mod_.map(|mod_| (mod_.info().name().clone(), mod_)).chain_err(|| "Could not process an installed mod"))
+			.map(|mod_| mod_.map(|mod_| (mod_.info.name.clone(), mod_)).chain_err(|| "Could not process an installed mod"))
 			.collect();
 		let all_installed_mods = all_installed_mods.chain_err(|| "Could not enumerate installed mods")?;
 
@@ -71,9 +71,9 @@ fn enable_disable<'a>(
 		let mut edges_to_add = vec![];
 		for node_index in graph.node_indices() {
 			let installed_mod = &graph[node_index];
-			for dep in installed_mod.info().dependencies() {
-				if dep.required() && &**dep.name() != "base" {
-					if let Some(&dep_node_index) = name_to_node_index.get(dep.name()) {
+			for dep in &installed_mod.info.dependencies {
+				if dep.required && dep.name.0 != "base" {
+					if let Some(&dep_node_index) = name_to_node_index.get(&dep.name) {
 						if enable {
 							edges_to_add.push((node_index, dep_node_index));
 						}
@@ -82,7 +82,7 @@ fn enable_disable<'a>(
 						}
 					}
 					else {
-						println!("Mod {} is a required dependency of {} but isn't installed. Run `fac update` to install missing dependencies.", dep.name(), installed_mod.info().name());
+						println!("Mod {} is a required dependency of {} but isn't installed. Run `fac update` to install missing dependencies.", dep.name, installed_mod.info.name);
 						return Box::new(future::ok(()));
 					}
 				}
@@ -95,7 +95,7 @@ fn enable_disable<'a>(
 		let mut to_change = ::std::collections::HashSet::new();
 
 		for name in mods {
-			if let Some(&node_index) = name_to_node_index.get(&::factorio_mods_common::ModName::new(name.to_string())) {
+			if let Some(&node_index) = name_to_node_index.get(&::factorio_mods_common::ModName(name.to_string())) {
 				let bfs = ::petgraph::visit::Bfs::new(&graph, node_index);
 				to_change.extend(::petgraph::visit::Walker::iter(bfs, &graph));
 			}
@@ -106,11 +106,11 @@ fn enable_disable<'a>(
 		}
 
 		let mut to_change: Vec<_> = to_change.into_iter().map(|node_index| &graph[node_index]).collect();
-		to_change.sort_by(|mod1, mod2| mod1.info().name().cmp(mod2.info().name()));
+		to_change.sort_by(|mod1, mod2| mod1.info.name.cmp(&mod2.info.name));
 
 		println!("The following mods will be {}:", if enable { "enabled" } else { "disabled" });
 		for to_change in &to_change {
-			println!("{}", to_change.info().name());
+			println!("{}", to_change.info.name);
 		}
 
 		println!();

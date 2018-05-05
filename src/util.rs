@@ -70,7 +70,7 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 			};
 
 			let username = match(username.is_empty(), existing_username) {
-				(false, _) => ::factorio_mods_common::ServiceUsername::new(username),
+				(false, _) => ::factorio_mods_common::ServiceUsername(username),
 				(true, Some(existing_username)) => existing_username,
 				(true, None) => {
 					existing_username = None;
@@ -83,7 +83,7 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 			match ::await!(web_api.login(username.clone(), &password)) {
 				Ok(user_credentials) => {
 					println!("Logged in successfully.");
-					local_api.save_user_credentials(&user_credentials).chain_err(|| "Could not save player-data.json")?;
+					local_api.save_user_credentials(user_credentials.clone()).chain_err(|| "Could not save player-data.json")?;
 					return Ok(user_credentials);
 				},
 

@@ -16,6 +16,7 @@ impl ::util::SubCommand for SubCommand {
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
+		#[cfg_attr(feature = "cargo-clippy", allow(unit_arg))]
 		let result: ::Result<_> = do catch {
 			let local_api = local_api?;
 
@@ -26,8 +27,8 @@ impl ::util::SubCommand for SubCommand {
 			}
 			else {
 				installed_mods.sort_by(|m1, m2|
-					m1.enabled().cmp(&m2.enabled()).reverse()
-					.then_with(|| m1.info().name().cmp(m2.info().name())));
+					m1.enabled.cmp(&m2.enabled).reverse()
+					.then_with(|| m1.info.name.cmp(&m2.info.name)));
 
 				let installed_mods = installed_mods;
 
@@ -35,16 +36,16 @@ impl ::util::SubCommand for SubCommand {
 
 				for installed_mod in installed_mods {
 					let mut tags = vec![];
-					if !installed_mod.enabled() {
+					if !installed_mod.enabled {
 						tags.push("disabled");
 					}
-					if let ::factorio_mods_local::InstalledModType::Unpacked = installed_mod.mod_type() {
+					if let ::factorio_mods_local::InstalledModType::Unpacked = installed_mod.mod_type {
 						tags.push("unpacked");
 					}
 
 					let tags_string = if tags.is_empty() { String::new() } else { format!(" ({})", tags.join(", ")) };
 
-					println!("    {} {}{}", installed_mod.info().name(), installed_mod.info().version(), tags_string);
+					println!("    {} {}{}", installed_mod.info.name, installed_mod.info.version, tags_string);
 				}
 			}
 		};

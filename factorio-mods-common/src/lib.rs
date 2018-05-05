@@ -5,16 +5,10 @@
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
-	missing_docs_in_private_items,
-	option_unwrap_used,
-	result_unwrap_used,
-	string_add,
-	too_many_arguments,
-	unseparated_literal_suffix,
-	use_debug,
+	const_static_lifetime,
+	use_self,
 ))]
 
-extern crate derive_new;
 extern crate derive_struct;
 extern crate itertools;
 #[macro_use]

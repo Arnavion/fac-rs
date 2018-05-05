@@ -1,7 +1,13 @@
+#![cfg_attr(feature = "cargo-clippy", allow(
+	identity_op,
+	single_match_else,
+))]
+
 use ::ResultExt;
 
 #[derive(Debug, ::serde_derive::Deserialize, ::serde_derive::Serialize)]
 #[serde(tag = "version")]
+#[cfg_attr(feature = "cargo-clippy", allow(unit_arg))]
 enum StoredConfig<'a> {
 	V1 {
 		#[serde(serialize_with = "serialize_config_mods")]
@@ -43,7 +49,7 @@ impl Config {
 						api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
 						.map(|mod_|
 							mod_
-							.map(|mod_| (mod_.info().name().clone(), ::factorio_mods_common::ModVersionReq::new(::semver::VersionReq::any())))
+							.map(|mod_| (mod_.info.name.clone(), ::factorio_mods_common::ModVersionReq(::semver::VersionReq::any())))
 							.chain_err(|| "Could not process an installed mod"))
 						.collect();
 					let mods = installed_mods.chain_err(|| "Could not enumerate installed mods")?;

@@ -21,7 +21,7 @@ impl ::util::SubCommand for SubCommand {
 			let web_api = web_api?;
 
 			let names = matches.values_of("mods").unwrap();
-			let names = names.into_iter().map(|name| ::factorio_mods_common::ModName::new(name.to_string()));
+			let names = names.into_iter().map(|name| ::factorio_mods_common::ModName(name.to_string()));
 
 			let mods =
 				stream::futures_ordered(names.map(|name| ::async_block! {
@@ -30,12 +30,12 @@ impl ::util::SubCommand for SubCommand {
 				}));
 
 			#[async] for mod_ in mods {
-				println!("Name: {}", mod_.name());
-				println!("Author: {}", ::itertools::join(mod_.owner(), ", "));
-				println!("Title: {}", mod_.title());
-				println!("Summary: {}", mod_.summary());
+				println!("Name: {}", mod_.name);
+				println!("Author: {}", ::itertools::join(mod_.owner, ", "));
+				println!("Title: {}", mod_.title);
+				println!("Summary: {}", mod_.summary);
 
-				let releases = mod_.releases();
+				let releases = mod_.releases;
 
 				if releases.is_empty() {
 					println!("Releases:");
@@ -43,14 +43,14 @@ impl ::util::SubCommand for SubCommand {
 				}
 				else {
 					let mut game_versions: ::std::collections::BTreeSet<_> = Default::default();
-					for release in releases {
-						game_versions.insert(format!("{}", release.info_json().factorio_version()));
+					for release in &releases {
+						game_versions.insert(format!("{}", release.info_json.factorio_version));
 					}
 					println!("Game versions: {}", ::itertools::join(game_versions, ", "));
 
 					println!("Releases:");
 					for release in releases {
-						println!("    Version: {:-9} Game version: {:-9}", release.version(), release.info_json().factorio_version());
+						println!("    Version: {:-9} Game version: {:-9}", release.version, release.info_json.factorio_version);
 					}
 				}
 

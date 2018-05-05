@@ -4,14 +4,8 @@
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
-	cyclomatic_complexity,
-	large_enum_variant,
-	missing_docs_in_private_items,
-	option_unwrap_used,
-	print_stdout,
-	result_unwrap_used,
-	shadow_reuse,
-	unseparated_literal_suffix,
+	const_static_lifetime,
+	similar_names,
 	use_self,
 ))]
 
