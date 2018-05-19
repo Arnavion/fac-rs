@@ -13,6 +13,8 @@ extern crate derive_struct;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
+#[cfg(feature = "package")]
+extern crate package;
 extern crate regex;
 extern crate semver;
 #[macro_use]

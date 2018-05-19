@@ -20,7 +20,8 @@ impl ::util::SubCommand for SubCommand {
 
 			let config = ::config::Config::load(local_api)?;
 
-			let _ = ::await!(::solve::compute_and_apply_diff(local_api, web_api, config.mods))?;
+			::await!(::solve::compute_and_apply_diff(local_api, web_api, config))?;
+
 			Ok(())
 		})
 	}

@@ -129,9 +129,7 @@ fn send(
 			Err(err) => bail!(::ErrorKind::HTTP(url, err)),
 		};
 
-		// TODO: Workaround for https://github.com/rust-lang/rust/issues/44197
-		let status = response.status();
-		match status {
+		match response.status() {
 			::reqwest::StatusCode::Ok => Ok((response, url)),
 
 			::reqwest::StatusCode::Unauthorized => {

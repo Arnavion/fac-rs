@@ -29,27 +29,22 @@ impl ::util::SubCommand for SubCommand {
 
 			let mut config = ::config::Config::load(local_api)?;
 
-			let mut reqs = config.mods;
 			for requirement in requirements {
 				let captures = match REQUIREMENT_REGEX.captures(requirement) {
 					Some(captures) => captures,
 					None => bail!(r#"Could not parse requirement "{}""#, requirement),
 				};
-				let name = ::factorio_mods_common::ModName::new(captures[1].to_string());
+				let name = ::factorio_mods_common::ModName(captures[1].to_string());
 				let requirement_string = captures.get(2).map_or("*", |m| m.as_str());
 				let requirement = match requirement_string.parse() {
 					Ok(requirement) => requirement,
 					Err(err) => return Err(err).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string)),
 				};
 
-				reqs.insert(name, ::factorio_mods_common::ModVersionReq::new(requirement));
+				config.mods.insert(name, ::factorio_mods_common::ModVersionReq(requirement));
 			}
 
-			let (result, reqs) = ::await!(::solve::compute_and_apply_diff(local_api, web_api, reqs))?;
-			if result {
-				config.mods = reqs;
-				config.save()?;
-			}
+			::await!(::solve::compute_and_apply_diff(local_api, web_api, config))?;
 
 			Ok(())
 		})

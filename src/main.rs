@@ -5,6 +5,7 @@
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
 	const_static_lifetime,
+	large_enum_variant,
 	similar_names,
 	use_self,
 ))]
@@ -19,11 +20,11 @@ extern crate factorio_mods_common;
 extern crate factorio_mods_local;
 extern crate factorio_mods_web;
 extern crate futures_await as futures;
-extern crate futures_mutex;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 extern crate multimap;
+extern crate package;
 extern crate petgraph;
 extern crate regex;
 extern crate rpassword;
@@ -39,15 +40,15 @@ use factorio_mods_web::reqwest;
 use futures::prelude::{ async_block, await };
 
 mod enable_disable;
-// mod install;
+mod install;
 mod list;
-// mod remove;
+mod remove;
 mod search;
 mod show;
-// mod update;
+mod update;
 
 mod config;
-// mod solve;
+mod solve;
 mod util;
 
 #[derive(Debug, ::derive_error_chain::ErrorChain)]
@@ -62,21 +63,21 @@ quick_main!(|| -> Result<()> {
 	::std::thread::spawn(|| {
 		let disable_subcommand = enable_disable::DisableSubCommand;
 		let enable_subcommand = enable_disable::EnableSubCommand;
-		// let install_subcommand = install::SubCommand;
+		let install_subcommand = install::SubCommand;
 		let list_subcommand = list::SubCommand;
-		// let remove_subcommand = remove::SubCommand;
+		let remove_subcommand = remove::SubCommand;
 		let search_subcommand = search::SubCommand;
 		let show_subcommand = show::SubCommand;
-		// let update_subcommand = update::SubCommand;
+		let update_subcommand = update::SubCommand;
 		let mut subcommands = std::collections::HashMap::<_, &util::SubCommand>::new();
 		subcommands.insert("disable", &disable_subcommand);
 		subcommands.insert("enable", &enable_subcommand);
-		// subcommands.insert("install", &install_subcommand);
+		subcommands.insert("install", &install_subcommand);
 		subcommands.insert("list", &list_subcommand);
-		// subcommands.insert("remove", &remove_subcommand);
+		subcommands.insert("remove", &remove_subcommand);
 		subcommands.insert("search", &search_subcommand);
 		subcommands.insert("show", &show_subcommand);
-		// subcommands.insert("update", &update_subcommand);
+		subcommands.insert("update", &update_subcommand);
 		let subcommands = subcommands;
 
 		let app = clap_app!(@app (app_from_crate!())

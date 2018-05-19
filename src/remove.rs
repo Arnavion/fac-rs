@@ -23,17 +23,12 @@ impl ::util::SubCommand for SubCommand {
 
 			let mut config = ::config::Config::load(local_api)?;
 
-			let mut reqs = config.mods;
 			for mod_ in mods {
-				let name = ::factorio_mods_common::ModName::new(mod_.to_string());
-				reqs.remove(&name);
+				let name = ::factorio_mods_common::ModName(mod_.to_string());
+				config.mods.remove(&name);
 			}
 
-			let (result, reqs) = ::await!(::solve::compute_and_apply_diff(local_api, web_api, reqs))?;
-			if result {
-				config.mods = reqs;
-				config.save()?;
-			}
+			::await!(::solve::compute_and_apply_diff(local_api, web_api, config))?;
 
 			Ok(())
 		})

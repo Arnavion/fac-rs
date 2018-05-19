@@ -14,6 +14,12 @@ pub struct Url(pub String);
 )]
 pub struct ModName(pub String);
 
+impl AsRef<str> for ModName {
+	fn as_ref(&self) -> &str {
+		&self.0
+	}
+}
+
 impl ::serde::Serialize for ModName {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {
 		serializer.serialize_str(&self.0)
@@ -50,6 +56,12 @@ pub struct ModDescription(pub String);
 	::derive_struct::newtype_deserialize, ::derive_struct::newtype_display,
 )]
 pub struct ReleaseVersion(pub ::semver::Version);
+
+impl AsRef<::semver::Version> for ReleaseVersion {
+	fn as_ref(&self) -> &::semver::Version {
+		&self.0
+	}
+}
 
 /// A username and token used with the parts of the web API that require authentication.
 #[derive(Clone, Debug, ::serde_derive::Deserialize)]
@@ -110,9 +122,33 @@ impl<'de> ::serde::Deserialize<'de> for Dependency {
 	}
 }
 
+#[cfg(feature = "package")]
+impl ::package::Dependency for Dependency {
+	type Name = ModName;
+	type Version = ModVersionReq;
+
+	fn name(&self) -> &Self::Name {
+		&self.name
+	}
+
+	fn version(&self) -> &Self::Version {
+		&self.version
+	}
+
+	fn required(&self) -> bool {
+		self.required
+	}
+}
+
 /// A version requirement.
 #[derive(Clone, Debug, PartialEq, ::derive_struct::newtype_deserialize, ::derive_struct::newtype_display)]
 pub struct ModVersionReq(pub ::semver::VersionReq);
+
+impl AsRef<::semver::VersionReq> for ModVersionReq {
+	fn as_ref(&self) -> &::semver::VersionReq {
+		&self.0
+	}
+}
 
 impl ::serde::Serialize for ModVersionReq {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {

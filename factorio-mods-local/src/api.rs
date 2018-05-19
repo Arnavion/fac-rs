@@ -71,8 +71,7 @@ impl API {
 
 	/// Returns an iterator over all the locally installed mods, matching the given name pattern if any.
 	pub fn installed_mods(&self) -> ::Result<impl Iterator<Item = ::Result<::InstalledMod>> + 'static> {
-		let mod_status = self.load_mod_status()?;
-		::installed_mod::find(&self.mods_directory, None, None, mod_status)
+		::installed_mod::find(&self.mods_directory, None, None)
 	}
 
 	/// Fetches the locally saved user credentials, if any.
@@ -118,18 +117,8 @@ impl API {
 		::serde_json::to_writer_pretty(&mut player_data_json_file, &player_data).map_err(|err| ::ErrorKind::WriteJSONFile(player_data_json_file_path.into(), err).into())
 	}
 
-	/// Marks the given locally installed mods as enabled or disabled in `mod-list.json`
-	pub fn set_enabled<'a, I>(&self, installed_mods: I, enabled: bool) -> ::Result<()> where I: IntoIterator<Item = &'a ::InstalledMod> {
-		let mut mod_status = self.load_mod_status()?;
-
-		for installed_mod in installed_mods {
-			mod_status.insert(installed_mod.info.name.clone(), enabled);
-		}
-
-		self.save_mod_status(&mod_status)
-	}
-
-	fn load_mod_status(&self) -> ::Result<::std::collections::HashMap<::factorio_mods_common::ModName, bool>> {
+	/// Returns a map of installed mod name to its enabled / disabled status in `mod-list.json`
+	pub fn mods_status(&self) -> ::Result<::std::collections::HashMap<::factorio_mods_common::ModName, bool>> {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mod_list_file = match ::std::fs::File::open(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
@@ -139,7 +128,18 @@ impl API {
 		Ok(mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect())
 	}
 
-	fn save_mod_status(&self, mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>) -> ::Result<()> {
+	/// Marks the given locally installed mods as enabled or disabled in `mod-list.json`
+	pub fn set_enabled<'a, I>(&self, installed_mods: I, enabled: bool) -> ::Result<()> where I: IntoIterator<Item = &'a ::InstalledMod> {
+		let mut mods_status = self.mods_status()?;
+
+		for installed_mod in installed_mods {
+			mods_status.insert(installed_mod.info.name.clone(), enabled);
+		}
+
+		self.save_mods_status(&mods_status)
+	}
+
+	fn save_mods_status(&self, mods_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>) -> ::Result<()> {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mut mod_list_file = match ::std::fs::File::create(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
@@ -147,7 +147,7 @@ impl API {
 		};
 
 		let mut mods: Vec<_> =
-			mod_status.into_iter()
+			mods_status.into_iter()
 			.map(|(name, &enabled)| ModListMod { name: name.clone(), enabled })
 			.collect();
 		mods.sort_by(|mod1, mod2| mod1.name.cmp(&mod2.name));

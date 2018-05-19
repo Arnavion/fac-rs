@@ -7,9 +7,6 @@ pub struct InstalledMod {
 	/// The info.json of the mod
 	pub info: ModInfo,
 
-	/// Whether the installed mod is enabled or not in `mod-list.json`
-	pub enabled: bool,
-
 	/// Whether the installed mod is zipped or unpacked.
 	pub mod_type: InstalledModType,
 }
@@ -58,10 +55,7 @@ pub enum InstalledModType {
 
 impl InstalledMod {
 	/// Parses the installed mod at the given location.
-	pub fn parse(
-		path: ::std::path::PathBuf,
-		mod_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
-	) -> ::Result<Self> {
+	pub fn parse(path: ::std::path::PathBuf) -> ::Result<Self> {
 		let (info, mod_type): (ModInfo, _) = if path.is_file() {
 			ensure!(path.extension() == Some("zip".as_ref()), ::ErrorKind::UnknownModFormat(path));
 
@@ -115,9 +109,7 @@ impl InstalledMod {
 			}
 		};
 
-		let enabled = mod_status.get(&info.name);
-
-		Ok(InstalledMod { path, info, enabled: enabled.cloned().unwrap_or(true), mod_type })
+		Ok(InstalledMod { path, info, mod_type })
 	}
 }
 
@@ -126,7 +118,6 @@ pub fn find(
 	mods_directory: &::std::path::Path,
 	name_pattern: Option<String>,
 	version: Option<::factorio_mods_common::ReleaseVersion>,
-	mod_status: ::std::collections::HashMap<::factorio_mods_common::ModName, bool>,
 ) -> ::Result<impl Iterator<Item = ::Result<InstalledMod>> + 'static> {
 	let directory_entries = ::std::fs::read_dir(mods_directory)?;
 
@@ -143,9 +134,7 @@ pub fn find(
 					continue;
 				}
 
-				// TODO: Workaround for https://github.com/rust-lang/rust/issues/44197
-				let installed_mod = InstalledMod::parse(path, &mod_status);
-				let installed_mod = match installed_mod {
+				let installed_mod = match InstalledMod::parse(path) {
 					Ok(installed_mod) => installed_mod,
 
 					Err(::Error(::ErrorKind::UnknownModFormat(_), _)) => continue,
