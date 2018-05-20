@@ -248,6 +248,8 @@ impl<'a> SolutionFuture<'a> {
 
 	fn get(&mut self, mod_name: ::factorio_mods_common::ModName) {
 		if self.already_fetching.insert(mod_name.clone()) {
+			println!("    Getting {} ...", mod_name);
+
 			let f = Box::new(self.web_api.get(&mod_name));
 			self.pending.push_back(CacheFuture::Get(mod_name, f));
 		}
@@ -281,53 +283,60 @@ impl<'a> Future for SolutionFuture<'a> {
 		while let Some(f) = self.pending.pop_front() {
 			match f {
 				CacheFuture::Get(mod_name, mut f) => match f.poll() {
-					Ok(Async::Ready(mod_)) => for release in mod_.releases {
-						if !release.info_json.factorio_version.0.matches(&self.game_version.0) {
-							continue;
-						}
+					Ok(Async::Ready(mod_)) => {
+						println!("    Getting {} ... done", mod_name);
 
-						let filename = self.cache_directory.join(&release.filename.0);
-						let displayable_filename = filename.display().to_string();
-
-						if filename.exists() {
-							self.parse_cached_mod(filename, &displayable_filename)?;
-							continue;
-						}
-
-						let mut download_filename: ::std::ffi::OsString =
-							filename.file_name()
-							.ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?
-							.into();
-
-						download_filename.push(".new");
-						let download_filename = filename.with_file_name(download_filename);
-						let download_displayable_filename = download_filename.display().to_string();
-
-						{
-							let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
-							let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
-							if parent_canonicalized != self.cache_directory_canonicalized {
-								bail!("Filename {} is malformed", download_displayable_filename);
+						for release in mod_.releases {
+							if !release.info_json.factorio_version.0.matches(&self.game_version.0) {
+								continue;
 							}
+
+							println!("        Downloading {} {} ... downloading to cache", mod_name, release.version);
+
+							let filename = self.cache_directory.join(&release.filename.0);
+							let displayable_filename = filename.display().to_string();
+
+							if filename.exists() {
+								println!("        Downloading {} {} ... parsing", mod_name, release.version);
+								self.parse_cached_mod(filename, &displayable_filename)?;
+								continue;
+							}
+
+							let mut download_filename: ::std::ffi::OsString =
+								filename.file_name()
+								.ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?
+								.into();
+
+							download_filename.push(".new");
+							let download_filename = filename.with_file_name(download_filename);
+							let download_displayable_filename = download_filename.display().to_string();
+
+							{
+								let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
+								let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
+								if parent_canonicalized != self.cache_directory_canonicalized {
+									bail!("Filename {} is malformed", download_displayable_filename);
+								}
+							}
+
+							let mut download_file = ::std::fs::OpenOptions::new();
+							let download_file = download_file.create(true).truncate(true).write(true);
+							let download_file = download_file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
+							let download_file = ::std::io::BufWriter::new(download_file);
+
+							let chunk_stream = Box::new(self.web_api.download(&release, &self.user_credentials));
+
+							self.pending.push_back(CacheFuture::Download(DownloadFuture {
+								mod_name: mod_name.clone(),
+								release_version: release.version,
+								chunk_stream,
+								download_file,
+								download_filename,
+								download_displayable_filename,
+								filename,
+								displayable_filename,
+							}));
 						}
-
-						let mut download_file = ::std::fs::OpenOptions::new();
-						let download_file = download_file.create(true).truncate(true).write(true);
-						let download_file = download_file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
-						let download_file = ::std::io::BufWriter::new(download_file);
-
-						let chunk_stream = Box::new(self.web_api.download(&release, &self.user_credentials));
-
-						self.pending.push_back(CacheFuture::Download(DownloadFuture {
-							mod_name: mod_name.clone(),
-							release_version: release.version,
-							chunk_stream,
-							download_file,
-							download_filename,
-							download_displayable_filename,
-							filename,
-							displayable_filename,
-						}));
 					},
 
 					Ok(Async::NotReady) => next.push_back(CacheFuture::Get(mod_name, f)),
@@ -350,6 +359,8 @@ impl<'a> Future for SolutionFuture<'a> {
 
 					Async::Ready(None) => {
 						let DownloadFuture {
+							mod_name,
+							release_version,
 							mut download_file,
 							download_filename,
 							download_displayable_filename,
@@ -357,6 +368,8 @@ impl<'a> Future for SolutionFuture<'a> {
 							displayable_filename,
 							..
 						} = f;
+
+						println!("        Downloading {} {} ... parsing", mod_name, release_version);
 
 						::std::io::Write::flush(&mut download_file)
 						.chain_err(|| format!("Could not write to file {}", download_displayable_filename))?;
@@ -366,6 +379,8 @@ impl<'a> Future for SolutionFuture<'a> {
 						.chain_err(|| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename))?;
 
 						self.parse_cached_mod(filename, &displayable_filename)?;
+
+						println!("        Downloading {} {} ... done", mod_name, release_version);
 					},
 
 					Async::NotReady => next.push_back(CacheFuture::Download(f)),
