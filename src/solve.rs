@@ -48,10 +48,6 @@ pub fn compute_and_apply_diff<'a>(
 			None => return Ok(()),
 		};
 
-		if to_uninstall.is_empty() && to_install.is_empty() {
-			return Ok(());
-		}
-
 		for installed_mod in to_uninstall {
 			let path = installed_mod.path;
 
