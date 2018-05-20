@@ -13,6 +13,7 @@ impl ::util::SubCommand for SubCommand {
 		_: &'a ::clap::ArgMatches<'a>,
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		_: ::Result<&'a ::factorio_mods_web::API>,
+		_: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 

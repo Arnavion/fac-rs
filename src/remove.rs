@@ -14,6 +14,7 @@ impl ::util::SubCommand for SubCommand {
 		matches: &'a ::clap::ArgMatches<'a>,
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		web_api: ::Result<&'a ::factorio_mods_web::API>,
+		prompt_override: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		Box::new(::async_block! {
 			let mods = matches.values_of("mods").unwrap();
@@ -28,7 +29,7 @@ impl ::util::SubCommand for SubCommand {
 				config.mods.remove(&name);
 			}
 
-			::await!(::solve::compute_and_apply_diff(local_api, web_api, config))?;
+			::await!(::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
 
 			Ok(())
 		})

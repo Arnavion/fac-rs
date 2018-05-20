@@ -14,14 +14,15 @@ impl ::util::SubCommand for SubCommand {
 		matches: &'a ::clap::ArgMatches<'a>,
 		_: ::Result<&'a ::factorio_mods_local::API>,
 		web_api: ::Result<&'a ::factorio_mods_web::API>,
+		_: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
 		#[cfg_attr(feature = "cargo-clippy", allow(unit_arg))]
 		Box::new(::async_block! {
-			let web_api = web_api?;
-
 			let query = matches.value_of("query").unwrap_or("");
+
+			let web_api = web_api?;
 
 			let r: Result<_, ::factorio_mods_web::Error> = do catch {
 				#[async] for mod_ in web_api.search(query) {

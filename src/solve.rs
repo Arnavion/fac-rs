@@ -9,9 +9,10 @@ pub fn compute_and_apply_diff<'a>(
 	local_api: &'a ::factorio_mods_local::API,
 	web_api: &'a ::factorio_mods_web::API,
 	mut config: ::config::Config,
+	prompt_override: Option<bool>,
 ) -> impl Future<Item = (), Error = ::Error> + 'a {
 	::async_block! {
-		let user_credentials = ::await!(::util::ensure_user_credentials(local_api, web_api))?;
+		let user_credentials = ::await!(::util::ensure_user_credentials(local_api, web_api, prompt_override))?;
 
 		let game_version = local_api.game_version();
 
@@ -42,7 +43,7 @@ pub fn compute_and_apply_diff<'a>(
 				})
 			.collect();
 
-		let (to_uninstall, to_install) = match compute_diff(solution, local_api)? {
+		let (to_uninstall, to_install) = match compute_diff(solution, local_api, prompt_override)? {
 			Some(diff) => diff,
 			None => return Ok(()),
 		};
@@ -102,6 +103,7 @@ pub fn compute_and_apply_diff<'a>(
 fn compute_diff(
 	mut solution: ::std::collections::HashMap<::factorio_mods_common::ModName, ::factorio_mods_local::InstalledMod>,
 	local_api: &::factorio_mods_local::API,
+	prompt_override: Option<bool>,
 ) -> ::Result<Option<(Vec<::factorio_mods_local::InstalledMod>, Vec<::factorio_mods_local::InstalledMod>)>> {
 	let all_installed_mods: ::Result<::multimap::MultiMap<_, _>> =
 		local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
@@ -193,7 +195,7 @@ fn compute_diff(
 	if to_uninstall.is_empty() && to_install.is_empty() {
 		println!("Nothing to do.");
 	}
-	else if !::util::prompt_continue()? {
+	else if !::util::prompt_continue(prompt_override)? {
 		return Ok(None);
 	}
 

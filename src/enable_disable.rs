@@ -16,8 +16,9 @@ impl ::util::SubCommand for EnableSubCommand {
 		matches: &'a ::clap::ArgMatches<'a>,
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		_: ::Result<&'a ::factorio_mods_web::API>,
+		prompt_override: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-		enable_disable(matches, local_api, true)
+		enable_disable(matches, local_api, prompt_override, true)
 	}
 }
 
@@ -35,20 +36,22 @@ impl ::util::SubCommand for DisableSubCommand {
 		matches: &'a ::clap::ArgMatches<'a>,
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		_: ::Result<&'a ::factorio_mods_web::API>,
+		prompt_override: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-		enable_disable(matches, local_api, false)
+		enable_disable(matches, local_api, prompt_override, false)
 	}
 }
 
 fn enable_disable<'a>(
 	matches: &'a ::clap::ArgMatches<'a>,
 	local_api: ::Result<&'a ::factorio_mods_local::API>,
+	prompt_override: Option<bool>,
 	enable: bool,
 ) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 	let result: ::Result<_> = do catch {
-		let local_api = local_api?;
-
 		let mods = matches.values_of("mods").unwrap();
+
+		let local_api = local_api?;
 
 		let all_installed_mods: ::Result<::multimap::MultiMap<_, _>> =
 			local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
@@ -114,7 +117,7 @@ fn enable_disable<'a>(
 		}
 
 		println!();
-		if !::util::prompt_continue()? {
+		if !::util::prompt_continue(prompt_override)? {
 			return Box::new(future::ok(()));
 		}
 

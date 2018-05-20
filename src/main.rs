@@ -83,7 +83,9 @@ quick_main!(|| -> Result<()> {
 		let app = clap_app!(@app (app_from_crate!())
 			(@setting SubcommandRequiredElseHelp)
 			(@setting VersionlessSubcommands)
-			(@arg proxy: --proxy +takes_value "HTTP proxy URL"));
+			(@arg proxy: --proxy +takes_value "HTTP proxy URL")
+			(@arg yes: -y --yes "Answer yes to all prompts")
+			(@arg no: -n --no conflicts_with("yes") "Answer no to all prompts"));
 
 		let app = subcommands.iter().fold(app, |app, (name, subcommand)|
 			app.subcommand(subcommand.build_subcommand(clap::SubCommand::with_name(name))));
@@ -99,6 +101,13 @@ quick_main!(|| -> Result<()> {
 			None
 		};
 
+		let prompt_override = match (matches.is_present("yes"), matches.is_present("no")) {
+			(true, false) => Some(true),
+			(false, true) => Some(false),
+			(false, false) => None,
+			(true, true) => unreachable!(),
+		};
+
 		let (subcommand_name, subcommand_matches) = matches.subcommand();
 		let subcommand = subcommands[subcommand_name];
 
@@ -110,7 +119,8 @@ quick_main!(|| -> Result<()> {
 		let result = subcommand.run(
 			subcommand_matches.unwrap(),
 			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err), },
-			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err), });
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err), },
+			prompt_override);
 
 		core.run(result)
 	}).join().unwrap()

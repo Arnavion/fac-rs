@@ -7,6 +7,7 @@ pub trait SubCommand {
 		matches: &'a ::clap::ArgMatches<'a>,
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		web_api: ::Result<&'a ::factorio_mods_web::API>,
+		prompt_override: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a>;
 }
 
@@ -33,9 +34,11 @@ pub fn wrapping_println(s: &str, indent: &str) {
 	}
 }
 
-pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, web_api: &'a ::factorio_mods_web::API) ->
-	impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'a {
-
+pub fn ensure_user_credentials<'a>(
+	local_api: &'a ::factorio_mods_local::API,
+	web_api: &'a ::factorio_mods_web::API,
+	prompt_override: Option<bool>,
+) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'a {
 	use ::ResultExt;
 
 	::async_block! {
@@ -63,6 +66,12 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 		loop {
 			println!("You need a Factorio account to download mods.");
 			println!("Please provide your username and password to authenticate yourself.");
+
+			match prompt_override {
+				Some(true) => bail!("Exiting because --yes was specified ..."),
+				Some(false) => bail!("Exiting because --no was specified ..."),
+				None => (),
+			}
 
 			let username = {
 				let prompt: ::std::borrow::Cow<_> = existing_username.as_ref().map_or("Username: ".into(), |username| format!("Username [{}]: ", username).into());
@@ -99,15 +108,28 @@ pub fn ensure_user_credentials<'a>(local_api: &'a ::factorio_mods_local::API, we
 	}
 }
 
-pub fn prompt_continue() -> ::Result<bool> {
+pub fn prompt_continue(prompt_override: Option<bool>) -> ::Result<bool> {
 	use ::ResultExt;
 
-	loop {
-		let choice = ::rprompt::prompt_reply_stdout("Continue? [y/n]: ").chain_err(|| "Could not read continue response")?;
-		match &*choice {
-			"y" | "Y" => return Ok(true),
-			"n" | "N" => return Ok(false),
-			_ => continue,
-		}
+	match prompt_override {
+		Some(true) => {
+			println!("Continue? [y/n]: y");
+			Ok(true)
+		},
+
+		Some(false) => {
+			println!("Continue? [y/n]: n");
+			Ok(false)
+		},
+
+		None => loop {
+			let choice = ::rprompt::prompt_reply_stdout("Continue? [y/n]: ").chain_err(|| "Could not read continue response")?;
+			match &*choice {
+				"y" | "Y" => return Ok(true),
+				"n" | "N" => return Ok(false),
+				_ => continue,
+			}
+		},
 	}
+
 }

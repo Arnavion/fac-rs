@@ -18,6 +18,7 @@ impl ::util::SubCommand for SubCommand {
 		matches: &'a ::clap::ArgMatches<'a>,
 		local_api: ::Result<&'a ::factorio_mods_local::API>,
 		web_api: ::Result<&'a ::factorio_mods_web::API>,
+		prompt_override: Option<bool>,
 	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
 		use ::ResultExt;
 
@@ -44,7 +45,7 @@ impl ::util::SubCommand for SubCommand {
 				config.mods.insert(name, ::factorio_mods_common::ModVersionReq(requirement));
 			}
 
-			::await!(::solve::compute_and_apply_diff(local_api, web_api, config))?;
+			::await!(::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
 
 			Ok(())
 		})
