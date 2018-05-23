@@ -6,7 +6,6 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 [dependencies]
 appdirs = "0.2.x"
 derive-error-chain = "0.11.x"
-derive-new = "0.5.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
