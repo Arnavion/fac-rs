@@ -72,7 +72,7 @@ pub fn compute_solution<I>(
 > where
 	I: IntoIterator,
 	<I as IntoIterator>::Item: Package + Clone,
-	<<I as IntoIterator>::Item as Package>::Name: AsRef<str> + Clone + ::std::fmt::Debug + ::std::fmt::Display + Eq + ::std::hash::Hash + Send + Sync + 'static,
+	<<I as IntoIterator>::Item as Package>::Name: Clone + ::std::fmt::Debug + ::std::fmt::Display + Eq + ::std::hash::Hash + Send + Sync + 'static,
 	<<I as IntoIterator>::Item as Package>::Version: AsRef<::semver::Version> + Clone + ::std::fmt::Display + ::std::fmt::Debug + Send + Sync + 'static,
 	<<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version: AsRef<::semver::VersionReq>,
 {

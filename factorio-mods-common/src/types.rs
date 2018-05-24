@@ -14,12 +14,6 @@ pub struct Url(pub String);
 )]
 pub struct ModName(pub String);
 
-impl AsRef<str> for ModName {
-	fn as_ref(&self) -> &str {
-		&self.0
-	}
-}
-
 impl ::serde::Serialize for ModName {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {
 		serializer.serialize_str(&self.0)
