@@ -45,11 +45,12 @@ impl Config {
 
 			Err(err) => match err.kind() {
 				::std::io::ErrorKind::NotFound => {
+					// Default config is the list of all currently installed mods with a * requirement
 					let installed_mods: ::Result<_> =
 						api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
 						.map(|mod_|
 							mod_
-							.map(|mod_| (mod_.info.name.clone(), ::factorio_mods_common::ModVersionReq(::semver::VersionReq::any())))
+							.map(|mod_| (mod_.info.name, ::factorio_mods_common::ModVersionReq(::semver::VersionReq::any())))
 							.chain_err(|| "Could not process an installed mod"))
 						.collect();
 					let mods = installed_mods.chain_err(|| "Could not enumerate installed mods")?;

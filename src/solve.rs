@@ -129,7 +129,7 @@ fn compute_diff(
 				}
 
 				if !already_installed {
-					to_install.insert(name.clone(), cached_mod);
+					to_install.insert(name, cached_mod);
 				}
 			},
 
@@ -200,7 +200,7 @@ fn compute_diff(
 
 struct SolutionFuture<'a> {
 	packages: Vec<Installable>,
-	already_fetching: ::std::collections::HashSet<::factorio_mods_common::ModName>,
+	already_fetching: ::std::collections::HashSet<::std::rc::Rc<::factorio_mods_common::ModName>>,
 	pending: ::std::collections::VecDeque<CacheFuture>,
 	web_api: &'a ::factorio_mods_web::API,
 	user_credentials: ::factorio_mods_common::UserCredentials,
@@ -234,7 +234,7 @@ impl<'a> SolutionFuture<'a> {
 		};
 
 		for mod_name in reqs.keys() {
-			result.get(mod_name.clone());
+			result.get(mod_name.clone().into());
 		}
 
 		reqs.insert(::factorio_mods_common::ModName("base".to_string()), ::factorio_mods_common::ModVersionReq(::semver::VersionReq::exact(&game_version.0)));
@@ -244,7 +244,7 @@ impl<'a> SolutionFuture<'a> {
 		result
 	}
 
-	fn get(&mut self, mod_name: ::factorio_mods_common::ModName) {
+	fn get(&mut self, mod_name: ::std::rc::Rc<::factorio_mods_common::ModName>) {
 		if self.already_fetching.insert(mod_name.clone()) {
 			println!("    Getting {} ...", mod_name);
 
@@ -259,7 +259,7 @@ impl<'a> SolutionFuture<'a> {
 			.chain_err(|| format!("Could not parse {}", displayable_filename))?;
 
 		for dep in cached_mod.info.dependencies.iter().filter(|dep| dep.required && dep.name.0 != "base") {
-			self.get(dep.name.clone());
+			self.get(dep.name.clone().into());
 		}
 
 		self.packages.push(Installable::Mod(cached_mod));
@@ -409,12 +409,12 @@ impl<'a> Future for SolutionFuture<'a> {
 }
 
 enum CacheFuture {
-	Get(::factorio_mods_common::ModName, Box<Future<Item = ::factorio_mods_web::Mod, Error = ::factorio_mods_web::Error>>),
+	Get(::std::rc::Rc<::factorio_mods_common::ModName>, Box<Future<Item = ::factorio_mods_web::Mod, Error = ::factorio_mods_web::Error>>),
 	Download(DownloadFuture),
 }
 
 struct DownloadFuture {
-	mod_name: ::factorio_mods_common::ModName,
+	mod_name: ::std::rc::Rc<::factorio_mods_common::ModName>,
 	release_version: ::factorio_mods_common::ReleaseVersion,
 	chunk_stream: Box<Stream<Item = ::factorio_mods_web::reqwest::unstable::async::Chunk, Error = ::factorio_mods_web::Error>>,
 	download_file: ::std::io::BufWriter<::std::fs::File>,

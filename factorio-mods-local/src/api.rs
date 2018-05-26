@@ -119,27 +119,19 @@ impl API {
 
 	/// Returns a map of installed mod name to its enabled / disabled status in `mod-list.json`
 	pub fn mods_status(&self) -> ::Result<::std::collections::HashMap<::factorio_mods_common::ModName, bool>> {
-		let mod_list_file_path = &self.mod_list_file_path;
-		let mod_list_file = match ::std::fs::File::open(mod_list_file_path) {
-			Ok(mod_list_file) => mod_list_file,
-			Err(err) => bail!(::ErrorKind::FileIO(mod_list_file_path.into(), err)),
-		};
-		let mod_list: ModList = ::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?;
-		Ok(mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect())
+		let mod_list = self.load_mod_list()?;
+		Ok(mod_list.mods.into_iter().map(|m| (m.name.into_owned(), m.enabled)).collect())
 	}
 
 	/// Marks the given locally installed mods as enabled or disabled in `mod-list.json`
 	pub fn set_enabled<'a, I>(&self, installed_mods: I, enabled: bool) -> ::Result<()> where I: IntoIterator<Item = &'a ::InstalledMod> {
-		let mut mods_status = self.mods_status()?;
+		let mod_list = self.load_mod_list()?;
+		let mut mods_status: ::std::collections::HashMap<_, _> = mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect();
 
 		for installed_mod in installed_mods {
-			mods_status.insert(installed_mod.info.name.clone(), enabled);
+			mods_status.insert(::std::borrow::Cow::Borrowed(&installed_mod.info.name), enabled);
 		}
 
-		self.save_mods_status(&mods_status)
-	}
-
-	fn save_mods_status(&self, mods_status: &::std::collections::HashMap<::factorio_mods_common::ModName, bool>) -> ::Result<()> {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mut mod_list_file = match ::std::fs::File::create(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
@@ -148,12 +140,21 @@ impl API {
 
 		let mut mods: Vec<_> =
 			mods_status.into_iter()
-			.map(|(name, &enabled)| ModListMod { name: name.clone(), enabled })
+			.map(|(name, enabled)| ModListMod { name, enabled })
 			.collect();
 		mods.sort_by(|mod1, mod2| mod1.name.cmp(&mod2.name));
 
 		let mod_list = ModList { mods };
 		::serde_json::to_writer_pretty(&mut mod_list_file, &mod_list).map_err(|err| ::ErrorKind::WriteJSONFile(mod_list_file_path.into(), err).into())
+	}
+
+	fn load_mod_list(&self) -> ::Result<ModList<'static>> {
+		let mod_list_file_path = &self.mod_list_file_path;
+		let mod_list_file = match ::std::fs::File::open(mod_list_file_path) {
+			Ok(mod_list_file) => mod_list_file,
+			Err(err) => bail!(::ErrorKind::FileIO(mod_list_file_path.into(), err)),
+		};
+		Ok(::serde_json::from_reader(mod_list_file).map_err(|err| ::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?)
 	}
 }
 
@@ -220,14 +221,14 @@ lazy_static! {
 
 /// Represents the contents of `mod-list.json`
 #[derive(Debug, ::serde_derive::Deserialize, ::serde_derive::Serialize)]
-struct ModList {
-	mods: Vec<ModListMod>,
+struct ModList<'a> {
+	mods: Vec<ModListMod<'a>>,
 }
 
 /// A mod entry in the mod list
 #[derive(Debug, ::serde_derive::Deserialize, ::serde_derive::Serialize)]
-struct ModListMod {
-	name: ::factorio_mods_common::ModName,
+struct ModListMod<'a> {
+	name: ::std::borrow::Cow<'a, ::factorio_mods_common::ModName>,
 
 	#[serde(deserialize_with = "deserialize_mod_list_mod_enabled")]
 	enabled: bool,
