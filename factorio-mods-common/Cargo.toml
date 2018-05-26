@@ -8,7 +8,7 @@ derive-struct = { version = "0.1.0", path = "../derive-struct" }
 itertools = "0.7.x"
 lazy_static = "1.0.x"
 package = { version = "0.1.0", optional = true, path = "../package" }
-regex = "0.2.x"
+regex = "1.0.x"
 semver = "0.9.x"
 serde = "1.0.x"
 serde_derive = "1.0.x"
