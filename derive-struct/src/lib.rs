@@ -16,7 +16,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 	let ast: syn::DeriveInput = syn::parse(input).unwrap();
 	let struct_name = &ast.ident;
 
-	let parser_func_name: syn::Ident = (match as_newtype(&ast) {
+	let parser_func_name = syn::Ident::new(match as_newtype(&ast) {
 		Some(ty) => match identify_type(ty).unwrap_or_else(|| panic!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type")) {
 			Type::SemverVersion => "parse_version",
 			Type::SemverVersionReq => "parse_version_req",
@@ -24,7 +24,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 		},
 
 		None => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field"),
-	}).into();
+	}, proc_macro2::Span::call_site());
 
 	let expecting_str = format!("a string that can be deserialized into a {}", struct_name);
 	let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
@@ -111,8 +111,8 @@ fn identify_type(ty: &syn::Type) -> Option<Type> {
 			let first_segment = &segments[0];
 			let second_segment = &segments[1];
 
-			if first_segment.arguments.is_empty() && first_segment.ident.as_ref() == "semver" && second_segment.arguments.is_empty() {
-				match second_segment.ident.as_ref() {
+			if first_segment.arguments.is_empty() && first_segment.ident == "semver" && second_segment.arguments.is_empty() {
+				match &*second_segment.ident.to_string() {
 					"Version" => Some(Type::SemverVersion),
 					"VersionReq" => Some(Type::SemverVersionReq),
 					_ => None,
@@ -127,7 +127,7 @@ fn identify_type(ty: &syn::Type) -> Option<Type> {
 			let segment = &segments[0];
 
 			match segment.arguments {
-				syn::PathArguments::None => match segment.ident.as_ref() {
+				syn::PathArguments::None => match &*segment.ident.to_string() {
 					"String" => Some(Type::String),
 					"u64" => Some(Type::U64),
 					_ => None,
