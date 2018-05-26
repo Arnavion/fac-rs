@@ -9,7 +9,7 @@ derive-error-chain = "0.11.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
-globset = "0.3.x"
+globset = "0.4.x"
 lazy_static = "1.0.x"
 semver = "0.9.x"
 serde = "1.0.x"
