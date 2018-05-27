@@ -7,6 +7,7 @@
 	const_static_lifetime,
 	large_enum_variant,
 	similar_names,
+	type_complexity,
 	use_self,
 ))]
 

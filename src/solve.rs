@@ -201,7 +201,7 @@ fn compute_diff(
 struct SolutionFuture<'a> {
 	packages: Vec<Installable>,
 	already_fetching: ::std::collections::HashSet<::std::rc::Rc<::factorio_mods_common::ModName>>,
-	pending: ::std::collections::VecDeque<CacheFuture>,
+	pending: Vec<CacheFuture>,
 	web_api: &'a ::factorio_mods_web::API,
 	user_credentials: ::factorio_mods_common::UserCredentials,
 	game_version: &'a ::factorio_mods_common::ReleaseVersion,
@@ -234,7 +234,7 @@ impl<'a> SolutionFuture<'a> {
 		};
 
 		for mod_name in reqs.keys() {
-			result.get(mod_name.clone().into());
+			get(mod_name.clone().into(), &mut result.already_fetching, &mut result.pending, web_api);
 		}
 
 		reqs.insert(::factorio_mods_common::ModName("base".to_string()), ::factorio_mods_common::ModVersionReq(::semver::VersionReq::exact(&game_version.0)));
@@ -242,29 +242,6 @@ impl<'a> SolutionFuture<'a> {
 		result.reqs = reqs;
 
 		result
-	}
-
-	fn get(&mut self, mod_name: ::std::rc::Rc<::factorio_mods_common::ModName>) {
-		if self.already_fetching.insert(mod_name.clone()) {
-			println!("    Getting {} ...", mod_name);
-
-			let f = Box::new(self.web_api.get(&mod_name));
-			self.pending.push_back(CacheFuture::Get(mod_name, f));
-		}
-	}
-
-	fn parse_cached_mod(&mut self, filename: ::std::path::PathBuf, displayable_filename: &str) -> ::Result<()> {
-		let cached_mod =
-			::factorio_mods_local::InstalledMod::parse(filename)
-			.chain_err(|| format!("Could not parse {}", displayable_filename))?;
-
-		for dep in cached_mod.info.dependencies.iter().filter(|dep| dep.required && dep.name.0 != "base") {
-			self.get(dep.name.clone().into());
-		}
-
-		self.packages.push(Installable::Mod(cached_mod));
-
-		Ok(())
 	}
 }
 
@@ -276,117 +253,137 @@ impl<'a> Future for SolutionFuture<'a> {
 	type Error = ::Error;
 
 	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-		let mut next: ::std::collections::VecDeque<_> = Default::default();
+		let mut i = 0;
 
-		while let Some(f) = self.pending.pop_front() {
-			match f {
-				CacheFuture::Get(mod_name, mut f) => match f.poll() {
-					Ok(Async::Ready(mod_)) => {
-						println!("    Getting {} ... done", mod_name);
+		while i < self.pending.len() {
+			let mut new = vec![];
 
-						for release in mod_.releases {
-							if !release.info_json.factorio_version.0.matches(&self.game_version.0) {
-								continue;
-							}
+			match &mut self.pending[i] {
+				CacheFuture::Get(get) => match get {
+					Some((mod_name, f)) => match f.poll() {
+						Ok(Async::Ready(mod_)) => {
+							let (mod_name, _) = get.take().unwrap();
 
-							println!("        Downloading {} {} ... downloading to cache", mod_name, release.version);
+							println!("    Getting {} ... done", mod_name);
 
-							let filename = self.cache_directory.join(&release.filename.0);
-							let displayable_filename = filename.display().to_string();
-
-							if filename.exists() {
-								println!("        Downloading {} {} ... parsing", mod_name, release.version);
-								self.parse_cached_mod(filename, &displayable_filename)?;
-								continue;
-							}
-
-							let mut download_filename: ::std::ffi::OsString =
-								filename.file_name()
-								.ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?
-								.into();
-
-							download_filename.push(".new");
-							let download_filename = filename.with_file_name(download_filename);
-							let download_displayable_filename = download_filename.display().to_string();
-
-							{
-								let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
-								let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
-								if parent_canonicalized != self.cache_directory_canonicalized {
-									bail!("Filename {} is malformed", download_displayable_filename);
+							for release in mod_.releases {
+								if !release.info_json.factorio_version.0.matches(&self.game_version.0) {
+									continue;
 								}
+
+								println!("        Downloading {} {} ... downloading to cache", mod_name, release.version);
+
+								let filename = self.cache_directory.join(&release.filename.0);
+								let displayable_filename = filename.display().to_string();
+
+								if filename.exists() {
+									println!("        Downloading {} {} ... parsing", mod_name, release.version);
+									parse_cached_mod(filename, &displayable_filename, &mut self.already_fetching, &mut new, &mut self.packages, self.web_api)?;
+									continue;
+								}
+
+								let mut download_filename: ::std::ffi::OsString =
+									filename.file_name()
+									.ok_or_else(|| format!("Could not parse filename {}", displayable_filename))?
+									.into();
+
+								download_filename.push(".new");
+								let download_filename = filename.with_file_name(download_filename);
+								let download_displayable_filename = download_filename.display().to_string();
+
+								{
+									let parent = download_filename.parent().ok_or_else(|| format!("Filename {} is malformed", download_displayable_filename))?;
+									let parent_canonicalized = parent.canonicalize().chain_err(|| format!("Filename {} is malformed", download_displayable_filename))?;
+									ensure!(parent_canonicalized == self.cache_directory_canonicalized, "Filename {} is malformed", download_displayable_filename);
+								}
+
+								let mut download_file = ::std::fs::OpenOptions::new();
+								let download_file = download_file.create(true).truncate(true).write(true);
+								let download_file = download_file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
+								let download_file = ::std::io::BufWriter::new(download_file);
+
+								let chunk_stream = Box::new(self.web_api.download(&release, &self.user_credentials));
+
+								new.push(CacheFuture::Download(Some(DownloadFuture {
+									mod_name: mod_name.clone(),
+									release_version: release.version,
+									chunk_stream,
+									download_file,
+									download_filename,
+									download_displayable_filename,
+									filename,
+									displayable_filename,
+								})));
 							}
+						},
 
-							let mut download_file = ::std::fs::OpenOptions::new();
-							let download_file = download_file.create(true).truncate(true).write(true);
-							let download_file = download_file.open(&download_filename).chain_err(|| format!("Could not open {} for writing", download_displayable_filename))?;
-							let download_file = ::std::io::BufWriter::new(download_file);
+						Ok(Async::NotReady) => (),
 
-							let chunk_stream = Box::new(self.web_api.download(&release, &self.user_credentials));
+						Err(err) => match *err.kind() {
+							// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
+							::factorio_mods_web::ErrorKind::StatusCode(_, ::factorio_mods_web::reqwest::StatusCode::NotFound) => {
+								let _ = get.take();
+							},
 
-							self.pending.push_back(CacheFuture::Download(DownloadFuture {
-								mod_name: mod_name.clone(),
-								release_version: release.version,
-								chunk_stream,
-								download_file,
-								download_filename,
-								download_displayable_filename,
-								filename,
-								displayable_filename,
-							}));
+							_ => Err(err).chain_err(|| format!("Could not get mod info for {}", mod_name))?,
+						},
+					},
+
+					None => unreachable!(),
+				},
+
+				CacheFuture::Download(download) => match download {
+					Some(f) => loop {
+						match f.chunk_stream.poll().chain_err(|| format!("Could not download release {} {}", f.mod_name, f.release_version))? {
+							Async::Ready(Some(chunk)) =>
+								::std::io::Write::write_all(&mut f.download_file, &chunk)
+								.chain_err(|| format!("Could not write to file {}", f.download_displayable_filename))?,
+
+							Async::Ready(None) => {
+								let DownloadFuture {
+									mod_name,
+									release_version,
+									mut download_file,
+									download_filename,
+									download_displayable_filename,
+									filename,
+									displayable_filename,
+									..
+								} = download.take().unwrap();
+
+								println!("        Downloading {} {} ... parsing", mod_name, release_version);
+
+								::std::io::Write::flush(&mut download_file)
+								.chain_err(|| format!("Could not write to file {}", download_displayable_filename))?;
+								drop(download_file);
+
+								::std::fs::rename(&download_filename, &filename)
+								.chain_err(|| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename))?;
+
+								parse_cached_mod(filename.clone(), &displayable_filename, &mut self.already_fetching, &mut new, &mut self.packages, self.web_api)?;
+
+								println!("        Downloading {} {} ... done", mod_name, release_version);
+
+								break;
+							},
+
+							Async::NotReady => break,
 						}
 					},
 
-					Ok(Async::NotReady) => next.push_back(CacheFuture::Get(mod_name, f)),
-
-					Err(err) => match *err.kind() {
-						// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
-						::factorio_mods_web::ErrorKind::StatusCode(_, ::factorio_mods_web::reqwest::StatusCode::NotFound) => (),
-
-						_ => Err(err).chain_err(|| format!("Could not get mod info for {}", mod_name))?,
-					},
+					None => unreachable!(),
 				},
+			}
 
-				CacheFuture::Download(mut f) => match f.chunk_stream.poll().chain_err(|| format!("Could not download release {} {}", f.mod_name, f.release_version))? {
-					Async::Ready(Some(chunk)) => {
-						::std::io::Write::write_all(&mut f.download_file, &chunk)
-						.chain_err(|| format!("Could not write to file {}", f.download_displayable_filename))?;
+			i += 1;
 
-						self.pending.push_back(CacheFuture::Download(f));
-					},
-
-					Async::Ready(None) => {
-						let DownloadFuture {
-							mod_name,
-							release_version,
-							mut download_file,
-							download_filename,
-							download_displayable_filename,
-							filename,
-							displayable_filename,
-							..
-						} = f;
-
-						println!("        Downloading {} {} ... parsing", mod_name, release_version);
-
-						::std::io::Write::flush(&mut download_file)
-						.chain_err(|| format!("Could not write to file {}", download_displayable_filename))?;
-						drop(download_file);
-
-						::std::fs::rename(&download_filename, &filename)
-						.chain_err(|| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename))?;
-
-						self.parse_cached_mod(filename, &displayable_filename)?;
-
-						println!("        Downloading {} {} ... done", mod_name, release_version);
-					},
-
-					Async::NotReady => next.push_back(CacheFuture::Download(f)),
-				},
-			};
+			self.pending.extend(new);
 		}
 
-		self.pending = next;
+		self.pending.retain(|f| match f {
+			CacheFuture::Get(None) | CacheFuture::Download(None) => false,
+			_ => true,
+		});
 
 		if !self.pending.is_empty() {
 			return Ok(Async::NotReady);
@@ -408,9 +405,44 @@ impl<'a> Future for SolutionFuture<'a> {
 	}
 }
 
+fn get(
+	mod_name: ::std::rc::Rc<::factorio_mods_common::ModName>,
+	already_fetching: &mut ::std::collections::HashSet<::std::rc::Rc<::factorio_mods_common::ModName>>,
+	new: &mut Vec<CacheFuture>,
+	web_api: &::factorio_mods_web::API,
+) {
+	if already_fetching.insert(mod_name.clone()) {
+		println!("    Getting {} ...", mod_name);
+
+		let f = Box::new(web_api.get(&mod_name));
+		new.push(CacheFuture::Get(Some((mod_name, f))));
+	}
+}
+
+fn parse_cached_mod(
+	filename: ::std::path::PathBuf,
+	displayable_filename: &str,
+	already_fetching: &mut ::std::collections::HashSet<::std::rc::Rc<::factorio_mods_common::ModName>>,
+	new: &mut Vec<CacheFuture>,
+	packages: &mut Vec<Installable>,
+	web_api: &::factorio_mods_web::API,
+) -> ::Result<()> {
+	let cached_mod =
+		::factorio_mods_local::InstalledMod::parse(filename)
+		.chain_err(|| format!("Could not parse {}", displayable_filename))?;
+
+	for dep in cached_mod.info.dependencies.iter().filter(|dep| dep.required && dep.name.0 != "base") {
+		get(dep.name.clone().into(), already_fetching, new, web_api);
+	}
+
+	packages.push(Installable::Mod(cached_mod));
+
+	Ok(())
+}
+
 enum CacheFuture {
-	Get(::std::rc::Rc<::factorio_mods_common::ModName>, Box<Future<Item = ::factorio_mods_web::Mod, Error = ::factorio_mods_web::Error>>),
-	Download(DownloadFuture),
+	Get(Option<(::std::rc::Rc<::factorio_mods_common::ModName>, Box<Future<Item = ::factorio_mods_web::Mod, Error = ::factorio_mods_web::Error>>)>),
+	Download(Option<DownloadFuture>),
 }
 
 struct DownloadFuture {
