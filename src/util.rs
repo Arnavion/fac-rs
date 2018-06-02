@@ -46,20 +46,11 @@ pub fn ensure_user_credentials<'a>(
 			Ok(user_credentials) =>
 				return Ok(user_credentials),
 
-			Err(err) => {
-				let existing_username = if let ::factorio_mods_local::ErrorKind::IncompleteUserCredentials(ref existing_username) = *err.kind() {
-					Some(existing_username.clone())
-				}
-				else {
-					None
-				};
-
-				if let Some(existing_username) = existing_username {
-					existing_username
-				}
-				else {
-					return Err(err).chain_err(|| "Could not read user credentials");
-				}
+			Err(err) => if let ::factorio_mods_local::ErrorKind::IncompleteUserCredentials(existing_username) = err.kind() {
+				existing_username.clone()
+			}
+			else {
+				return Err(err).chain_err(|| "Could not read user credentials");
 			},
 		};
 

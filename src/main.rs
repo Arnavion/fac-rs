@@ -1,6 +1,6 @@
 //! A CLI tool to manage Factorio mods.
 
-#![feature(catch_expr, exhaustive_patterns, generators, never_type, proc_macro, proc_macro_non_items, proc_macro_path_invoc)]
+#![feature(catch_expr, exhaustive_patterns, generators, never_type, nll, proc_macro, proc_macro_non_items, proc_macro_path_invoc)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
