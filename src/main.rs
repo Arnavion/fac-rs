@@ -5,6 +5,8 @@
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
 	const_static_lifetime,
+	default_trait_access,
+	indexing_slicing,
 	large_enum_variant,
 	similar_names,
 	type_complexity,

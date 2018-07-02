@@ -6,6 +6,7 @@
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
 	const_static_lifetime,
+	indexing_slicing,
 	use_self,
 ))]
 

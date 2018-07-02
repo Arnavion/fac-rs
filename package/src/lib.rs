@@ -5,6 +5,7 @@
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
 	cyclomatic_complexity,
+	indexing_slicing,
 	similar_names,
 	type_complexity,
 	use_self,
