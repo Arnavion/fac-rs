@@ -8,7 +8,7 @@ use ::ResultExt;
 pub fn compute_and_apply_diff<'a>(
 	local_api: &'a ::factorio_mods_local::API,
 	web_api: &'a ::factorio_mods_web::API,
-	config: ::config::Config, // TODO: Should be `mut` but triggers warning due to https://github.com/rust-lang/rust/issues/50897
+	mut config: ::config::Config,
 	prompt_override: Option<bool>,
 ) -> impl Future<Item = (), Error = ::Error> + 'a {
 	::async_block! {
