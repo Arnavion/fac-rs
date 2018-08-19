@@ -12,6 +12,7 @@ pub trait SubCommand {
 }
 
 pub fn wrapping_println(s: &str, indent: &str) {
+	#[cfg_attr(feature = "cargo-clippy", allow(single_match_else))] // Bad clippy lint - false positive
 	match ::term_size::dimensions() {
 		Some((width, _)) => {
 			let wrapper = ::textwrap::Wrapper {

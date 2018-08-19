@@ -22,7 +22,7 @@ impl ::util::SubCommand for SubCommand {
 			let web_api = web_api?;
 
 			let names = matches.values_of("mods").unwrap();
-			let names = names.into_iter().map(|name| ::factorio_mods_common::ModName(name.to_string()));
+			let names = names.map(|name| ::factorio_mods_common::ModName(name.to_string()));
 
 			let mods =
 				stream::futures_ordered(names.map(|name| ::async_block! {
