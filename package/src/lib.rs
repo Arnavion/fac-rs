@@ -1,6 +1,6 @@
 //! Solves the given set of packages and requirements to produce a solution of packages to be installed.
 
-#![feature(proc_macro_path_invoc, use_extern_macros)]
+#![feature(proc_macro_path_invoc, unrestricted_attribute_tokens)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(

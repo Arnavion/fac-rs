@@ -1,7 +1,7 @@
 //! API to interface with <https://mods.factorio.com/>
 
 #![deny(missing_docs)]
-#![feature(catch_expr, generators, generator_trait, proc_macro_non_items, proc_macro_path_invoc, use_extern_macros)]
+#![feature(catch_expr, generators, generator_trait, proc_macro_non_items, proc_macro_path_invoc, unrestricted_attribute_tokens)]
 
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 #![cfg_attr(feature = "cargo-clippy", allow(
