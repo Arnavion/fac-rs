@@ -1,21 +1,21 @@
 /// A URL.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct Url(pub String);
 
 /// The name of a mod.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ModName(pub String);
 
-impl ::serde::Serialize for ModName {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {
+impl serde::Serialize for ModName {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
 		serializer.serialize_str(&self.0)
 	}
 }
@@ -23,42 +23,42 @@ impl ::serde::Serialize for ModName {
 /// The name of an author of a mod.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct AuthorName(pub String);
 
 /// The title of a mod.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ModTitle(pub String);
 
 /// The description of a mod.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ModDescription(pub String);
 
 /// The version of a mod release.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_deserialize, ::derive_struct::newtype_display,
+	derive_struct::newtype_deserialize, derive_struct::newtype_display,
 )]
-pub struct ReleaseVersion(pub ::semver::Version);
+pub struct ReleaseVersion(pub semver::Version);
 
-impl AsRef<::semver::Version> for ReleaseVersion {
-	fn as_ref(&self) -> &::semver::Version {
+impl AsRef<semver::Version> for ReleaseVersion {
+	fn as_ref(&self) -> &semver::Version {
 		&self.0
 	}
 }
 
 /// A username and token used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, ::serde_derive::Deserialize)]
+#[derive(Clone, Debug, serde_derive::Deserialize)]
 pub struct UserCredentials {
 	/// The username.
 	pub username: ServiceUsername,
@@ -70,16 +70,16 @@ pub struct UserCredentials {
 /// A username used with the parts of the web API that require authentication.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ServiceUsername(pub String);
 
 /// A token used with the parts of the web API that require authentication.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ServiceToken(pub String);
 
@@ -96,18 +96,18 @@ pub struct Dependency {
 	pub required: bool,
 }
 
-impl<'de> ::serde::Deserialize<'de> for Dependency {
-	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: ::serde::Deserializer<'de> {
+impl<'de> serde::Deserialize<'de> for Dependency {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
 		struct Visitor;
 
-		impl<'de> ::serde::de::Visitor<'de> for Visitor {
+		impl serde::de::Visitor<'_> for Visitor {
 			type Value = Dependency;
 
-			fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+			fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
 				formatter.write_str("a string")
 			}
 
-			fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: ::serde::de::Error {
+			fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: serde::de::Error {
 				parse_dependency(v)
 			}
 		}
@@ -117,7 +117,7 @@ impl<'de> ::serde::Deserialize<'de> for Dependency {
 }
 
 #[cfg(feature = "package")]
-impl ::package::Dependency for Dependency {
+impl package::Dependency for Dependency {
 	type Name = ModName;
 	type Version = ModVersionReq;
 
@@ -135,34 +135,34 @@ impl ::package::Dependency for Dependency {
 }
 
 /// A version requirement.
-#[derive(Clone, Debug, PartialEq, ::derive_struct::newtype_deserialize, ::derive_struct::newtype_display)]
-pub struct ModVersionReq(pub ::semver::VersionReq);
+#[derive(Clone, Debug, PartialEq, derive_struct::newtype_deserialize, derive_struct::newtype_display)]
+pub struct ModVersionReq(pub semver::VersionReq);
 
-impl AsRef<::semver::VersionReq> for ModVersionReq {
-	fn as_ref(&self) -> &::semver::VersionReq {
+impl AsRef<semver::VersionReq> for ModVersionReq {
+	fn as_ref(&self) -> &semver::VersionReq {
 		&self.0
 	}
 }
 
-impl ::serde::Serialize for ModVersionReq {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::Serializer {
+impl serde::Serialize for ModVersionReq {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
 		serializer.serialize_str(&self.0.to_string())
 	}
 }
 
-/// Parses the given string as a `::semver::Version`
-fn parse_version(s: &str) -> Result<::semver::Version, ::semver::SemVerError> {
+/// Parses the given string as a `semver::Version`
+fn parse_version(s: &str) -> Result<semver::Version, semver::SemVerError> {
 	s.parse().or_else(|_| fixup_version(s).parse())
 }
 
-/// Parses the given string as a `::semver::VersionReq`
-fn parse_version_req(s: &str) -> Result<::semver::VersionReq, ::semver::ReqParseError> {
+/// Parses the given string as a `semver::VersionReq`
+fn parse_version_req(s: &str) -> Result<semver::VersionReq, semver::ReqParseError> {
 	s.parse().or_else(|_| fixup_version(s).parse())
 }
 
 /// Fixes up some bad version strings returned by the web API into something valid for the `semver` crate.
 pub fn fixup_version(s: &str) -> String {
-	::itertools::join(s.split('.').enumerate().map(|(i, part)| {
+	itertools::join(s.split('.').enumerate().map(|(i, part)| {
 		let part =
 			if i == 0 && part.starts_with('0') {
 				"0".to_string() + part.trim_matches('0')
@@ -181,13 +181,13 @@ pub fn fixup_version(s: &str) -> String {
 }
 
 lazy_static! {
-	static ref DEPENDENCY_REGEX: ::regex::Regex = ::regex::Regex::new(r"^(\??)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
+	static ref DEPENDENCY_REGEX: regex::Regex = regex::Regex::new(r"^(\??)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
 }
 
 /// Parses the given string as a Dependency
-fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::Error {
+fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Error {
 	let captures = DEPENDENCY_REGEX.captures(s)
-		.ok_or_else(|| ::serde::de::Error::invalid_value(::serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
+		.ok_or_else(|| serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
 
 	let required = captures[1].is_empty();
 
@@ -199,7 +199,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: ::serde::de::E
 		.or_else(|_| {
 			let fixed_version = captures[4].to_string() + &fixup_version(&captures[5]);
 			fixed_version.parse()
-				.map_err(|err| ::serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, ::std::error::Error::description(&err))))
+				.map_err(|err| serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, std::error::Error::description(&err))))
 		})?;
 
 	Ok(Dependency { name, version: ModVersionReq(version_req), required, })
@@ -211,7 +211,7 @@ mod tests {
 
 	fn test_deserialize_release_version_inner(s: &str, expected: &str) {
 		let expected = ReleaseVersion(expected.parse().unwrap());
-		let actual: ReleaseVersion = ::serde_json::from_str(s).unwrap();
+		let actual: ReleaseVersion = serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}
 
@@ -225,7 +225,7 @@ mod tests {
 
 	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, required: bool) {
 		let expected = Dependency { name: ModName(name.to_string()), version: ModVersionReq(version.parse().unwrap()), required };
-		let actual: Dependency = ::serde_json::from_str(s).unwrap();
+		let actual: Dependency = serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}
 

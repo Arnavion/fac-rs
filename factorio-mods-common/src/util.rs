@@ -1,54 +1,54 @@
 /// Deserializes a string or a sequence of strings into a vector of the target type.
-pub fn deserialize_string_or_seq_string<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
-	where T: ::serde::Deserialize<'de>, D: ::serde::Deserializer<'de> {
+pub fn deserialize_string_or_seq_string<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error> where
+	T: serde::Deserialize<'de>,
+	D: serde::Deserializer<'de>,
+{
+	struct Visitor<T>(std::marker::PhantomData<T>);
 
-	struct Visitor<T>(::std::marker::PhantomData<T>);
-
-	impl<'de, T> ::serde::de::Visitor<'de> for Visitor<T>
-		where T: ::serde::Deserialize<'de> {
-
+	impl<'de, T> serde::de::Visitor<'de> for Visitor<T> where T: serde::Deserialize<'de> {
 		type Value = Vec<T>;
 
-		fn expecting(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+		fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 			write!(f, "a string or sequence of strings")
 		}
 
 		fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-			where E: ::serde::de::Error {
+			where E: serde::de::Error {
 
 			let value = {
 				// Try parsing as a newtype
-				let deserializer = StringNewTypeStructDeserializer(v, ::std::marker::PhantomData);
-				::serde::Deserialize::deserialize(deserializer)
+				let deserializer = StringNewTypeStructDeserializer(v, std::marker::PhantomData);
+				serde::Deserialize::deserialize(deserializer)
 			}.or_else(|_: E| {
 				// Try parsing as a str
-				let deserializer = ::serde::de::IntoDeserializer::into_deserializer(v);
-				::serde::Deserialize::deserialize(deserializer)
+				let deserializer = serde::de::IntoDeserializer::into_deserializer(v);
+				serde::Deserialize::deserialize(deserializer)
 			})?;
 			Ok(vec![value])
 		}
 
 		fn visit_seq<A>(self, visitor: A) -> Result<Self::Value, A::Error>
-			where A: ::serde::de::SeqAccess<'de> {
+			where A: serde::de::SeqAccess<'de> {
 
-			::serde::Deserialize::deserialize(::serde::de::value::SeqAccessDeserializer::new(visitor))
+			serde::Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(visitor))
 		}
 	}
 
-	deserializer.deserialize_any(Visitor(::std::marker::PhantomData))
+	deserializer.deserialize_any(Visitor(std::marker::PhantomData))
 }
 
 // Tries to deserialize the given string as a newtype
-struct StringNewTypeStructDeserializer<'a, E>(&'a str, ::std::marker::PhantomData<E>);
+struct StringNewTypeStructDeserializer<'a, E>(&'a str, std::marker::PhantomData<E>);
 
-impl<'de, 'a, E> ::serde::Deserializer<'de> for StringNewTypeStructDeserializer<'a, E> where E: ::serde::de::Error {
+// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
+impl<'de, 'a, E> ::serde::Deserializer<'de> for StringNewTypeStructDeserializer<'a, E> where E: serde::de::Error {
 	type Error = E;
 
-	fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: ::serde::de::Visitor<'de> {
+	fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: serde::de::Visitor<'de> {
 		visitor.visit_newtype_struct(self)
 	}
 
-	fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: ::serde::de::Visitor<'de> {
+	fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: serde::de::Visitor<'de> {
 		// Called by newtype visitor
 		visitor.visit_str(self.0)
 	}

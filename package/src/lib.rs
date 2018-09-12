@@ -1,23 +1,18 @@
 //! Solves the given set of packages and requirements to produce a solution of packages to be installed.
 
-#![feature(proc_macro_path_invoc, unrestricted_attribute_tokens)]
+#![feature(
+	tool_lints,
+	unrestricted_attribute_tokens,
+)]
 
-#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
-#![cfg_attr(feature = "cargo-clippy", allow(
-	cyclomatic_complexity,
-	indexing_slicing,
-	similar_names,
-	type_complexity,
-	use_self,
-))]
-
-extern crate derive_error_chain;
-#[macro_use]
-extern crate error_chain;
-extern crate itertools;
-extern crate multimap;
-extern crate petgraph;
-extern crate semver;
+#![deny(clippy::all, clippy::pedantic)]
+#![allow(
+	clippy::cyclomatic_complexity,
+	clippy::indexing_slicing,
+	clippy::similar_names,
+	clippy::type_complexity,
+	clippy::use_self,
+)]
 
 pub trait Package {
 	type Name;
@@ -44,10 +39,10 @@ pub enum Relation {
 	Conflicts,
 }
 
-#[derive(Debug, ::derive_error_chain::ErrorChain)]
+#[derive(Debug, derive_error_chain::ErrorChain)]
 pub enum ErrorKind<Name, Version> where
-	Name: ::std::fmt::Display + ::std::fmt::Debug + Send + 'static,
-	Version: ::std::fmt::Display + ::std::fmt::Debug + Send + 'static,
+	Name: std::fmt::Display + std::fmt::Debug + Send + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + 'static,
 {
 	#[error_chain(custom)]
 	#[error_chain(display = const("{package_name} {package_version} both requires and conflicts with {dep_name} {dep_version}"))]
@@ -65,22 +60,22 @@ pub enum ErrorKind<Name, Version> where
 
 pub fn compute_solution<I>(
 	packages: I,
-	reqs: &::std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version>,
-) -> ::Result<
+	reqs: &std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version>,
+) -> crate::Result<
 	<<I as IntoIterator>::Item as Package>::Name,
 	<<I as IntoIterator>::Item as Package>::Version,
-	Option<::std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <I as IntoIterator>::Item>>,
+	Option<std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <I as IntoIterator>::Item>>,
 > where
 	I: IntoIterator,
 	<I as IntoIterator>::Item: Package + Clone,
-	<<I as IntoIterator>::Item as Package>::Name: Clone + ::std::fmt::Debug + ::std::fmt::Display + Eq + ::std::hash::Hash + Send + Sync + 'static,
-	<<I as IntoIterator>::Item as Package>::Version: AsRef<::semver::Version> + Clone + ::std::fmt::Display + ::std::fmt::Debug + Send + Sync + 'static,
-	<<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version: AsRef<::semver::VersionReq>,
+	<<I as IntoIterator>::Item as Package>::Name: Clone + std::fmt::Debug + std::fmt::Display + Eq + std::hash::Hash + Send + Sync + 'static,
+	<<I as IntoIterator>::Item as Package>::Version: AsRef<semver::Version> + Clone + std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	<<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version: AsRef<semver::VersionReq>,
 {
-	let mut graph: ::petgraph::Graph<_, Relation> =
-		::petgraph::data::FromElements::from_elements(
+	let mut graph: petgraph::Graph<_, Relation> =
+		petgraph::data::FromElements::from_elements(
 			packages.into_iter()
-			.map(|package| ::petgraph::data::Element::Node { weight: package }));
+			.map(|package| petgraph::data::Element::Node { weight: package }));
 
 	let mut edges_to_add = vec![];
 
@@ -114,7 +109,7 @@ pub fn compute_solution<I>(
 				}
 
 				match (requires, conflicts) {
-					(true, true) => bail!(ErrorKind::BothRequiresAndConflicts {
+					(true, true) => error_chain::bail!(ErrorKind::BothRequiresAndConflicts {
 						package_name: package1.name().clone(),
 						package_version: package1.version().clone(),
 						dep_name: package2.name().clone(),
@@ -135,10 +130,10 @@ pub fn compute_solution<I>(
 	}
 
 	loop {
-		let mut node_indices_to_remove = ::std::collections::HashSet::new();
+		let mut node_indices_to_remove = std::collections::HashSet::new();
 
 		{
-			let name_to_node_indices: ::multimap::MultiMap<_, _> = graph.node_indices().map(|node_index| {
+			let name_to_node_indices: multimap::MultiMap<_, _> = graph.node_indices().map(|node_index| {
 				let package = &graph[node_index];
 				(package.name(), node_index)
 			}).collect();
@@ -146,7 +141,7 @@ pub fn compute_solution<I>(
 			for name in reqs.keys() {
 				match name_to_node_indices.get_vec(name) {
 					Some(node_indices) if !node_indices.is_empty() => (),
-					_ => bail!(ErrorKind::NoPackagesMeetRequirements(name.clone())),
+					_ => error_chain::bail!(ErrorKind::NoPackagesMeetRequirements(name.clone())),
 				}
 			}
 
@@ -158,7 +153,7 @@ pub fn compute_solution<I>(
 					Some(req) => req.as_ref().matches(package.version().as_ref()),
 
 					// Required by another package
-					None => graph.edges_directed(node_index, ::petgraph::Direction::Incoming).any(|edge|
+					None => graph.edges_directed(node_index, petgraph::Direction::Incoming).any(|edge|
 						if let Relation::Requires = *edge.weight() {
 							true
 						}
@@ -183,12 +178,12 @@ pub fn compute_solution<I>(
 					for &node_index1 in node_indices {
 						let package1 = &graph[node_index1];
 
-						let neighbors1: ::std::collections::HashSet<_> =
-							graph.edges_directed(node_index1, ::petgraph::Direction::Incoming)
-							.map(|edge| (::petgraph::Direction::Incoming, edge.weight(), ::petgraph::visit::EdgeRef::source(&edge)))
+						let neighbors1: std::collections::HashSet<_> =
+							graph.edges_directed(node_index1, petgraph::Direction::Incoming)
+							.map(|edge| (petgraph::Direction::Incoming, edge.weight(), petgraph::visit::EdgeRef::source(&edge)))
 							.chain(
 								graph.edges(node_index1)
-								.map(|edge| (::petgraph::Direction::Outgoing, edge.weight(), ::petgraph::visit::EdgeRef::target(&edge))))
+								.map(|edge| (petgraph::Direction::Outgoing, edge.weight(), petgraph::visit::EdgeRef::target(&edge))))
 							.filter(|&(_, _, neighbor_node_index)| graph[neighbor_node_index].name() != package1.name())
 							.collect();
 
@@ -196,12 +191,12 @@ pub fn compute_solution<I>(
 							if node_index2 > node_index1 {
 								let package2 = &graph[node_index2];
 
-								let neighbors2: ::std::collections::HashSet<_> =
-									graph.edges_directed(node_index2, ::petgraph::Direction::Incoming)
-									.map(|edge| (::petgraph::Direction::Incoming, edge.weight(), ::petgraph::visit::EdgeRef::source(&edge)))
+								let neighbors2: std::collections::HashSet<_> =
+									graph.edges_directed(node_index2, petgraph::Direction::Incoming)
+									.map(|edge| (petgraph::Direction::Incoming, edge.weight(), petgraph::visit::EdgeRef::source(&edge)))
 									.chain(
 										graph.edges(node_index2)
-										.map(|edge| (::petgraph::Direction::Outgoing, edge.weight(), ::petgraph::visit::EdgeRef::target(&edge))))
+										.map(|edge| (petgraph::Direction::Outgoing, edge.weight(), petgraph::visit::EdgeRef::target(&edge))))
 									.filter(|&(_, _, neighbor_node_index)| graph[neighbor_node_index].name() != package2.name())
 									.collect();
 
@@ -227,11 +222,11 @@ pub fn compute_solution<I>(
 					let mut common_conflicts = None;
 
 					for &node_index in node_indices {
-						let conflicts: ::std::collections::HashSet<_> =
+						let conflicts: std::collections::HashSet<_> =
 							graph.edges(node_index)
 							.filter_map(|edge|
 								if let Relation::Conflicts = *edge.weight() {
-									Some(::petgraph::visit::EdgeRef::target(&edge))
+									Some(petgraph::visit::EdgeRef::target(&edge))
 								}
 								else {
 									None
@@ -257,7 +252,7 @@ pub fn compute_solution<I>(
 			break;
 		}
 		else {
-			let node_indices_to_remove = ::itertools::Itertools::sorted_by(node_indices_to_remove.into_iter(), |i1, i2| i1.cmp(i2).reverse());
+			let node_indices_to_remove = itertools::Itertools::sorted_by(node_indices_to_remove.into_iter(), |i1, i2| i1.cmp(i2).reverse());
 
 			for node_index in node_indices_to_remove {
 				graph.remove_node(node_index);
@@ -266,7 +261,7 @@ pub fn compute_solution<I>(
 	}
 
 	let possibilities: Vec<_> = {
-		let name_to_packages: ::multimap::MultiMap<_, _> =
+		let name_to_packages: multimap::MultiMap<_, _> =
 			graph.into_nodes_edges().0.into_iter().map(|node| {
 				let package = node.weight;
 				(package.name().clone(), Some(package))
@@ -293,18 +288,18 @@ pub fn compute_solution<I>(
 		let solution = values.iter().filter_map(|package| package.map(|package| (package.name(), package))).collect();
 
 		if is_valid(&solution) {
-			best_solution = ::std::cmp::max(best_solution, Some(Solution(solution)));
+			best_solution = std::cmp::max(best_solution, Some(Solution(solution)));
 		}
 	}
 
 	Ok(best_solution.map(|best_solution| best_solution.0.into_iter().map(|(name, package)| (name.clone(), package.clone())).collect()))
 }
 
-fn is_valid<P>(solution: &::std::collections::HashMap<&<P as Package>::Name, &P>) -> bool where
+fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) -> bool where
 	P: Package,
-	<P as Package>::Name: Eq + ::std::hash::Hash,
-	<P as Package>::Version: AsRef<::semver::Version>,
-	<<P as Package>::Dependency as Dependency>::Version: AsRef<::semver::VersionReq>,
+	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Version: AsRef<semver::Version>,
+	<<P as Package>::Dependency as Dependency>::Version: AsRef<semver::VersionReq>,
 {
 	for package in solution.values() {
 		for dep in package.dependencies() {
@@ -322,21 +317,21 @@ fn is_valid<P>(solution: &::std::collections::HashMap<&<P as Package>::Name, &P>
 	true
 }
 
-struct Solution<'a, P>(::std::collections::HashMap<&'a <P as Package>::Name, &'a P>) where
+struct Solution<'a, P>(std::collections::HashMap<&'a <P as Package>::Name, &'a P>) where
 	P: Package + 'a,
-	<P as Package>::Name: Eq + ::std::hash::Hash,
+	<P as Package>::Name: Eq + std::hash::Hash,
 ;
 
-impl<'a, P> Ord for Solution<'a, P> where
+impl<P> Ord for Solution<'_, P> where
 	P: Package,
-	<P as Package>::Name: Eq + ::std::hash::Hash,
-	<P as Package>::Version: AsRef<::semver::Version>,
+	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Version: AsRef<semver::Version>,
 {
-	fn cmp(&self, other: &Self) -> ::std::cmp::Ordering {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		for (n1, i1) in &self.0 {
 			if let Some(i2) = other.0.get(n1) {
 				match i1.version().as_ref().cmp(i2.version().as_ref()) {
-					::std::cmp::Ordering::Equal => (),
+					std::cmp::Ordering::Equal => (),
 					o => return o,
 				}
 			}
@@ -346,31 +341,31 @@ impl<'a, P> Ord for Solution<'a, P> where
 	}
 }
 
-impl<'a, P> PartialOrd for Solution<'a, P> where
+impl<P> PartialOrd for Solution<'_, P> where
 	P: Package,
-	<P as Package>::Name: Eq + ::std::hash::Hash,
-	<P as Package>::Version: AsRef<::semver::Version>,
+	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Version: AsRef<semver::Version>,
 {
-	fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
 		Some(self.cmp(other))
 	}
 }
 
-impl<'a, P> PartialEq for Solution<'a, P> where
+impl<P> PartialEq for Solution<'_, P> where
 	P: Package,
-	<P as Package>::Name: Eq + ::std::hash::Hash,
-	<P as Package>::Version: AsRef<::semver::Version>,
+	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Version: AsRef<semver::Version>,
 {
 	fn eq(&self, other: &Self) -> bool {
-		self.cmp(other) == ::std::cmp::Ordering::Equal
+		self.cmp(other) == std::cmp::Ordering::Equal
 	}
 }
 
-impl<'a, P> Eq for Solution<'a, P>
+impl<P> Eq for Solution<'_, P>
  where
 	P: Package,
-	<P as Package>::Name: Eq + ::std::hash::Hash,
-	<P as Package>::Version: AsRef<::semver::Version>,
+	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Version: AsRef<semver::Version>,
 {
 }
 

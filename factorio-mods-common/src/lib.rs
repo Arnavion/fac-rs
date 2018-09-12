@@ -1,31 +1,26 @@
 //! Common types and functionality used by the other factorio-mods crates.
 
+#![feature(
+	tool_lints,
+)]
+
 #![deny(missing_docs)]
-#![feature(proc_macro_path_invoc)]
 
-#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
-#![cfg_attr(feature = "cargo-clippy", allow(
-	const_static_lifetime,
-	indexing_slicing,
-	use_self,
-))]
+#![deny(clippy::all, clippy::pedantic)]
+#![allow(
+	clippy::const_static_lifetime,
+	clippy::indexing_slicing,
+	clippy::use_self,
+)]
 
-extern crate derive_struct;
-extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
-#[cfg(feature = "package")]
-extern crate package;
-extern crate regex;
-extern crate semver;
-#[macro_use]
-extern crate serde;
-extern crate serde_derive;
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate serde;
+
 #[cfg(test)]
 extern crate serde_json;
 
 mod types;
-pub use types::*;
+pub use self::types::*;
 
 mod util;
-pub use util::deserialize_string_or_seq_string;
+pub use self::util::deserialize_string_or_seq_string;

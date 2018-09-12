@@ -1,37 +1,28 @@
-use ::futures::Future;
+pub fn build_subcommand<'a>(subcommand: clap::App<'a, 'a>) -> clap::App<'a, 'a> {
+	clap_app!(@app (subcommand)
+		(about: "Remove mods.")
+		(@arg mods: ... +required index(1) "mod names to remove"))
+}
 
-pub struct SubCommand;
+pub async fn run<'a>(
+	matches: &'a clap::ArgMatches<'a>,
+	local_api: crate::Result<&'a factorio_mods_local::API>,
+	web_api: crate::Result<&'a factorio_mods_web::API>,
+	prompt_override: Option<bool>,
+) -> crate::Result<()> {
+	let mods = matches.values_of("mods").unwrap();
 
-impl ::util::SubCommand for SubCommand {
-	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
-		clap_app!(@app (subcommand)
-			(about: "Remove mods.")
-			(@arg mods: ... +required index(1) "mod names to remove"))
+	let local_api = local_api?;
+	let web_api = web_api?;
+
+	let mut config = crate::config::Config::load(local_api)?;
+
+	for mod_ in mods {
+		let name = factorio_mods_common::ModName(mod_.to_string());
+		config.mods.remove(&name);
 	}
 
-	fn run<'a>(
-		&'a self,
-		matches: &'a ::clap::ArgMatches<'a>,
-		local_api: ::Result<&'a ::factorio_mods_local::API>,
-		web_api: ::Result<&'a ::factorio_mods_web::API>,
-		prompt_override: Option<bool>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-		Box::new(::async_block! {
-			let mods = matches.values_of("mods").unwrap();
+	await!(crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
 
-			let local_api = local_api?;
-			let web_api = web_api?;
-
-			let mut config = ::config::Config::load(local_api)?;
-
-			for mod_ in mods {
-				let name = ::factorio_mods_common::ModName(mod_.to_string());
-				config.mods.remove(&name);
-			}
-
-			::await!(::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
-
-			Ok(())
-		})
-	}
+	Ok(())
 }

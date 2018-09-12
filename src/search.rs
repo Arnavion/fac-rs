@@ -1,40 +1,31 @@
-use ::futures::Future;
+pub fn build_subcommand<'a>(subcommand: clap::App<'a, 'a>) -> clap::App<'a, 'a> {
+	clap_app!(@app (subcommand)
+		(about: "Search the mods database.")
+		(@arg query: index(1) "search string"))
+}
 
-pub struct SubCommand;
+pub async fn run<'a>(
+	matches: &'a clap::ArgMatches<'a>,
+	web_api: crate::Result<&'a factorio_mods_web::API>,
+) -> crate::Result<()> {
+	use crate::ResultExt;
 
-impl ::util::SubCommand for SubCommand {
-	fn build_subcommand<'a>(&self, subcommand: ::clap::App<'a, 'a>) -> ::clap::App<'a, 'a> {
-		clap_app!(@app (subcommand)
-			(about: "Search the mods database.")
-			(@arg query: index(1) "search string"))
+	let query = matches.value_of("query").unwrap_or("");
+
+	let web_api = web_api?;
+
+	let mut mods = web_api.search(query);
+	let mut mods = std::pin::PinMut::new(&mut mods);
+
+	while let Some(mod_) = await!(futures::StreamExt::next(&mut *mods)) {
+		let mod_ = mod_.chain_err(|| "Could not retrieve mods")?;
+
+		println!("{}", mod_.title);
+		println!("    Name: {}", mod_.name);
+		println!();
+		crate::util::wrapping_println(&mod_.summary.0, "    ");
+		println!();
 	}
 
-	fn run<'a>(
-		&'a self,
-		matches: &'a ::clap::ArgMatches<'a>,
-		_: ::Result<&'a ::factorio_mods_local::API>,
-		web_api: ::Result<&'a ::factorio_mods_web::API>,
-		_: Option<bool>,
-	) -> Box<Future<Item = (), Error = ::Error> + 'a> {
-		use ::ResultExt;
-
-		#[cfg_attr(feature = "cargo-clippy", allow(unit_arg))]
-		Box::new(::async_block! {
-			let query = matches.value_of("query").unwrap_or("");
-
-			let web_api = web_api?;
-
-			let r: Result<_, ::factorio_mods_web::Error> = do catch {
-				#[async] for mod_ in web_api.search(query) {
-					println!("{}", mod_.title);
-					println!("    Name: {}", mod_.name);
-					println!();
-					::util::wrapping_println(&mod_.summary.0, "    ");
-					println!();
-				}
-			};
-
-			r.chain_err(|| "Could not retrieve mods")
-		})
-	}
+	Ok(())
 }

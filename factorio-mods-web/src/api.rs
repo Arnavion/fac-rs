@@ -1,29 +1,24 @@
-#![cfg_attr(feature = "cargo-clippy", allow(
-	single_match_else,
-))]
-
-use ::futures::{ Future, Poll, stream, Stream };
+#![allow(
+	clippy::single_match_else,
+)]
 
 /// Entry-point to the <https://mods.factorio.com/> API
 #[derive(Debug)]
 pub struct API {
-	base_url: ::reqwest::Url,
-	mods_url: ::reqwest::Url,
-	login_url: ::reqwest::Url,
-	client: ::client::Client,
+	base_url: reqwest::Url,
+	mods_url: reqwest::Url,
+	login_url: reqwest::Url,
+	client: crate::client::Client,
 }
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(
-		builder: Option<::reqwest::unstable::async::ClientBuilder>,
-		handle: ::tokio_core::reactor::Handle,
-	) -> ::Result<Self> {
+	pub fn new(builder: Option<reqwest::r#async::ClientBuilder>) -> crate::Result<Self> {
 		Ok(API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
 			login_url: LOGIN_URL.clone(),
-			client: ::client::Client::new(builder, handle)?,
+			client: crate::client::Client::new(builder)?,
 		})
 	}
 
@@ -31,48 +26,23 @@ impl API {
 	pub fn search<'a>(
 		&'a self,
 		query: &'a str,
-	) -> impl Stream<Item = ::SearchResponseMod, Error = ::Error> + 'a {
-		::async_stream_block! {
-			let query = query.to_lowercase();
-
-			let mut next_page_url = Some(self.mods_url.clone());
-
-			while let Some(url) = next_page_url {
-				match ::await!(self.client.get_object::<PagedResponse<::SearchResponseMod>>(url)) {
-					Ok((page, _)) => {
-						for mod_ in page.results {
-							if
-								mod_.name.0.to_lowercase().contains(&query) ||
-								mod_.title.0.to_lowercase().contains(&query) ||
-								mod_.owner.iter().any(|owner| owner.0.to_lowercase().contains(&query)) ||
-								mod_.summary.0.to_lowercase().contains(&query)
-							{
-								::stream_yield!(mod_);
-							}
-						}
-
-						next_page_url = page.pagination.links.next;
-					},
-
-					Err(::Error(::ErrorKind::StatusCode(_, ::reqwest::StatusCode::NotFound), _)) =>
-						break,
-
-					Err(err) => return Err(err),
-				}
-			}
-
-			Ok(())
+	) -> impl futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + 'a {
+		let query = query.to_lowercase();
+		SearchStream {
+			query,
+			client: &self.client,
+			state: SearchStreamState::HavePage(vec![].into_iter(), Some(self.mods_url.clone())),
 		}
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get(&self, mod_name: &::factorio_mods_common::ModName) -> impl Future<Item = ::Mod, Error = ::Error> + 'static {
+	pub fn get(&self, mod_name: &factorio_mods_common::ModName) -> impl std::future::Future<Output = crate::Result<crate::Mod>> + 'static {
 		let mut mod_url = self.mods_url.clone();
 		mod_url.path_segments_mut().unwrap().push(&mod_name.0);
 		let future = self.client.get_object(mod_url);
 
-		::async_block! {
-			let (mod_, _) = ::await!(future)?;
+		async {
+			let (mod_, _) = await!(future)?;
 			Ok(mod_)
 		}
 	}
@@ -80,23 +50,25 @@ impl API {
 	/// Logs in to the web API using the given username and password and returns a credentials object.
 	pub fn login(
 		&self,
-		username: ::factorio_mods_common::ServiceUsername,
+		username: factorio_mods_common::ServiceUsername,
 		password: &str,
-	) -> impl Future<Item = ::factorio_mods_common::UserCredentials, Error = ::Error> + 'static {
+	) -> impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static {
+		// TODO: Replace return type with client::PostObjectFuture
+
 		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
-		::async_block! {
-			let ((token,), _) = ::await!(future)?;
-			Ok(::factorio_mods_common::UserCredentials { username, token })
-		}
+		std::pin::PinBox::new(async {
+			let ((token,), _) = await!(future)?;
+			Ok(factorio_mods_common::UserCredentials { username, token })
+		})
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
 	pub fn download(
 		&self,
-		release: &::ModRelease,
-		user_credentials: &::factorio_mods_common::UserCredentials,
-	) -> impl Stream<Item = ::reqwest::unstable::async::Chunk, Error = ::Error> + 'static {
+		release: &crate::ModRelease,
+		user_credentials: &factorio_mods_common::UserCredentials,
+	) -> impl futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static {
 		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
@@ -107,146 +79,257 @@ impl API {
 			},
 
 			Err(err) =>
-				return Either::A(stream::once(Err(::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into()))),
+				return either::Either::Left(futures_util::stream::once(futures_util::future::ready(Err(
+					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into())))),
 		};
 
 		let future = self.client.get_zip(download_url);
 
-		#[cfg_attr(feature = "cargo-clippy", allow(unit_arg))]
-		Either::B(::async_stream_block! {
-			let (response, download_url) = ::await!(future)?;
+		either::Either::Right(DownloadStream::Fetch(future))
+	}
+}
 
-			let result: Result<_, ::reqwest::Error> = do catch {
-				#[async] for chunk in response.into_body() {
-					::stream_yield!(chunk);
-				}
+// TODO: Use existential type when https://github.com/rust-lang/rust/issues/53443 is fixed
+// pub existential type GetResponse: Future<Output = crate::Result<crate::Mod>> + 'static;
+// pub existential type DownloadResponse: Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
+
+#[derive(Debug)]
+enum DownloadStream<F> {
+	Fetch(F),
+	Response(futures_util::compat::Compat<reqwest::r#async::Decoder, ()>, Option<reqwest::Url>),
+}
+
+// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
+impl<F> ::futures_core::Stream for DownloadStream<F> where F: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> {
+	type Item = crate::Result<reqwest::r#async::Chunk>;
+
+	fn poll_next(mut self: std::pin::PinMut<Self>, cx: &mut std::task::Context) -> std::task::Poll<Option<Self::Item>> {
+		unsafe {
+			loop {
+				let (response, download_url) = match std::pin::PinMut::get_mut_unchecked(self.reborrow()) {
+					DownloadStream::Fetch(f) => match std::pin::PinMut::new_unchecked(f).poll(cx) {
+						std::task::Poll::Pending => return std::task::Poll::Pending,
+						std::task::Poll::Ready(Ok(value)) => value,
+						std::task::Poll::Ready(Err(err)) => return std::task::Poll::Ready(Some(Err(err))),
+					},
+
+					DownloadStream::Response(body, download_url) => return match std::pin::PinMut::new_unchecked(body).poll_next(cx) {
+						std::task::Poll::Pending => std::task::Poll::Pending,
+						std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
+						std::task::Poll::Ready(Some(Err(err))) => std::task::Poll::Ready(Some(Err(crate::ErrorKind::HTTP(download_url.take().unwrap(), err).into()))),
+						std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
+					},
+				};
+
+				let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
+				std::pin::PinMut::set(self.reborrow(), DownloadStream::Response(body, Some(download_url)));
+			}
+		}
+	}
+}
+
+#[derive(Debug)]
+struct SearchStream<'a> {
+	query: String,
+	client: &'a crate::client::Client,
+	state: SearchStreamState,
+}
+
+enum SearchStreamState {
+	WaitingForPage(std::future::LocalFutureObj<'static, crate::Result<(PagedResponse<crate::SearchResponseMod>, reqwest::Url)>>),
+	HavePage(std::vec::IntoIter<crate::SearchResponseMod>, Option<reqwest::Url>),
+	Ended,
+}
+
+impl std::fmt::Debug for SearchStreamState {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		match *self {
+			SearchStreamState::WaitingForPage(_) =>
+				f.debug_tuple("WaitingForPage")
+				.finish(),
+ 			SearchStreamState::HavePage(ref results, ref next_page_url) =>
+				f.debug_tuple("HavePage")
+				.field(&results.len())
+				.field(next_page_url)
+				.finish(),
+ 			SearchStreamState::Ended =>
+				f.debug_tuple("Ended")
+				.finish(),
+		}
+	}
+}
+
+// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
+impl ::futures_core::Stream for SearchStream<'_> {
+	type Item = crate::Result<crate::SearchResponseMod>;
+
+	fn poll_next(mut self: std::pin::PinMut<Self>, cx: &mut std::task::Context) -> std::task::Poll<Option<Self::Item>> {
+		loop {
+			let (next_state, result) = match &mut self.state {
+				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(std::pin::PinMut::new(page), cx) {
+					std::task::Poll::Pending =>
+						return std::task::Poll::Pending,
+					std::task::Poll::Ready(Ok((page, _))) => (
+						Some(SearchStreamState::HavePage(page.results.into_iter(), page.pagination.links.next)),
+						None,
+					),
+					std::task::Poll::Ready(Err(crate::Error(crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND), _))) => (
+						Some(SearchStreamState::Ended),
+						Some(std::task::Poll::Ready(None)),
+					),
+					std::task::Poll::Ready(Err(err)) => (
+						Some(SearchStreamState::Ended),
+						Some(std::task::Poll::Ready(Some(Err(err)))),
+					),
+				},
+
+				SearchStreamState::HavePage(results, next_page_url) => match results.next() {
+					Some(mod_) => {
+						let query = &*self.query;
+
+						if
+							mod_.name.0.to_lowercase().contains(query) ||
+							mod_.title.0.to_lowercase().contains(query) ||
+							mod_.owner.iter().any(|owner| owner.0.to_lowercase().contains(query)) ||
+							mod_.summary.0.to_lowercase().contains(query)
+						{
+							(None, Some(std::task::Poll::Ready(Some(Ok(mod_)))))
+						}
+						else {
+							(None, None)
+						}
+					},
+
+					None => match next_page_url.take() {
+						Some(next_page_url) => (
+							Some(SearchStreamState::WaitingForPage(std::future::LocalFutureObj::new(std::pin::PinBox::new(self.client.get_object(next_page_url))))),
+							None,
+						),
+						None => (
+							Some(SearchStreamState::Ended),
+							Some(std::task::Poll::Ready(None)),
+						),
+					},
+				},
+
+				SearchStreamState::Ended => (
+					Some(SearchStreamState::Ended),
+					Some(std::task::Poll::Ready(None)),
+				),
 			};
 
-			result.map_err(|err| ::ErrorKind::HTTP(download_url, err).into())
-		})
+			if let Some(next_state) = next_state {
+				self.state = next_state;
+			}
+
+			if let Some(result) = result {
+				return result;
+			}
+		}
 	}
 }
 
 /// A single page of a paged response.
-#[derive(Debug, ::serde_derive::Deserialize)]
+#[derive(Debug, serde_derive::Deserialize)]
 struct PagedResponse<T> {
 	pagination: Pagination,
 	results: Vec<T>,
 }
 
 /// Pagination information in a paged response.
-#[derive(Debug, ::serde_derive::Deserialize)]
+#[derive(Debug, serde_derive::Deserialize)]
 struct Pagination {
 	links: PaginationLinks,
 }
 
 /// Pagination link information in a paged response.
-#[derive(Debug, ::serde_derive::Deserialize)]
+#[derive(Debug, serde_derive::Deserialize)]
 struct PaginationLinks {
 	#[serde(deserialize_with = "deserialize_url")]
-	next: Option<::reqwest::Url>,
+	next: Option<reqwest::Url>,
 }
 
 // TODO: Remove when url supports serde 1.0 (https://github.com/servo/rust-url/pull/327) and reqwest enables or exposes its "serde" feature
-fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<::reqwest::Url>, D::Error> where D: ::serde::Deserializer<'de> {
-	let url: Option<String> = ::serde::Deserialize::deserialize(deserializer)?;
+fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<reqwest::Url>, D::Error> where D: serde::Deserializer<'de> {
+	let url: Option<String> = serde::Deserialize::deserialize(deserializer)?;
 	match url {
 		Some(url) => match url.parse() {
 			Ok(url) => Ok(Some(url)),
-			Err(err) => Err(::serde::de::Error::custom(format!("invalid URL {:?}: {}", url, ::std::error::Error::description(&err)))),
+			Err(err) => Err(serde::de::Error::custom(format!("invalid URL {:?}: {}", url, std::error::Error::description(&err)))),
 		},
 
 		None => Ok(None),
 	}
 }
 
-enum Either<A, B> {
-	A(A),
-	B(B),
-}
-
-impl<A, B> Stream for Either<A, B> where A: Stream, B: Stream<Item = A::Item, Error = A::Error> {
-	type Item = A::Item;
-	type Error = A::Error;
-
-	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-		match *self {
-			Either::A(ref mut a) => a.poll(),
-			Either::B(ref mut b) => b.poll(),
-		}
-	}
-}
-
 lazy_static! {
-	static ref BASE_URL: ::reqwest::Url = "https://mods.factorio.com/".parse().unwrap();
-	static ref MODS_URL: ::reqwest::Url = "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap();
-	static ref LOGIN_URL: ::reqwest::Url = "https://auth.factorio.com/api-login".parse().unwrap();
+	static ref BASE_URL: reqwest::Url = "https://mods.factorio.com/".parse().unwrap();
+	static ref MODS_URL: reqwest::Url = "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap();
+	static ref LOGIN_URL: reqwest::Url = "https://auth.factorio.com/api-login".parse().unwrap();
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use ::futures::Stream;
 
-	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> Box<Future<Item = (), Error = ::Error> + 'r> {
-		let mut core = ::tokio_core::reactor::Core::new().unwrap();
-		let api = API::new(None, core.handle()).unwrap();
-		let result = test(&api);
-		core.run(result).unwrap();
+	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> std::future::LocalFutureObj<'r, ()> {
+		use futures_util::FutureExt;
+
+		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+		let api = API::new(None).unwrap();
+		let result = test(&api).map(|()| Ok::<_, crate::Error>(()));
+		runtime.block_on(futures_util::TryFutureExt::compat(std::pin::PinBox::new(result), futures_util::compat::TokioDefaultSpawner)).unwrap();
 	}
 
 	#[test]
 	fn search_list_all_mods() {
-		run_test(|api| Box::new(
+		use futures_util::{ FutureExt, StreamExt };
+
+		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
 			api.search("")
-			.fold(0usize, |count, _| Ok::<_, ::Error>(count + 1usize))
+			.fold(0usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
 			.map(|count| {
 				println!("Found {} mods", count);
 				assert!(count > 1700); // 1700+ as of 2017-06-21
-			})));
+			}))));
 	}
 
 	#[test]
 	fn search_by_title() {
-		run_test(|api| Box::new(
+		use futures_util::{ FutureExt, StreamExt };
+
+		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
 			api.search("bob's functions library mod")
 			.into_future()
-			.then(|result| match result {
-				Ok((Some(mod_), _)) => {
-					println!("{:?}", mod_);
-					assert_eq!(mod_.title.0, "Bob's Functions Library mod");
-					Ok(())
-				},
-
-				Ok((None, _)) =>
-					unreachable!(),
-
-				Err((err, _)) =>
-					Err(err),
-			})));
+			.map(|(result, _)| {
+				let mod_ = result.unwrap().unwrap();
+				println!("{:?}", mod_);
+				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
+			}))));
 	}
 
 	#[test]
 	fn search_non_existing() {
-		run_test(|api| Box::new(
+		use futures_util::{ FutureExt, StreamExt };
+
+		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
 			api.search("arnavion's awesome mod")
 			.into_future()
-			.then(|result| match result {
-				Ok((Some(_), _)) => unreachable!(),
-				Ok((None, _)) => Ok(()),
-				Err((err, _)) => Err(err),
-			})));
+			.map(|(result, _)| assert!(result.is_none())))));
 	}
 
 	#[test]
 	fn get() {
-		let mod_name = ::factorio_mods_common::ModName("boblibrary".to_string());
+		use futures_util::FutureExt;
 
-		run_test(|api| Box::new(
+		let mod_name = factorio_mods_common::ModName("boblibrary".to_string());
+
+		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
 			api.get(&mod_name)
 			.map(|mod_| {
+				let mod_ = mod_.unwrap();
 				println!("{:?}", mod_);
 				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
-			})));
+			}))));
 	}
 }

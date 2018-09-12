@@ -1,35 +1,35 @@
-#![cfg_attr(feature = "cargo-clippy", allow(
-	single_match_else,
-))]
+#![allow(
+	clippy::single_match_else,
+)]
 
 /// A date and time string.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct DateTime(pub String);
 
 /// Number of downloads.
 #[derive(
 	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct DownloadCount(pub u64);
 
 /// A mod object returned by `API::get`.
-#[derive(Clone, Debug, PartialEq, ::serde_derive::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde_derive::Deserialize)]
 pub struct Mod {
 	/// The name of the mod.
-	pub name: ::factorio_mods_common::ModName,
+	pub name: factorio_mods_common::ModName,
 
 	/// The title of the mod.
-	pub title: ::factorio_mods_common::ModTitle,
+	pub title: factorio_mods_common::ModTitle,
 
 	/// The authors of the mod.
-	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
-	pub owner: Vec<::factorio_mods_common::AuthorName>,
+	#[serde(deserialize_with = "factorio_mods_common::deserialize_string_or_seq_string")]
+	pub owner: Vec<factorio_mods_common::AuthorName>,
 
 	/// A short summary of the mod.
 	pub summary: ModSummary,
@@ -44,22 +44,22 @@ pub struct Mod {
 /// The summary of a mod.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ModSummary(pub String);
 
 /// A single mod release.
-#[derive(Clone, Debug, PartialEq, ::serde_derive::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde_derive::Deserialize)]
 pub struct ModRelease {
 	/// The version of the mod release.
-	pub version: ::factorio_mods_common::ReleaseVersion,
+	pub version: factorio_mods_common::ReleaseVersion,
 
 	/// The `info.json` of the mod release.
 	pub info_json: ModReleaseInfo,
 
 	/// The URL to download the mod release.
-	pub download_url: ::factorio_mods_common::Url,
+	pub download_url: factorio_mods_common::Url,
 
 	/// The filename of the mod release.
 	#[serde(rename(deserialize = "file_name"))]
@@ -73,40 +73,40 @@ pub struct ModRelease {
 }
 
 /// Extra information about a single mod release.
-#[derive(Clone, Debug, PartialEq, ::serde_derive::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde_derive::Deserialize)]
 pub struct ModReleaseInfo {
 	/// The versions of the game supported by the mod release.
-	pub factorio_version: ::factorio_mods_common::ModVersionReq,
+	pub factorio_version: factorio_mods_common::ModVersionReq,
 }
 
 /// The hash of a mod release file.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct ModHash(pub String);
 
 /// The filename of a mod release.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	::derive_struct::newtype_display,
-	::serde_derive::Deserialize,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
 pub struct Filename(pub String);
 
 /// A mod object returned by `API::search`.
-#[derive(Clone, Debug, PartialEq, ::serde_derive::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde_derive::Deserialize)]
 pub struct SearchResponseMod {
 	/// The name of the mod.
-	pub name: ::factorio_mods_common::ModName,
+	pub name: factorio_mods_common::ModName,
 
 	/// The title of the mod.
-	pub title: ::factorio_mods_common::ModTitle,
+	pub title: factorio_mods_common::ModTitle,
 
 	/// The authors of the mod.
-	#[serde(deserialize_with = "::factorio_mods_common::deserialize_string_or_seq_string")]
-	pub owner: Vec<::factorio_mods_common::AuthorName>,
+	#[serde(deserialize_with = "factorio_mods_common::deserialize_string_or_seq_string")]
+	pub owner: Vec<factorio_mods_common::AuthorName>,
 
 	/// A short summary of the mod.
 	pub summary: ModSummary,
