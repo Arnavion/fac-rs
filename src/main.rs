@@ -26,6 +26,7 @@
 
 use factorio_mods_web::reqwest;
 
+mod cache;
 mod enable_disable;
 mod install;
 mod list;
@@ -55,6 +56,7 @@ fn main() -> Result<()> {
 			(@arg yes: -y --yes "Answer yes to all prompts")
 			(@arg no: -n --no conflicts_with("yes") "Answer no to all prompts"));
 
+		let app = app.subcommand(cache::build_subcommand(clap::SubCommand::with_name("cache")));
 		let app = app.subcommand(enable_disable::build_disable_subcommand(clap::SubCommand::with_name("disable")));
 		let app = app.subcommand(enable_disable::build_enable_subcommand(clap::SubCommand::with_name("enable")));
 		let app = app.subcommand(install::build_subcommand(clap::SubCommand::with_name("install")));
@@ -92,6 +94,10 @@ fn main() -> Result<()> {
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().chain_err(|| "Could not start tokio runtime")?;
 
 		match subcommand_name {
+			"cache" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(cache::run(
+				matches,
+				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			)), futures::compat::TokioDefaultSpawner))?,
 			"disable" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(enable_disable::run_disable(
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
