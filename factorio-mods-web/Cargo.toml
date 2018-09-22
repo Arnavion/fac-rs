@@ -14,8 +14,7 @@ futures-core-preview = { version = "0.3.0-alpha.6", features = ["either"] }
 futures-util-preview = { version = "0.3.0-alpha.6", features = ["compat"] }
 itertools = "0.7.x"
 lazy_static = "1.1.x"
-# TODO: Replace with reqwest 0.9.x when that gets released
-reqwest = { git = "https://github.com/seanmonstar/reqwest", branch = "master" }
+reqwest = "0.9.x"
 serde = "1.0.x"
 serde_derive = "1.0.x"
 serde_urlencoded = "0.5.x"
