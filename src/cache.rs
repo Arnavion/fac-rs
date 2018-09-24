@@ -12,6 +12,7 @@ pub fn build_subcommand<'a>(subcommand: clap::App<'a, 'a>) -> clap::App<'a, 'a> 
 pub async fn run<'a>(
 	matches: &'a clap::ArgMatches<'a>,
 	local_api: crate::Result<&'a factorio_mods_local::API>,
+	config_file_path: Option<std::path::PathBuf>,
 ) -> crate::Result<()> {
 	use crate::ResultExt;
 
@@ -19,7 +20,7 @@ pub async fn run<'a>(
 
 	let local_api = local_api?;
 
-	let config = crate::config::Config::load(local_api)?;
+	let config = crate::config::Config::load(local_api, config_file_path)?;
 
 	let cache_directory = config.cache_directory()?;
 

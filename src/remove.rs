@@ -8,6 +8,7 @@ pub async fn run<'a>(
 	matches: &'a clap::ArgMatches<'a>,
 	local_api: crate::Result<&'a factorio_mods_local::API>,
 	web_api: crate::Result<&'a factorio_mods_web::API>,
+	config_file_path: Option<std::path::PathBuf>,
 	prompt_override: Option<bool>,
 ) -> crate::Result<()> {
 	let mods = matches.values_of("mods").unwrap();
@@ -15,7 +16,7 @@ pub async fn run<'a>(
 	let local_api = local_api?;
 	let web_api = web_api?;
 
-	let mut config = crate::config::Config::load(local_api)?;
+	let mut config = crate::config::Config::load(local_api, config_file_path)?;
 
 	for mod_ in mods {
 		let name = factorio_mods_common::ModName(mod_.to_string());

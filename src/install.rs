@@ -12,6 +12,7 @@ pub async fn run<'a>(
 	matches: &'a clap::ArgMatches<'a>,
 	local_api: crate::Result<&'a factorio_mods_local::API>,
 	web_api: crate::Result<&'a factorio_mods_web::API>,
+	config_file_path: Option<std::path::PathBuf>,
 	prompt_override: Option<bool>,
 ) -> crate::Result<()> {
 	use crate::ResultExt;
@@ -21,7 +22,7 @@ pub async fn run<'a>(
 	let local_api = local_api?;
 	let web_api = web_api?;
 
-	let mut config = crate::config::Config::load(local_api)?;
+	let mut config = crate::config::Config::load(local_api, config_file_path)?;
 
 	for requirement in requirements {
 		let captures = match REQUIREMENT_REGEX.captures(requirement) {

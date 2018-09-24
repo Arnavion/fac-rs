@@ -52,6 +52,7 @@ fn main() -> Result<()> {
 		let app = clap_app!(@app (app_from_crate!())
 			(@setting SubcommandRequiredElseHelp)
 			(@setting VersionlessSubcommands)
+			(@arg config: -c --config +takes_value "Path to fac config file. Defaults to .../fac/config.json ")
 			(@arg proxy: --proxy +takes_value "HTTP proxy URL")
 			(@arg yes: -y --yes "Answer yes to all prompts")
 			(@arg no: -n --no conflicts_with("yes") "Answer no to all prompts"));
@@ -67,6 +68,8 @@ fn main() -> Result<()> {
 		let app = app.subcommand(update::build_subcommand(clap::SubCommand::with_name("update")));
 
 		let matches = app.get_matches();
+
+		let config_file_path = matches.value_of_os("config").map(Into::into);
 
 		let client = if let Some(proxy_url) = matches.value_of("proxy") {
 			let builder = crate::reqwest::r#async::ClientBuilder::new();
@@ -97,6 +100,7 @@ fn main() -> Result<()> {
 			"cache" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(cache::run(
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+				config_file_path,
 			)), futures::compat::TokioDefaultSpawner))?,
 			"disable" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(enable_disable::run_disable(
 				matches,
@@ -112,6 +116,7 @@ fn main() -> Result<()> {
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+				config_file_path,
 				prompt_override,
 			)), futures::compat::TokioDefaultSpawner))?,
 			"list" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(list::run(
@@ -121,6 +126,7 @@ fn main() -> Result<()> {
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+				config_file_path,
 				prompt_override,
 			)), futures::compat::TokioDefaultSpawner))?,
 			"search" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(search::run(
@@ -134,6 +140,7 @@ fn main() -> Result<()> {
 			"update" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(update::run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+				config_file_path,
 				prompt_override,
 			)), futures::compat::TokioDefaultSpawner))?,
 			_ => unreachable!(),
