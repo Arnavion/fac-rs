@@ -6,6 +6,7 @@
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct DateTime(pub String);
@@ -45,6 +46,7 @@ pub struct Mod {
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ModSummary(pub String);
@@ -83,6 +85,7 @@ pub struct ModReleaseInfo {
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ModHash(pub String);
@@ -91,6 +94,7 @@ pub struct ModHash(pub String);
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct Filename(pub String);

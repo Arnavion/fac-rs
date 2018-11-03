@@ -80,6 +80,32 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 	result.into()
 }
 
+/// Derives `std::str::FromStr` on the newtype.
+#[proc_macro_derive(newtype_fromstr)]
+pub fn derive_newtype_fromstr(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	let ast: syn::DeriveInput = syn::parse(input).unwrap();
+
+	let result = match as_newtype(&ast).and_then(identify_type) {
+		Some(Type::String) => {
+			let struct_name = &ast.ident;
+
+			quote! {
+				impl std::str::FromStr for #struct_name {
+					type Err = std::string::ParseError;
+
+					fn from_str(s: &str) -> Result<Self, Self::Err> {
+						Ok(#struct_name(s.to_string()))
+					}
+				}
+			}
+		},
+
+		_ => panic!("#[derive(newtype_display)] can only be used with tuple structs of one String field"),
+	};
+
+	result.into()
+}
+
 fn as_newtype(ast: &syn::DeriveInput) -> Option<&syn::Type> {
 	match ast.data {
 		syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Unnamed(syn::FieldsUnnamed { ref unnamed, .. }), .. }) if unnamed.len() == 1 => Some(&unnamed[0].ty),

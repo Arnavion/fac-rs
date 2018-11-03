@@ -1,42 +1,44 @@
-pub fn build_enable_subcommand<'a>(subcommand: clap::App<'a, 'a>) -> clap::App<'a, 'a> {
-	clap_app!(@app (subcommand)
-		(about: "Enable mods.")
-		(@arg mods: ... +required index(1) "mods to enable"))
+#[derive(Debug, structopt_derive::StructOpt)]
+pub struct EnableSubCommand {
+	#[structopt(help = "mods to enable", required = true)]
+	names: Vec<factorio_mods_common::ModName>,
 }
 
-pub async fn run_enable<'a>(
-	matches: &'a clap::ArgMatches<'a>,
-	local_api: crate::Result<&'a factorio_mods_local::API>,
-	prompt_override: Option<bool>,
-) -> crate::Result<()> {
-	await!(enable_disable(matches, local_api, prompt_override, true))?;
-	Ok(())
+impl EnableSubCommand {
+	pub async fn run<'a>(
+		self,
+		local_api: crate::Result<&'a factorio_mods_local::API>,
+		prompt_override: Option<bool>,
+	) -> crate::Result<()> {
+		await!(enable_disable(self.names, local_api, prompt_override, true))?;
+		Ok(())
+	}
 }
 
-pub fn build_disable_subcommand<'a>(subcommand: clap::App<'a, 'a>) -> clap::App<'a, 'a> {
-	clap_app!(@app (subcommand)
-		(about: "Disable mods.")
-		(@arg mods: ... +required index(1) "mods to disable"))
+#[derive(Debug, structopt_derive::StructOpt)]
+pub struct DisableSubCommand {
+	#[structopt(help = "mods to disable", required = true)]
+	names: Vec<factorio_mods_common::ModName>,
 }
 
-pub async fn run_disable<'a>(
-	matches: &'a clap::ArgMatches<'a>,
-	local_api: crate::Result<&'a factorio_mods_local::API>,
-	prompt_override: Option<bool>,
-) -> crate::Result<()> {
-	await!(enable_disable(matches, local_api, prompt_override, false))?;
-	Ok(())
+impl DisableSubCommand {
+	pub async fn run<'a>(
+		self,
+		local_api: crate::Result<&'a factorio_mods_local::API>,
+		prompt_override: Option<bool>,
+	) -> crate::Result<()> {
+		await!(enable_disable(self.names, local_api, prompt_override, false))?;
+		Ok(())
+	}
 }
 
 pub async fn enable_disable<'a>(
-	matches: &'a clap::ArgMatches<'a>,
+	mods: Vec<factorio_mods_common::ModName>,
 	local_api: crate::Result<&'a factorio_mods_local::API>,
 	prompt_override: Option<bool>,
 	enable: bool,
 ) -> crate::Result<()> {
 	use crate::ResultExt;
-
-	let mods = matches.values_of("mods").unwrap();
 
 	let local_api = local_api?;
 

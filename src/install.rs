@@ -2,44 +2,61 @@ lazy_static! {
 	static ref REQUIREMENT_REGEX: regex::Regex = regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap();
 }
 
-pub fn build_subcommand<'a>(subcommand: clap::App<'a, 'a>) -> clap::App<'a, 'a> {
-	clap_app!(@app (subcommand)
-		(about: "Install (or update) mods.")
-		(@arg requirements: ... +required index(1) "requirements to install"))
+#[derive(Debug, structopt_derive::StructOpt)]
+pub struct SubCommand {
+	#[structopt(help = "requirements to install", required = true)]
+	requirements: Vec<Requirement>,
 }
 
-pub async fn run<'a>(
-	matches: &'a clap::ArgMatches<'a>,
-	local_api: crate::Result<&'a factorio_mods_local::API>,
-	web_api: crate::Result<&'a factorio_mods_web::API>,
-	config_file_path: Option<std::path::PathBuf>,
-	prompt_override: Option<bool>,
-) -> crate::Result<()> {
-	use crate::ResultExt;
+#[derive(Debug)]
+struct Requirement {
+	name: factorio_mods_common::ModName,
+	version: factorio_mods_common::ModVersionReq,
+}
 
-	let requirements = matches.values_of("requirements").unwrap();
+impl std::str::FromStr for Requirement {
+	type Err = crate::Error;
 
-	let local_api = local_api?;
-	let web_api = web_api?;
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		use crate::ResultExt;
 
-	let mut config = crate::config::Config::load(local_api, config_file_path)?;
-
-	for requirement in requirements {
-		let captures = match REQUIREMENT_REGEX.captures(requirement) {
+		let captures = match REQUIREMENT_REGEX.captures(s) {
 			Some(captures) => captures,
-			None => error_chain::bail!(r#"Could not parse requirement "{}""#, requirement),
+			None => error_chain::bail!(r#"Could not parse requirement "{}""#, s),
 		};
 		let name = factorio_mods_common::ModName(captures[1].to_string());
-		let requirement_string = captures.get(2).map_or("*", |m| m.as_str());
-		let requirement = match requirement_string.parse() {
-			Ok(requirement) => requirement,
-			Err(err) => return Err(err).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, requirement_string)),
+		let version_string = captures.get(2).map_or("*", |m| m.as_str());
+		let version = match version_string.parse() {
+			Ok(version) => factorio_mods_common::ModVersionReq(version),
+			Err(err) => return Err(err).chain_err(|| format!(r#"Could not parse "{}" as a valid version requirement"#, version_string)),
 		};
 
-		config.mods.insert(name, factorio_mods_common::ModVersionReq(requirement));
+		Ok(Requirement {
+			name,
+			version,
+		})
 	}
+}
 
-	await!(crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
+impl SubCommand {
+	pub async fn run<'a>(
+		self,
+		local_api: crate::Result<&'a factorio_mods_local::API>,
+		web_api: crate::Result<&'a factorio_mods_web::API>,
+		config_file_path: Option<std::path::PathBuf>,
+		prompt_override: Option<bool>,
+	) -> crate::Result<()> {
+		let local_api = local_api?;
+		let web_api = web_api?;
 
-	Ok(())
+		let mut config = crate::config::Config::load(local_api, config_file_path)?;
+
+		for requirement in self.requirements {
+			config.mods.insert(requirement.name, requirement.version);
+		}
+
+		await!(crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
+
+		Ok(())
+	}
 }

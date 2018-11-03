@@ -2,6 +2,7 @@
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct Url(pub String);
@@ -10,6 +11,7 @@ pub struct Url(pub String);
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ModName(pub String);
@@ -24,6 +26,7 @@ impl serde::Serialize for ModName {
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct AuthorName(pub String);
@@ -32,6 +35,7 @@ pub struct AuthorName(pub String);
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ModTitle(pub String);
@@ -40,6 +44,7 @@ pub struct ModTitle(pub String);
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ModDescription(pub String);
@@ -71,6 +76,7 @@ pub struct UserCredentials {
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ServiceUsername(pub String);
@@ -79,6 +85,7 @@ pub struct ServiceUsername(pub String);
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
+	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
 )]
 pub struct ServiceToken(pub String);
