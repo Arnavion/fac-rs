@@ -1,9 +1,5 @@
 //! Common types and functionality used by the other factorio-mods crates.
 
-#![feature(
-	tool_lints,
-)]
-
 #![deny(missing_docs)]
 
 #![deny(clippy::all, clippy::pedantic)]

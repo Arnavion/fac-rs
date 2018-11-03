@@ -1,7 +1,6 @@
 //! Solves the given set of packages and requirements to produce a solution of packages to be installed.
 
 #![feature(
-	tool_lints,
 	unrestricted_attribute_tokens,
 )]
 

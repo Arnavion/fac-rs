@@ -3,7 +3,6 @@
 #![feature(
 	generators,
 	generator_trait,
-	tool_lints,
 	unrestricted_attribute_tokens,
 )]
 

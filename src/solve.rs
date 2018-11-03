@@ -242,14 +242,13 @@ impl<'a> SolutionFuture<'a> {
 	}
 }
 
-// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
-impl ::std::future::Future for SolutionFuture<'_> {
+impl std::future::Future for SolutionFuture<'_> {
 	type Output = crate::Result<(
 		Option<std::collections::HashMap<factorio_mods_common::ModName, Installable>>,
 		std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	)>;
 
-	fn poll(mut self: std::pin::PinMut<Self>, cx: &mut std::task::Context) -> std::task::Poll<Self::Output> {
+	fn poll(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Self::Output> {
 		let this = &mut *self;
 
 		let mut i = 0;
@@ -259,7 +258,7 @@ impl ::std::future::Future for SolutionFuture<'_> {
 
 			match &mut this.pending[i] {
 				CacheFuture::Get(get) => match get {
-					Some((mod_name, f)) => match std::pin::PinMut::new(f).poll(cx) {
+					Some((mod_name, f)) => match std::pin::Pin::new(f).poll(lw) {
 						std::task::Poll::Pending => (),
 
 						std::task::Poll::Ready(Ok(mod_)) => {
@@ -310,7 +309,7 @@ impl ::std::future::Future for SolutionFuture<'_> {
 								new.push(CacheFuture::Download(Some(DownloadFuture {
 									mod_name: mod_name.clone(),
 									release_version: release.version,
-									chunk_stream: futures::stream::LocalStreamObj::new(std::pin::PinBox::new(chunk_stream)),
+									chunk_stream: futures::stream::LocalStreamObj::new(Box::pinned(chunk_stream)),
 									download_file,
 									download_filename,
 									download_displayable_filename,
@@ -335,7 +334,7 @@ impl ::std::future::Future for SolutionFuture<'_> {
 
 				CacheFuture::Download(download) => match download {
 					Some(f) => loop {
-						match <_ as futures::Stream>::poll_next(std::pin::PinMut::new(&mut f.chunk_stream), cx) {
+						match <_ as futures::Stream>::poll_next(std::pin::Pin::new(&mut f.chunk_stream), lw) {
 							std::task::Poll::Pending => break,
 
 							std::task::Poll::Ready(Some(Ok(chunk))) =>
@@ -418,7 +417,7 @@ fn get(
 	if already_fetching.insert(mod_name.clone()) {
 		println!("    Getting {} ...", mod_name);
 
-		let f = std::future::LocalFutureObj::new(std::pin::PinBox::new(web_api.get(&mod_name)));
+		let f = futures::future::LocalFutureObj::new(Box::pinned(web_api.get(&mod_name)));
 		new.push(CacheFuture::Get(Some((mod_name, f))));
 	}
 }
@@ -445,7 +444,7 @@ fn parse_cached_mod(
 }
 
 enum CacheFuture {
-	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, std::future::LocalFutureObj<'static, factorio_mods_web::Result<factorio_mods_web::Mod>>)>),
+	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, futures::future::LocalFutureObj<'static, factorio_mods_web::Result<factorio_mods_web::Mod>>)>),
 	Download(Option<DownloadFuture>),
 }
 

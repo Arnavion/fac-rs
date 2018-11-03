@@ -15,7 +15,7 @@ pub async fn run<'a>(
 	let web_api = web_api?;
 
 	let mut mods = web_api.search(query);
-	let mut mods = std::pin::PinMut::new(&mut mods);
+	let mut mods = std::pin::Pin::new(&mut mods);
 
 	while let Some(mod_) = await!(futures::StreamExt::next(&mut *mods)) {
 		let mod_ = mod_.chain_err(|| "Could not retrieve mods")?;

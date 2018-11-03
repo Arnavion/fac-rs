@@ -62,7 +62,7 @@ impl Client {
 	}
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
-	pub fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> std::future::LocalFutureObj<'static, crate::Result<(T, reqwest::Url)>>
+	pub fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> futures_core::future::LocalFutureObj<'static, crate::Result<(T, reqwest::Url)>>
 		where B: serde::Serialize, T: serde::de::DeserializeOwned + 'static
 	{
 		// TODO: Replace return type with PostObjectFuture
@@ -91,7 +91,7 @@ impl Client {
 
 		let body = serde_urlencoded::to_string(body);
 
-		std::future::LocalFutureObj::new(std::pin::PinBox::new(inner(url, builder, body)))
+		futures_core::future::LocalFutureObj::new(Box::pinned(inner(url, builder, body)))
 	}
 }
 

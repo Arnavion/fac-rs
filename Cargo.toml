@@ -13,7 +13,7 @@ error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", features = ["package"], path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
-futures-preview = { version = "0.3.0-alpha.6", features = ["tokio-compat"] }
+futures-preview = "0.3.0-alpha.9"
 itertools = "0.7.x"
 lazy_static = "1.1.x"
 multimap = "0.4.x"
@@ -31,3 +31,7 @@ textwrap = "0.10.x"
 tokio = "0.1.x"
 
 [workspace]
+
+[replace]
+# TODO: Remove when 0.3.0-alpha.10 is released
+"futures-core-preview:0.3.0-alpha.9" = { git = "https://github.com/rust-lang-nursery/futures-rs", rev = "cdddc2161c92f060dbb7ff718fc972d9ae75d990" }

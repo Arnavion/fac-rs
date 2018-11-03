@@ -10,8 +10,8 @@ derive-struct = { version = "0.1.0", path = "../derive-struct" }
 either = "1.4.x"
 error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
-futures-core-preview = { version = "0.3.0-alpha.6", features = ["either"] }
-futures-util-preview = { version = "0.3.0-alpha.6", features = ["compat"] }
+futures-core-preview = { version = "0.3.0-alpha.9", features = ["either"] }
+futures-util-preview = { version = "0.3.0-alpha.9", features = ["compat"] }
 itertools = "0.7.x"
 lazy_static = "1.1.x"
 reqwest = "0.9.x"
@@ -20,5 +20,5 @@ serde_derive = "1.0.x"
 serde_urlencoded = "0.5.x"
 
 [dev-dependencies]
-futures-util-preview = { version = "0.3.0-alpha.6", features = ["compat", "tokio-compat"] }
+futures-util-preview = { version = "0.3.0-alpha.9", features = ["compat"] }
 tokio = "0.1.x"

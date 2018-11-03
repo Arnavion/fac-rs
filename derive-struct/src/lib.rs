@@ -1,9 +1,5 @@
 //! A helper crate for easily deriving structs.
 
-#![feature(
-	tool_lints,
-)]
-
 #![recursion_limit = "200"]
 
 #![deny(clippy::all, clippy::pedantic)]
@@ -69,8 +65,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 				Type::SemverVersionReq |
 				Type::String |
 				Type::U64 => quote! {
-					// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
-					impl ::std::fmt::Display for #struct_name {
+					impl std::fmt::Display for #struct_name {
 						fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 							self.0.fmt(f)
 						}

@@ -40,8 +40,7 @@ pub fn deserialize_string_or_seq_string<'de, T, D>(deserializer: D) -> Result<Ve
 // Tries to deserialize the given string as a newtype
 struct StringNewTypeStructDeserializer<'a, E>(&'a str, std::marker::PhantomData<E>);
 
-// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
-impl<'de, 'a, E> ::serde::Deserializer<'de> for StringNewTypeStructDeserializer<'a, E> where E: serde::de::Error {
+impl<'de, 'a, E> serde::Deserializer<'de> for StringNewTypeStructDeserializer<'a, E> where E: serde::de::Error {
 	type Error = E;
 
 	fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: serde::de::Visitor<'de> {

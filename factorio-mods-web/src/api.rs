@@ -57,7 +57,7 @@ impl API {
 
 		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
-		std::pin::PinBox::new(async {
+		Box::pinned(async {
 			let ((token,), _) = await!(future)?;
 			Ok(factorio_mods_common::UserCredentials { username, token })
 		})
@@ -96,24 +96,23 @@ impl API {
 #[derive(Debug)]
 enum DownloadStream<F> {
 	Fetch(F),
-	Response(futures_util::compat::Compat<reqwest::r#async::Decoder, ()>, Option<reqwest::Url>),
+	Response(futures_util::compat::Compat01As03<reqwest::r#async::Decoder>, Option<reqwest::Url>),
 }
 
-// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
-impl<F> ::futures_core::Stream for DownloadStream<F> where F: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> {
+impl<F> futures_core::Stream for DownloadStream<F> where F: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> {
 	type Item = crate::Result<reqwest::r#async::Chunk>;
 
-	fn poll_next(mut self: std::pin::PinMut<Self>, cx: &mut std::task::Context) -> std::task::Poll<Option<Self::Item>> {
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
 		unsafe {
 			loop {
-				let (response, download_url) = match std::pin::PinMut::get_mut_unchecked(self.reborrow()) {
-					DownloadStream::Fetch(f) => match std::pin::PinMut::new_unchecked(f).poll(cx) {
+				let (response, download_url) = match std::pin::Pin::get_mut_unchecked(self.as_mut()) {
+					DownloadStream::Fetch(f) => match std::pin::Pin::new_unchecked(f).poll(lw) {
 						std::task::Poll::Pending => return std::task::Poll::Pending,
 						std::task::Poll::Ready(Ok(value)) => value,
 						std::task::Poll::Ready(Err(err)) => return std::task::Poll::Ready(Some(Err(err))),
 					},
 
-					DownloadStream::Response(body, download_url) => return match std::pin::PinMut::new_unchecked(body).poll_next(cx) {
+					DownloadStream::Response(body, download_url) => return match std::pin::Pin::new_unchecked(body).poll_next(lw) {
 						std::task::Poll::Pending => std::task::Poll::Pending,
 						std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
 						std::task::Poll::Ready(Some(Err(err))) => std::task::Poll::Ready(Some(Err(crate::ErrorKind::HTTP(download_url.take().unwrap(), err).into()))),
@@ -122,7 +121,7 @@ impl<F> ::futures_core::Stream for DownloadStream<F> where F: std::future::Futur
 				};
 
 				let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
-				std::pin::PinMut::set(self.reborrow(), DownloadStream::Response(body, Some(download_url)));
+				std::pin::Pin::set(self.as_mut(), DownloadStream::Response(body, Some(download_url)));
 			}
 		}
 	}
@@ -136,7 +135,7 @@ struct SearchStream<'a> {
 }
 
 enum SearchStreamState {
-	WaitingForPage(std::future::LocalFutureObj<'static, crate::Result<(PagedResponse<crate::SearchResponseMod>, reqwest::Url)>>),
+	WaitingForPage(futures_core::future::LocalFutureObj<'static, crate::Result<(PagedResponse<crate::SearchResponseMod>, reqwest::Url)>>),
 	HavePage(std::vec::IntoIter<crate::SearchResponseMod>, Option<reqwest::Url>),
 	Ended,
 }
@@ -159,14 +158,13 @@ impl std::fmt::Debug for SearchStreamState {
 	}
 }
 
-// TODO: Absolute path because of https://github.com/rust-lang/rust/issues/53796
-impl ::futures_core::Stream for SearchStream<'_> {
+impl futures_core::Stream for SearchStream<'_> {
 	type Item = crate::Result<crate::SearchResponseMod>;
 
-	fn poll_next(mut self: std::pin::PinMut<Self>, cx: &mut std::task::Context) -> std::task::Poll<Option<Self::Item>> {
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
 		loop {
 			let (next_state, result) = match &mut self.state {
-				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(std::pin::PinMut::new(page), cx) {
+				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(std::pin::Pin::new(page), lw) {
 					std::task::Poll::Pending =>
 						return std::task::Poll::Pending,
 					std::task::Poll::Ready(Ok((page, _))) => (
@@ -202,7 +200,7 @@ impl ::futures_core::Stream for SearchStream<'_> {
 
 					None => match next_page_url.take() {
 						Some(next_page_url) => (
-							Some(SearchStreamState::WaitingForPage(std::future::LocalFutureObj::new(std::pin::PinBox::new(self.client.get_object(next_page_url))))),
+							Some(SearchStreamState::WaitingForPage(futures_core::future::LocalFutureObj::new(Box::pinned(self.client.get_object(next_page_url))))),
 							None,
 						),
 						None => (
@@ -272,20 +270,20 @@ lazy_static! {
 mod tests {
 	use super::*;
 
-	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> std::future::LocalFutureObj<'r, ()> {
+	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> futures_core::future::LocalFutureObj<'r, ()> {
 		use futures_util::FutureExt;
 
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 		let api = API::new(None).unwrap();
 		let result = test(&api).map(|()| Ok::<_, crate::Error>(()));
-		runtime.block_on(futures_util::TryFutureExt::compat(std::pin::PinBox::new(result), futures_util::compat::TokioDefaultSpawner)).unwrap();
+		runtime.block_on(futures_util::TryFutureExt::compat(Box::pinned(result))).unwrap();
 	}
 
 	#[test]
 	fn search_list_all_mods() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
+		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
 			api.search("")
 			.fold(0usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
 			.map(|count| {
@@ -298,7 +296,7 @@ mod tests {
 	fn search_by_title() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
+		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
 			api.search("bob's functions library mod")
 			.into_future()
 			.map(|(result, _)| {
@@ -312,7 +310,7 @@ mod tests {
 	fn search_non_existing() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
+		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
 			api.search("arnavion's awesome mod")
 			.into_future()
 			.map(|(result, _)| assert!(result.is_none())))));
@@ -324,7 +322,7 @@ mod tests {
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_string());
 
-		run_test(|api| std::future::LocalFutureObj::new(std::pin::PinBox::new(
+		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
 			api.get(&mod_name)
 			.map(|mod_| {
 				let mod_ = mod_.unwrap();

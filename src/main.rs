@@ -7,7 +7,6 @@
 	futures_api,
 	nll,
 	pin,
-	tool_lints,
 )]
 
 #![deny(clippy::all, clippy::pedantic)]
@@ -97,52 +96,52 @@ fn main() -> Result<()> {
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().chain_err(|| "Could not start tokio runtime")?;
 
 		match subcommand_name {
-			"cache" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(cache::run(
+			"cache" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(cache::run(
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				config_file_path,
-			)), futures::compat::TokioDefaultSpawner))?,
-			"disable" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(enable_disable::run_disable(
+			))))?,
+			"disable" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(enable_disable::run_disable(
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
-			)), futures::compat::TokioDefaultSpawner))?,
-			"enable" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(enable_disable::run_enable(
+			))))?,
+			"enable" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(enable_disable::run_enable(
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
-			)), futures::compat::TokioDefaultSpawner))?,
-			"install" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(install::run(
-				matches,
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				config_file_path,
-				prompt_override,
-			)), futures::compat::TokioDefaultSpawner))?,
-			"list" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(list::run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			)), futures::compat::TokioDefaultSpawner))?,
-			"remove" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(remove::run(
+			))))?,
+			"install" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(install::run(
 				matches,
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 				config_file_path,
 				prompt_override,
-			)), futures::compat::TokioDefaultSpawner))?,
-			"search" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(search::run(
+			))))?,
+			"list" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(list::run(
+				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			))))?,
+			"remove" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(remove::run(
 				matches,
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-			)), futures::compat::TokioDefaultSpawner))?,
-			"show" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(show::run(
-				matches,
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-			)), futures::compat::TokioDefaultSpawner))?,
-			"update" => runtime.block_on(futures::TryFutureExt::compat(std::pin::PinBox::new(update::run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 				config_file_path,
 				prompt_override,
-			)), futures::compat::TokioDefaultSpawner))?,
+			))))?,
+			"search" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(search::run(
+				matches,
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			))))?,
+			"show" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(show::run(
+				matches,
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			))))?,
+			"update" => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(update::run(
+				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+				config_file_path,
+				prompt_override,
+			))))?,
 			_ => unreachable!(),
 		}
 

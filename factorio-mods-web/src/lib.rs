@@ -6,7 +6,6 @@
 	await_macro,
 	futures_api,
 	pin,
-	tool_lints,
 	unrestricted_attribute_tokens,
 )]
 
