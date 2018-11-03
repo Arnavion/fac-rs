@@ -1,62 +1,107 @@
+/// Errors returned by this crate.
+#[derive(Debug)]
+pub struct Error {
+	kind: ErrorKind,
+	backtrace: failure::Backtrace,
+}
+
+impl Error {
+	/// Gets the kind of error
+	pub fn kind(&self) -> &ErrorKind {
+		&self.kind
+	}
+}
+
+impl failure::Fail for Error {
+	fn cause(&self) -> Option<&dyn failure::Fail> {
+		self.kind.cause()
+	}
+
+	fn backtrace(&self) -> Option<&failure::Backtrace> {
+		Some(&self.backtrace)
+	}
+}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		self.kind.fmt(f)
+	}
+}
+
+impl From<ErrorKind> for Error {
+	fn from(kind: ErrorKind) -> Self {
+		Error {
+			kind,
+			backtrace: Default::default(),
+		}
+	}
+}
+
+impl From<std::io::Error> for Error {
+	fn from(err: std::io::Error) -> Self {
+		ErrorKind::IO(err).into()
+	}
+}
+
 /// Error kinds for errors returned by this crate.
-#[derive(Debug, derive_error_chain::ErrorChain)]
+#[derive(Debug, failure_derive::Fail)]
 pub enum ErrorKind {
 	/// An IO error
-	#[error_chain(foreign)]
-	IO(std::io::Error),
+	#[fail(display = "IO error")]
+	IO(#[cause] std::io::Error),
 
 	/// An IO error
-	#[error_chain(custom)]
-	#[error_chain(display = |path: &std::path::Path, _| write!(f, "IO error on file {}", path.display()))]
-	#[error_chain(cause = |_, err| err)]
-	FileIO(std::path::PathBuf, std::io::Error),
+	#[fail(display = "IO error on file {}", _0)]
+	FileIO(DisplayablePathBuf, #[cause] std::io::Error),
 
 	/// Reading a JSON file failed
-	#[error_chain(custom)]
-	#[error_chain(display = |path: &std::path::Path, _| write!(f, "Could not parse the JSON file {}", path.display()))]
-	#[error_chain(cause = |_, err| err)]
-	ReadJSONFile(std::path::PathBuf, serde_json::Error),
+	#[fail(display = "Could not parse the JSON file {}", _0)]
+	ReadJSONFile(DisplayablePathBuf, #[cause] serde_json::Error),
 
 	/// Writing a JSON file failed
-	#[error_chain(custom)]
-	#[error_chain(display = |path: &std::path::Path, _| write!(f, "Could not save {}", path.display()))]
-	#[error_chain(cause = |_, err| err)]
-	WriteJSONFile(std::path::PathBuf, serde_json::Error),
+	#[fail(display = "Could not save {}", _0)]
+	WriteJSONFile(DisplayablePathBuf, #[cause] serde_json::Error),
 
 	/// An error encountered while working with a .zip file
-	#[error_chain(custom)]
-	#[error_chain(display = |path: &std::path::Path, _| write!(f, "Could not parse the ZIP file {}", path.display()))]
-	#[error_chain(cause = |_, err| err)]
-	Zip(std::path::PathBuf, zip::result::ZipError),
+	#[fail(display = "Could not parse the ZIP file {}", _0)]
+	Zip(DisplayablePathBuf, #[cause] zip::result::ZipError),
 
 	/// A zipped mod has no files and is thus malformed
-	#[error_chain(custom)]
-	#[error_chain(display = |path: &std::path::Path| write!(f, "The zipped mod file {} is empty", path.display()))]
-	EmptyZippedMod(std::path::PathBuf),
+	#[fail(display = "The zipped mod file {} is empty", _0)]
+	EmptyZippedMod(DisplayablePathBuf),
 
 	/// The file or directory is not recognized as a valid mod format
-	#[error_chain(custom)]
-	#[error_chain(display = |path: &std::path::Path| write!(f, "The mod at {} could not be recognized as a valid mod", path.display()))]
-	UnknownModFormat(std::path::PathBuf),
+	#[fail(display = "The mod at {} could not be recognized as a valid mod", _0)]
+	UnknownModFormat(DisplayablePathBuf),
 
 	/// Generating a glob from a pattern failed
-	#[error_chain(custom)]
-	#[error_chain(display = const("The pattern {0} is invalid"))]
-	#[error_chain(cause = |_, err| err)]
-	Pattern(String, globset::Error),
+	#[fail(display = "The pattern {} is invalid", _0)]
+	Pattern(String, #[cause] globset::Error),
 
 	/// The local Factorio installation could not be found.
-	#[error_chain(custom)]
-	#[error_chain(display = const("The local Factorio installation could not be found"))]
+	#[fail(display = "The local Factorio installation could not be found")]
 	DataPath,
 
 	/// The local Factorio installation could not be found.
-	#[error_chain(custom)]
-	#[error_chain(display = const("The local Factorio installation could not be found"))]
+	#[fail(display = "The local Factorio installation could not be found")]
 	WritePath,
 
 	/// The credentials stored in `player-data.json` do not have both username and service token.
-	#[error_chain(custom)]
-	#[error_chain(display = const("Valid API credentials were not found in player-data.json"))]
+	#[fail(display = "Valid API credentials were not found in player-data.json")]
 	IncompleteUserCredentials(Option<factorio_mods_common::ServiceUsername>),
+}
+
+#[derive(Debug)]
+pub struct DisplayablePathBuf(pub std::path::PathBuf);
+
+impl std::fmt::Display for DisplayablePathBuf {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		write!(f, "{}", self.0.display())
+	}
+}
+
+impl<P> From<P> for DisplayablePathBuf where P: Into<std::path::PathBuf> {
+	fn from(path: P) -> Self {
+		DisplayablePathBuf(path.into())
+	}
 }

@@ -7,6 +7,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::cyclomatic_complexity,
+	clippy::default_trait_access,
 	clippy::indexing_slicing,
 	clippy::similar_names,
 	clippy::type_complexity,
@@ -38,13 +39,65 @@ pub enum Relation {
 	Conflicts,
 }
 
-#[derive(Debug, derive_error_chain::ErrorChain)]
-pub enum ErrorKind<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + 'static,
+#[derive(Debug)]
+pub struct Error<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static
 {
-	#[error_chain(custom)]
-	#[error_chain(display = const("{package_name} {package_version} both requires and conflicts with {dep_name} {dep_version}"))]
+	kind: ErrorKind<Name, Version>,
+	backtrace: failure::Backtrace,
+}
+
+impl<Name, Version> Error<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	/// Gets the kind of error
+	pub fn kind(&self) -> &ErrorKind<Name, Version> {
+		&self.kind
+	}
+}
+
+impl<Name, Version> failure::Fail for Error<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	fn cause(&self) -> Option<&dyn failure::Fail> {
+		self.kind.cause()
+	}
+
+	fn backtrace(&self) -> Option<&failure::Backtrace> {
+		Some(&self.backtrace)
+	}
+}
+
+impl<Name, Version> std::fmt::Display for Error<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		self.kind.fmt(f)
+	}
+}
+
+impl<Name, Version> From<ErrorKind<Name, Version>> for Error<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	fn from(kind: ErrorKind<Name, Version>) -> Self {
+		Error {
+			kind,
+			backtrace: Default::default(),
+		}
+	}
+}
+
+#[derive(Debug, failure_derive::Fail)]
+pub enum ErrorKind<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	#[fail(display = "{} {} both requires and conflicts with {} {}", package_name, package_version, dep_name, dep_version)]
 	BothRequiresAndConflicts {
 		package_name: Name,
 		package_version: Version,
@@ -52,15 +105,17 @@ pub enum ErrorKind<Name, Version> where
 		dep_version: Version,
 	},
 
-	#[error_chain(custom)]
-	#[error_chain(display = const("No packages found for {0} that meet the specified requirements"))]
+	#[fail(display = "No packages found for {} that meet the specified requirements", _0)]
 	NoPackagesMeetRequirements(Name),
 }
+
+/// A type alias for [`std::result::Result`]
+pub type Result<Name, Version, T> = std::result::Result<T, Error<Name, Version>>;
 
 pub fn compute_solution<I>(
 	packages: I,
 	reqs: &std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version>,
-) -> crate::Result<
+) -> Result<
 	<<I as IntoIterator>::Item as Package>::Name,
 	<<I as IntoIterator>::Item as Package>::Version,
 	Option<std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <I as IntoIterator>::Item>>,
@@ -108,12 +163,12 @@ pub fn compute_solution<I>(
 				}
 
 				match (requires, conflicts) {
-					(true, true) => error_chain::bail!(ErrorKind::BothRequiresAndConflicts {
+					(true, true) => return Err((ErrorKind::BothRequiresAndConflicts {
 						package_name: package1.name().clone(),
 						package_version: package1.version().clone(),
 						dep_name: package2.name().clone(),
 						dep_version: package2.version().clone(),
-					}),
+					}).into()),
 					(true, false) => edges_to_add.push((node_index1, node_index2, Relation::Requires)),
 					(false, true) => edges_to_add.push((node_index1, node_index2, Relation::Conflicts)),
 					(false, false) => (),
@@ -140,7 +195,7 @@ pub fn compute_solution<I>(
 			for name in reqs.keys() {
 				match name_to_node_indices.get_vec(name) {
 					Some(node_indices) if !node_indices.is_empty() => (),
-					_ => error_chain::bail!(ErrorKind::NoPackagesMeetRequirements(name.clone())),
+					_ => return Err(ErrorKind::NoPackagesMeetRequirements(name.clone()).into()),
 				}
 			}
 

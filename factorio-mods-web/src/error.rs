@@ -1,47 +1,74 @@
+/// Errors returned by this crate.
+#[derive(Debug)]
+pub struct Error {
+	kind: ErrorKind,
+	backtrace: failure::Backtrace,
+}
+
+impl Error {
+	/// Gets the kind of error
+	pub fn kind(&self) -> &ErrorKind {
+		&self.kind
+	}
+}
+
+impl failure::Fail for Error {
+	fn cause(&self) -> Option<&dyn failure::Fail> {
+		self.kind.cause()
+	}
+
+	fn backtrace(&self) -> Option<&failure::Backtrace> {
+		Some(&self.backtrace)
+	}
+}
+
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		self.kind.fmt(f)
+	}
+}
+
+impl From<ErrorKind> for Error {
+	fn from(kind: ErrorKind) -> Self {
+		Error {
+			kind,
+			backtrace: Default::default(),
+		}
+	}
+}
+
 /// Error kinds for errors returned by this crate.
-#[derive(Debug, derive_error_chain::ErrorChain)]
+#[derive(Debug, failure_derive::Fail)]
 pub enum ErrorKind {
 	/// Could not create HTTP client
-	#[error_chain(custom)]
-	#[error_chain(display = const("Could not create HTTP client"))]
-	#[error_chain(cause = |err| err)]
-	CreateClient(reqwest::Error),
+	#[fail(display = "Could not create HTTP client")]
+	CreateClient(#[cause] reqwest::Error),
 
 	/// Could not perform HTTP request
-	#[error_chain(custom)]
-	#[error_chain(display = const("Could not fetch URL {0}"))]
-	#[error_chain(cause = |_, err| err)]
-	HTTP(reqwest::Url, reqwest::Error),
+	#[fail(display = "Could not fetch URL {}", _0)]
+	HTTP(reqwest::Url, #[cause] reqwest::Error),
 
 	/// Parsing a URL failed
-	#[error_chain(custom)]
-	#[error_chain(display = const("Could not parse URL {0}"))]
-	#[error_chain(cause = |_, err| err)]
-	Parse(String, reqwest::UrlError),
+	#[fail(display = "Could not parse URL {}", _0)]
+	Parse(String, #[cause] reqwest::UrlError),
 
 	/// An HTTP request did not have a successful status code
-	#[error_chain(custom)]
-	#[error_chain(display = const("Request to URL {0} returned {1}"))]
+	#[fail(display = "Request to URL {} returned {}", _0, _1)]
 	StatusCode(reqwest::Url, reqwest::StatusCode),
 
 	/// A request to the web API resulted in a login failure response
-	#[error_chain(custom)]
-	#[error_chain(display = const("Login failed: {0}"))]
+	#[fail(display = "Login failed: {}", _0)]
 	LoginFailure(String),
 
 	/// Got a malformed HTTP response
-	#[error_chain(custom)]
-	#[error_chain(display = const("Request to URL {0} got malformed response: {1}"))]
+	#[fail(display = "Request to URL {} got malformed response: {}", _0, _1)]
 	MalformedResponse(reqwest::Url, String),
 
 	/// Tried to request a host that isn't whitelisted
-	#[error_chain(custom)]
-	#[error_chain(display = const("Host {0} is not whitelisted"))]
+	#[fail(display = "Host {} is not whitelisted", _0)]
 	NotWhitelistedHost(reqwest::Url),
 
 	/// Could not serialize HTTP POST request body
-	#[error_chain(custom)]
-	#[error_chain(display = const("Could not serialize request body for URL {0}"))]
-	#[error_chain(cause = |_, err| err)]
-	Serialize(reqwest::Url, serde_urlencoded::ser::Error),
+	#[fail(display = "Could not serialize request body for URL {}", _0)]
+	Serialize(reqwest::Url, #[cause] serde_urlencoded::ser::Error),
 }

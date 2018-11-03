@@ -7,9 +7,9 @@ pub struct SubCommand {
 impl SubCommand {
 	pub async fn run<'a>(
 		self,
-		web_api: crate::Result<&'a factorio_mods_web::API>,
-	) -> crate::Result<()> {
-		use crate::ResultExt;
+		web_api: Result<&'a factorio_mods_web::API, failure::Error>,
+	) -> Result<(), failure::Error> {
+		use failure::ResultExt;
 
 		let web_api = web_api?;
 
@@ -17,7 +17,7 @@ impl SubCommand {
 		let mut mods = std::pin::Pin::new(&mut mods);
 
 		while let Some(mod_) = await!(futures::StreamExt::next(&mut *mods)) {
-			let mod_ = mod_.chain_err(|| "Could not retrieve mods")?;
+			let mod_ = mod_.context("Could not retrieve mods")?;
 
 			println!("{}", mod_.title);
 			println!("    Name: {}", mod_.name);

@@ -11,6 +11,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::const_static_lifetime,
+	clippy::default_trait_access,
 	clippy::similar_names,
 	clippy::stutter,
 	clippy::too_many_arguments,
@@ -23,7 +24,10 @@ mod api;
 pub use self::api::{ API };
 
 mod error;
-pub use self::error::{ Error, ErrorKind, Result, };
+pub use self::error::{ Error, ErrorKind };
+
+/// A type alias for [`std::result::Result`]
+pub type Result<T> = std::result::Result<T, crate::Error>;
 
 mod installed_mod;
 pub use self::installed_mod::{ InstalledMod, InstalledModType, ModInfo };

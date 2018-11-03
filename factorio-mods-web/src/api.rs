@@ -167,18 +167,23 @@ impl futures_core::Stream for SearchStream<'_> {
 				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(std::pin::Pin::new(page), lw) {
 					std::task::Poll::Pending =>
 						return std::task::Poll::Pending,
+
 					std::task::Poll::Ready(Ok((page, _))) => (
 						Some(SearchStreamState::HavePage(page.results.into_iter(), page.pagination.links.next)),
 						None,
 					),
-					std::task::Poll::Ready(Err(crate::Error(crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND), _))) => (
-						Some(SearchStreamState::Ended),
-						Some(std::task::Poll::Ready(None)),
-					),
-					std::task::Poll::Ready(Err(err)) => (
-						Some(SearchStreamState::Ended),
-						Some(std::task::Poll::Ready(Some(Err(err)))),
-					),
+
+					std::task::Poll::Ready(Err(err)) => match err.kind() {
+						crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND) => (
+							Some(SearchStreamState::Ended),
+							Some(std::task::Poll::Ready(None)),
+						),
+
+						_ => (
+							Some(SearchStreamState::Ended),
+							Some(std::task::Poll::Ready(Some(Err(err)))),
+						),
+					}
 				},
 
 				SearchStreamState::HavePage(results, next_page_url) => match results.next() {

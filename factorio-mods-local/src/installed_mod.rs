@@ -58,27 +58,27 @@ impl InstalledMod {
 	pub fn parse(path: std::path::PathBuf) -> crate::Result<Self> {
 		let (info, mod_type): (ModInfo, _) = if path.is_file() {
 			if path.extension() != Some("zip".as_ref()) {
-				error_chain::bail!(crate::ErrorKind::UnknownModFormat(path));
+				return Err(crate::ErrorKind::UnknownModFormat(path.into()).into());
 			}
 
 			let zip_file = match std::fs::File::open(&path) {
 				Ok(zip_file) => zip_file,
-				Err(err) => error_chain::bail!(crate::ErrorKind::FileIO(path, err)),
+				Err(err) => return Err(crate::ErrorKind::FileIO(path.into(), err).into()),
 			};
 
 			let mut zip_file = match zip::ZipArchive::new(zip_file) {
 				Ok(zip_file) => zip_file,
-				Err(err) => error_chain::bail!(crate::ErrorKind::Zip(path, err)),
+				Err(err) => return Err(crate::ErrorKind::Zip(path.into(), err).into()),
 			};
 
 			if zip_file.len() == 0 {
-				error_chain::bail!(crate::ErrorKind::EmptyZippedMod(path));
+				return Err(crate::ErrorKind::EmptyZippedMod(path.into()).into());
 			}
 
 			let toplevel = {
 				let first_file = match zip_file.by_index(0) {
 					Ok(first_file) => first_file,
-					Err(err) => error_chain::bail!(crate::ErrorKind::Zip(path, err)),
+					Err(err) => return Err(crate::ErrorKind::Zip(path.into(), err).into()),
 				};
 
 				first_file.name().split('/').next().unwrap().to_string()
@@ -88,12 +88,12 @@ impl InstalledMod {
 
 			let info_json_file = match zip_file.by_name(&info_json_file_path) {
 				Ok(info_json_file) => info_json_file,
-				Err(err) => error_chain::bail!(crate::ErrorKind::Zip(path, err)),
+				Err(err) => return Err(crate::ErrorKind::Zip(path.into(), err).into()),
 			};
 
 			match serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Zipped),
-				Err(err) => error_chain::bail!(crate::ErrorKind::ReadJSONFile(path, err)),
+				Err(err) => return Err(crate::ErrorKind::ReadJSONFile(path.into(), err).into()),
 			}
 		}
 		else {
@@ -102,14 +102,14 @@ impl InstalledMod {
 			let info_json_file = match std::fs::File::open(&info_json_file_path) {
 				Ok(info_json_file) => info_json_file,
 				Err(err) => match err.kind() {
-					std::io::ErrorKind::NotFound => error_chain::bail!(crate::ErrorKind::UnknownModFormat(info_json_file_path)),
-					_ => error_chain::bail!(crate::ErrorKind::FileIO(info_json_file_path, err)),
+					std::io::ErrorKind::NotFound => return Err(crate::ErrorKind::UnknownModFormat(info_json_file_path.into()).into()),
+					_ => return Err(crate::ErrorKind::FileIO(info_json_file_path.into(), err).into()),
 				},
 			};
 
 			match serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Unpacked),
-				Err(err) => error_chain::bail!(crate::ErrorKind::ReadJSONFile(info_json_file_path, err)),
+				Err(err) => return Err(crate::ErrorKind::ReadJSONFile(info_json_file_path.into(), err).into()),
 			}
 		};
 
@@ -141,10 +141,12 @@ pub fn find(
 				let installed_mod = match InstalledMod::parse(path) {
 					Ok(installed_mod) => installed_mod,
 
-					Err(crate::Error(crate::ErrorKind::UnknownModFormat(_), _)) => continue,
-
 					Err(err) => {
-						yield Err(err);
+						match err.kind() {
+							crate::ErrorKind::UnknownModFormat(_) => (),
+							_ => yield Err(err),
+						}
+
 						continue;
 					},
 				};

@@ -126,12 +126,12 @@ async fn send(
 	};
 
 	if !is_whitelisted_host {
-		error_chain::bail!(crate::ErrorKind::NotWhitelistedHost(url));
+		return Err(crate::ErrorKind::NotWhitelistedHost(url).into());
 	}
 
 	let response = match await!(futures_util::compat::Future01CompatExt::compat(builder.send())) {
 		Ok(response) => response,
-		Err(err) => error_chain::bail!(crate::ErrorKind::HTTP(url, err)),
+		Err(err) => return Err(crate::ErrorKind::HTTP(url, err).into()),
 	};
 
 	match response.status() {
@@ -139,12 +139,12 @@ async fn send(
 
 		reqwest::StatusCode::UNAUTHORIZED => {
 			let (object, _): (LoginFailureResponse, _) = await!(json(response, url))?;
-			error_chain::bail!(crate::ErrorKind::LoginFailure(object.message));
+			Err(crate::ErrorKind::LoginFailure(object.message).into())
 		},
 
-		reqwest::StatusCode::FOUND => error_chain::bail!(crate::ErrorKind::NotWhitelistedHost(url)),
+		reqwest::StatusCode::FOUND => Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
 
-		code => error_chain::bail!(crate::ErrorKind::StatusCode(url, code)),
+		code => Err(crate::ErrorKind::StatusCode(url, code).into()),
 	}
 }
 
@@ -154,7 +154,7 @@ async fn json<T>(mut response: reqwest::r#async::Response, url: reqwest::Url) ->
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
 	match await!(futures_util::compat::Future01CompatExt::compat(response.json())) {
 		Ok(object) => Ok((object, url)),
-		Err(err) => error_chain::bail!(crate::ErrorKind::HTTP(url, err)),
+		Err(err) => Err(crate::ErrorKind::HTTP(url, err).into()),
 	}
 }
 
@@ -165,11 +165,11 @@ fn expect_content_type(
 ) -> crate::Result<reqwest::Url> {
 	let mime = match response.headers().get(reqwest::header::CONTENT_TYPE) {
 		Some(mime) => mime,
-		None => error_chain::bail!(crate::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string())),
+		None => return Err(crate::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string()).into()),
 	};
 
 	if mime != expected_mime {
-		error_chain::bail!(crate::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {:?}", mime)));
+		return Err(crate::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {:?}", mime)).into());
 	}
 
 	Ok(url)

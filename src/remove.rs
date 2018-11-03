@@ -7,11 +7,11 @@ pub struct SubCommand {
 impl SubCommand {
 	pub async fn run<'a>(
 		self,
-		local_api: crate::Result<&'a factorio_mods_local::API>,
-		web_api: crate::Result<&'a factorio_mods_web::API>,
+		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
+		web_api: Result<&'a factorio_mods_web::API, failure::Error>,
 		config_file_path: Option<std::path::PathBuf>,
 		prompt_override: Option<bool>,
-	) -> crate::Result<()> {
+	) -> Result<(), failure::Error> {
 		let local_api = local_api?;
 		let web_api = web_api?;
 

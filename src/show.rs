@@ -7,16 +7,16 @@ pub struct SubCommand {
 impl SubCommand {
 	pub async fn run<'a>(
 		self,
-		web_api: crate::Result<&'a factorio_mods_web::API>,
-	) -> crate::Result<()> {
-		use crate::ResultExt;
+		web_api: Result<&'a factorio_mods_web::API, failure::Error>,
+	) -> Result<(), failure::Error> {
+		use failure::ResultExt;
 
 		let web_api = web_api?;
 
 		let mut mods =
 			futures::stream::futures_ordered(self.names.into_iter().map(|name| async move {
 				await!(web_api.get(&name))
-				.chain_err(|| format!("Could not retrieve mod {}", name))
+				.with_context(|_| format!("Could not retrieve mod {}", name))
 			}));
 		let mut mods = std::pin::Pin::new(&mut mods);
 

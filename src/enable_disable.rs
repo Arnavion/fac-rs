@@ -7,9 +7,9 @@ pub struct EnableSubCommand {
 impl EnableSubCommand {
 	pub async fn run<'a>(
 		self,
-		local_api: crate::Result<&'a factorio_mods_local::API>,
+		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
-	) -> crate::Result<()> {
+	) -> Result<(), failure::Error> {
 		await!(enable_disable(self.names, local_api, prompt_override, true))?;
 		Ok(())
 	}
@@ -24,9 +24,9 @@ pub struct DisableSubCommand {
 impl DisableSubCommand {
 	pub async fn run<'a>(
 		self,
-		local_api: crate::Result<&'a factorio_mods_local::API>,
+		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
-	) -> crate::Result<()> {
+	) -> Result<(), failure::Error> {
 		await!(enable_disable(self.names, local_api, prompt_override, false))?;
 		Ok(())
 	}
@@ -34,19 +34,19 @@ impl DisableSubCommand {
 
 pub async fn enable_disable<'a>(
 	mods: Vec<factorio_mods_common::ModName>,
-	local_api: crate::Result<&'a factorio_mods_local::API>,
+	local_api: Result<&'a factorio_mods_local::API, failure::Error>,
 	prompt_override: Option<bool>,
 	enable: bool,
-) -> crate::Result<()> {
-	use crate::ResultExt;
+) -> Result<(), failure::Error> {
+	use failure::ResultExt;
 
 	let local_api = local_api?;
 
-	let all_installed_mods: crate::Result<multimap::MultiMap<_, _>> =
-		local_api.installed_mods().chain_err(|| "Could not enumerate installed mods")?
-		.map(|mod_| mod_.map(|mod_| (mod_.info.name.clone(), mod_)).chain_err(|| "Could not process an installed mod"))
+	let all_installed_mods: Result<multimap::MultiMap<_, _>, failure::Error> =
+		local_api.installed_mods().context("Could not enumerate installed mods")?
+		.map(|mod_| Ok(mod_.map(|mod_| (mod_.info.name.clone(), mod_)).context("Could not process an installed mod")?))
 		.collect();
-	let all_installed_mods = all_installed_mods.chain_err(|| "Could not enumerate installed mods")?;
+	let all_installed_mods = all_installed_mods.context("Could not enumerate installed mods")?;
 
 	for (name, installed_mods) in &all_installed_mods {
 		if installed_mods.len() > 1 {
@@ -110,7 +110,8 @@ pub async fn enable_disable<'a>(
 		return Ok(());
 	}
 
-	local_api.set_enabled(to_change, enable).chain_err(|| format!("Could not {} mods", if enable { "enable" } else { "disable" }))?;
+	local_api.set_enabled(to_change, enable)
+	.with_context(|_| format!("Could not {} mods", if enable { "enable" } else { "disable" }))?;
 
 	Ok(())
 }

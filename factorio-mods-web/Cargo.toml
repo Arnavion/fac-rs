@@ -5,11 +5,11 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-derive-error-chain = "0.11.x"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 either = "1.4.x"
-error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
+failure = "0.1.x"
+failure_derive = "0.1.x"
 futures-core-preview = { version = "0.3.0-alpha.9", features = ["either"] }
 futures-util-preview = { version = "0.3.0-alpha.9", features = ["compat"] }
 itertools = "0.7.x"

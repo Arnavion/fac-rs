@@ -37,11 +37,6 @@ mod config;
 mod solve;
 mod util;
 
-#[derive(Debug, derive_error_chain::ErrorChain)]
-pub enum ErrorKind {
-	Msg(String),
-}
-
 #[derive(Debug, structopt_derive::StructOpt)]
 #[structopt(raw(setting = "structopt::clap::AppSettings::VersionlessSubcommands"))]
 pub struct Options {
@@ -91,7 +86,9 @@ pub enum SubCommand {
 	Update(update::SubCommand),
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), DisplayableError> {
+	use failure::ResultExt;
+
 	std::env::set_var("RUST_BACKTRACE", "1");
 
 	// Run everything in a separate thread because the default Windows main thread stack isn't big enough (1 MiB)
@@ -100,7 +97,7 @@ fn main() -> Result<()> {
 
 		let client = if let Some(proxy_url) = options.proxy {
 			let builder = crate::reqwest::r#async::ClientBuilder::new();
-			let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).chain_err(|| "Couldn't parse proxy URL")?);
+			let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("Couldn't parse proxy URL")?);
 			Some(builder)
 		}
 		else {
@@ -114,10 +111,10 @@ fn main() -> Result<()> {
 			(true, true) => unreachable!(),
 		};
 
-		let local_api = factorio_mods_local::API::new().chain_err(|| "Could not initialize local API");
-		let web_api = factorio_mods_web::API::new(client).chain_err(|| "Could not initialize web API");
+		let local_api = factorio_mods_local::API::new().context("Could not initialize local API").map_err(Into::into);
+		let web_api = factorio_mods_web::API::new(client).context("Could not initialize web API").map_err(Into::into);
 
-		let mut runtime = tokio::runtime::current_thread::Runtime::new().chain_err(|| "Could not start tokio runtime")?;
+		let mut runtime = tokio::runtime::current_thread::Runtime::new().context("Could not start tokio runtime")?;
 
 		match options.subcommand {
 			SubCommand::Cache(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
@@ -170,5 +167,23 @@ fn main() -> Result<()> {
 		}
 
 		Ok(())
-	}).join().unwrap()
+	}).join().unwrap().map_err(DisplayableError)
+}
+
+struct DisplayableError(failure::Error);
+
+impl std::fmt::Debug for DisplayableError {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		writeln!(f, "{}", self.0.as_fail())?;
+
+		for fail in self.0.iter_causes() {
+			writeln!(f)?;
+			writeln!(f, "Caused by: {}", fail)?;
+		}
+
+		writeln!(f)?;
+		writeln!(f, "{}", self.0.backtrace())?;
+
+		Ok(())
+	}
 }

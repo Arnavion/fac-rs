@@ -7,11 +7,11 @@ edition = "2018"
 
 [dependencies]
 appdirs = "0.2.x"
-derive-error-chain = "0.11.x"
-error-chain = "0.11.x"
 factorio-mods-common = { version = "0.1.0", features = ["package"], path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
+failure = { version = "0.1.x", features = ["backtrace"] }
+failure_derive = "0.1.x"
 futures-preview = "0.3.0-alpha.9"
 itertools = "0.7.x"
 lazy_static = "1.1.x"
