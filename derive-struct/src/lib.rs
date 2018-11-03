@@ -10,100 +10,114 @@ extern crate proc_macro;
 /// Derives `serde::Deserialize` on the newtype.
 #[proc_macro_derive(newtype_deserialize)]
 pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	let ast: syn::DeriveInput = syn::parse(input).unwrap();
-	let struct_name = &ast.ident;
+	run_derive(input, |ast| {
+		let struct_name = &ast.ident;
 
-	let parser_func_name = syn::Ident::new(match as_newtype(&ast) {
-		Some(ty) => match identify_type(ty).unwrap_or_else(|| panic!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type")) {
-			Type::SemverVersion => "parse_version",
-			Type::SemverVersionReq => "parse_version_req",
-			_ => panic!("#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type"),
-		},
+		let ty = as_newtype(&ast).ok_or_else(||
+			error(&ast, "#[derive(newtype_deserialize)] can only be used with tuple structs of one field"))?;
 
-		None => panic!("#[derive(newtype_deserialize)] can only be used with tuple structs of one field"),
-	}, proc_macro2::Span::call_site());
+		let parser_func_name = syn::Ident::new(match identify_type(ty) {
+			Some(Type::SemverVersion) => "parse_version",
+			Some(Type::SemverVersionReq) => "parse_version_req",
+			_ => return Err(error(&ty, "#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type")),
+		}, proc_macro2::Span::call_site());
 
-	let expecting_str = format!("a string that can be deserialized into a {}", struct_name);
-	let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
+		let expecting_str = format!("a string that can be deserialized into a {}", struct_name);
+		let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
 
-	let result = quote! {
-		impl<'de> serde::Deserialize<'de> for #struct_name {
-			fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: serde::Deserializer<'de> {
-				struct Visitor;
+		let result = quote! {
+			impl<'de> serde::Deserialize<'de> for #struct_name {
+				fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: serde::Deserializer<'de> {
+					struct Visitor;
 
-				impl serde::de::Visitor<'_> for Visitor {
-					type Value = #struct_name;
+					impl serde::de::Visitor<'_> for Visitor {
+						type Value = #struct_name;
 
-					fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-						formatter.write_str(#expecting_str)
+						fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+							formatter.write_str(#expecting_str)
+						}
+
+						fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E> where E: serde::de::Error {
+							Ok(#struct_name(#parser_func_name(v).map_err(|err| serde::de::Error::custom(format!(#error_str, v, std::error::Error::description(&err))))?))
+						}
 					}
 
-					fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E> where E: serde::de::Error {
-						Ok(#struct_name(#parser_func_name(v).map_err(|err| serde::de::Error::custom(format!(#error_str, v, std::error::Error::description(&err))))?))
-					}
+					deserializer.deserialize_any(Visitor)
 				}
-
-				deserializer.deserialize_any(Visitor)
 			}
-		}
-	};
+		};
 
-	result.into()
+		Ok(result.into())
+	})
 }
 
 /// Derives `std::fmt::Display` on the newtype.
 #[proc_macro_derive(newtype_display)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	let ast: syn::DeriveInput = syn::parse(input).unwrap();
+	run_derive(input, |ast| {
+		let struct_name = &ast.ident;
 
-	let result = match as_newtype(&ast) {
-		Some(ty) => {
-			let struct_name = &ast.ident;
+		let ty = as_newtype(&ast).ok_or_else(||
+			error(&ast, "#[derive(newtype_display)] can only be used with tuple structs of one field"))?;
 
-			match identify_type(ty).unwrap_or_else(|| panic!("#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type")) {
-				Type::SemverVersion |
-				Type::SemverVersionReq |
-				Type::String |
-				Type::U64 => quote! {
-					impl std::fmt::Display for #struct_name {
-						fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-							self.0.fmt(f)
-						}
+		let result = match identify_type(ty) {
+			Some(Type::SemverVersion) |
+			Some(Type::SemverVersionReq) |
+			Some(Type::String) |
+			Some(Type::U64) => quote! {
+				impl std::fmt::Display for #struct_name {
+					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+						self.0.fmt(f)
 					}
-				},
-			}
-		},
+				}
+			},
 
-		None => panic!("#[derive(newtype_display)] can only be used with tuple structs of one field"),
-	};
+			None => return Err(error(&ty, "#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type")),
+		};
 
-	result.into()
+		Ok(result.into())
+	})
 }
 
 /// Derives `std::str::FromStr` on the newtype.
 #[proc_macro_derive(newtype_fromstr)]
 pub fn derive_newtype_fromstr(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	let ast: syn::DeriveInput = syn::parse(input).unwrap();
+	run_derive(input, |ast| {
+		let struct_name = &ast.ident;
 
-	let result = match as_newtype(&ast).and_then(identify_type) {
-		Some(Type::String) => {
-			let struct_name = &ast.ident;
+		let ty = as_newtype(&ast).and_then(identify_type);
 
-			quote! {
-				impl std::str::FromStr for #struct_name {
-					type Err = std::string::ParseError;
+		let result = match ty {
+			Some(Type::String) => {
+				quote! {
+					impl std::str::FromStr for #struct_name {
+						type Err = std::string::ParseError;
 
-					fn from_str(s: &str) -> Result<Self, Self::Err> {
-						Ok(#struct_name(s.to_string()))
+						fn from_str(s: &str) -> Result<Self, Self::Err> {
+							Ok(#struct_name(s.to_string()))
+						}
 					}
 				}
-			}
-		},
+			},
 
-		_ => panic!("#[derive(newtype_display)] can only be used with tuple structs of one String field"),
-	};
+			_ => return Err(error(&ast, "#[derive(newtype_fromstr)] can only be used with tuple structs of one String field")),
+		};
 
-	result.into()
+		Ok(result.into())
+	})
+}
+
+fn run_derive<F>(input: proc_macro::TokenStream, f: F) -> proc_macro::TokenStream where
+	F: FnOnce(syn::DeriveInput) -> Result<proc_macro::TokenStream, syn::parse::Error>,
+{
+	match syn::parse(input).and_then(f) {
+		Ok(token_stream) => token_stream,
+		Err(err) => err.to_compile_error().into(),
+	}
+}
+
+fn error<S, D>(spanned: &S, message: D) -> syn::parse::Error where S: syn::spanned::Spanned, D: std::fmt::Display {
+	syn::parse::Error::new(spanned.span(), message)
 }
 
 fn as_newtype(ast: &syn::DeriveInput) -> Option<&syn::Type> {
