@@ -96,7 +96,7 @@ fn serialize_config_mods<S>(
 	serializer: S,
 ) -> Result<S::Ok, S::Error> where S: serde::Serializer {
 	let mut map = serializer.serialize_map(None)?;
-	for (name, req) in itertools::Itertools::sorted_by(value.into_iter(), |&(n1, _), &(n2, _)| n1.cmp(n2)) {
+	for (name, req) in itertools::Itertools::sorted_by(value.iter(), |&(n1, _), &(n2, _)| n1.cmp(n2)) {
 		serde::ser::SerializeMap::serialize_key(&mut map, name)?;
 		serde::ser::SerializeMap::serialize_value(&mut map, req)?;
 	}

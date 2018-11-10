@@ -1,6 +1,6 @@
 language: rust
 rust:
-- nightly-2018-09-19
+- nightly
 
 script: rustup component add clippy-preview && cd $CRATE && cargo build --verbose && cargo test --verbose && cargo clippy --verbose
 

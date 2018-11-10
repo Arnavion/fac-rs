@@ -218,10 +218,10 @@ pub fn compute_solution<I>(
 
 				// All required dependencies satisfied
 				let keep = keep &&
-					package.dependencies().into_iter()
+					package.dependencies().iter()
 					.filter(|dep| dep.required())
 					.all(|dep|
-						name_to_node_indices.get_vec(dep.name()).unwrap().into_iter()
+						name_to_node_indices.get_vec(dep.name()).unwrap().iter()
 						.any(|&dep_node_index| dep.version().as_ref().matches(graph[dep_node_index].version().as_ref())));
 
 				!keep
