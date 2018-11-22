@@ -317,7 +317,7 @@ impl std::future::Future for SolutionFuture<'_> {
 								new.push(CacheFuture::Download(Some(DownloadFuture {
 									mod_name: mod_name.clone(),
 									release_version: release.version,
-									chunk_stream: futures::stream::LocalStreamObj::new(Box::pinned(chunk_stream)),
+									chunk_stream: Box::pinned(chunk_stream),
 									download_file,
 									download_filename,
 									download_displayable_filename,
@@ -427,7 +427,7 @@ fn get(
 	if already_fetching.insert(mod_name.clone()) {
 		println!("    Getting {} ...", mod_name);
 
-		let f = futures::future::LocalFutureObj::new(Box::pinned(web_api.get(&mod_name)));
+		let f = Box::pinned(web_api.get(&mod_name));
 		new.push(CacheFuture::Get(Some((mod_name, f))));
 	}
 }
@@ -454,14 +454,14 @@ fn parse_cached_mod(
 }
 
 enum CacheFuture {
-	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, futures::future::LocalFutureObj<'static, factorio_mods_web::Result<factorio_mods_web::Mod>>)>),
+	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, std::pin::Pin<Box<std::future::Future<Output = factorio_mods_web::Result<factorio_mods_web::Mod>>>>)>),
 	Download(Option<DownloadFuture>),
 }
 
 struct DownloadFuture {
 	mod_name: std::rc::Rc<factorio_mods_common::ModName>,
 	release_version: factorio_mods_common::ReleaseVersion,
-	chunk_stream: futures::stream::LocalStreamObj<'static, factorio_mods_web::Result<crate::reqwest::r#async::Chunk>>,
+	chunk_stream: std::pin::Pin<Box<futures::stream::Stream<Item = factorio_mods_web::Result<crate::reqwest::r#async::Chunk>>>>,
 	download_file: std::io::BufWriter<std::fs::File>,
 	download_filename: std::path::PathBuf,
 	download_displayable_filename: String,

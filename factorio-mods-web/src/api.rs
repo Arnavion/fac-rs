@@ -135,7 +135,7 @@ struct SearchStream<'a> {
 }
 
 enum SearchStreamState {
-	WaitingForPage(futures_core::future::LocalFutureObj<'static, crate::Result<(PagedResponse<crate::SearchResponseMod>, reqwest::Url)>>),
+	WaitingForPage(std::pin::Pin<Box<std::future::Future<Output = crate::Result<(PagedResponse<crate::SearchResponseMod>, reqwest::Url)>>>>),
 	HavePage(std::vec::IntoIter<crate::SearchResponseMod>, Option<reqwest::Url>),
 	Ended,
 }
@@ -205,7 +205,7 @@ impl futures_core::Stream for SearchStream<'_> {
 
 					None => match next_page_url.take() {
 						Some(next_page_url) => (
-							Some(SearchStreamState::WaitingForPage(futures_core::future::LocalFutureObj::new(Box::pinned(self.client.get_object(next_page_url))))),
+							Some(SearchStreamState::WaitingForPage(Box::pinned(self.client.get_object(next_page_url)))),
 							None,
 						),
 						None => (
@@ -275,7 +275,7 @@ lazy_static! {
 mod tests {
 	use super::*;
 
-	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> futures_core::future::LocalFutureObj<'r, ()> {
+	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> std::pin::Pin<Box<std::future::Future<Output = ()> + 'r>> {
 		use futures_util::FutureExt;
 
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
@@ -288,37 +288,37 @@ mod tests {
 	fn search_list_all_mods() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
+		run_test(|api| Box::pinned(
 			api.search("")
 			.fold(0usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
 			.map(|count| {
 				println!("Found {} mods", count);
 				assert!(count > 1700); // 1700+ as of 2017-06-21
-			}))));
+			})));
 	}
 
 	#[test]
 	fn search_by_title() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
+		run_test(|api| Box::pinned(
 			api.search("bob's functions library mod")
 			.into_future()
 			.map(|(result, _)| {
 				let mod_ = result.unwrap().unwrap();
 				println!("{:?}", mod_);
 				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
-			}))));
+			})));
 	}
 
 	#[test]
 	fn search_non_existing() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
+		run_test(|api| Box::pinned(
 			api.search("arnavion's awesome mod")
 			.into_future()
-			.map(|(result, _)| assert!(result.is_none())))));
+			.map(|(result, _)| assert!(result.is_none()))));
 	}
 
 	#[test]
@@ -327,12 +327,12 @@ mod tests {
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_string());
 
-		run_test(|api| futures_core::future::LocalFutureObj::new(Box::pinned(
+		run_test(|api| Box::pinned(
 			api.get(&mod_name)
 			.map(|mod_| {
 				let mod_ = mod_.unwrap();
 				println!("{:?}", mod_);
 				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
-			}))));
+			})));
 	}
 }
