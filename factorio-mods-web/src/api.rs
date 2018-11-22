@@ -57,10 +57,10 @@ impl API {
 
 		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
-		Box::pinned(async {
+		async {
 			let ((token,), _) = await!(future)?;
 			Ok(factorio_mods_common::UserCredentials { username, token })
-		})
+		}
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
@@ -90,8 +90,8 @@ impl API {
 }
 
 // TODO: Use existential type when https://github.com/rust-lang/rust/issues/53443 is fixed
-// pub existential type GetResponse: Future<Output = crate::Result<crate::Mod>> + 'static;
-// pub existential type DownloadResponse: Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
+// pub existential type GetResponse: std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
+// pub existential type DownloadResponse: futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
 
 #[derive(Debug)]
 enum DownloadStream<F> {
@@ -135,7 +135,7 @@ struct SearchStream<'a> {
 }
 
 enum SearchStreamState {
-	WaitingForPage(std::pin::Pin<Box<std::future::Future<Output = crate::Result<(PagedResponse<crate::SearchResponseMod>, reqwest::Url)>>>>),
+	WaitingForPage(std::pin::Pin<Box<crate::client::GetObjectFuture<PagedResponse<crate::SearchResponseMod>>>>),
 	HavePage(std::vec::IntoIter<crate::SearchResponseMod>, Option<reqwest::Url>),
 	Ended,
 }
@@ -281,7 +281,7 @@ mod tests {
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 		let api = API::new(None).unwrap();
 		let result = test(&api).map(|()| Ok::<_, crate::Error>(()));
-		runtime.block_on(futures_util::TryFutureExt::compat(Box::pinned(result))).unwrap();
+		runtime.block_on(futures_util::TryFutureExt::compat(result)).unwrap();
 	}
 
 	#[test]

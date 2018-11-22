@@ -4,6 +4,7 @@
 	arbitrary_self_types,
 	async_await,
 	await_macro,
+	existential_type,
 	futures_api,
 	pin,
 	unrestricted_attribute_tokens,

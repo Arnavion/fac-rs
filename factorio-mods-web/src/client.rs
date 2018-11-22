@@ -39,7 +39,7 @@ impl Client {
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
-	pub fn get_object<T>(&self, url: reqwest::Url) -> impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static where T: serde::de::DeserializeOwned + 'static {
+	pub fn get_object<T>(&self, url: reqwest::Url) -> GetObjectFuture<T> where T: serde::de::DeserializeOwned + 'static {
 		let builder = self.inner.get(url.clone());
 
 		async {
@@ -62,11 +62,9 @@ impl Client {
 	}
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
-	pub fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> std::pin::Pin<Box<std::future::Future<Output = crate::Result<(T, reqwest::Url)>>>>
+	pub fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> PostObjectFuture<T>
 		where B: serde::Serialize, T: serde::de::DeserializeOwned + 'static
 	{
-		// TODO: Replace return type with PostObjectFuture
-
 		async fn inner<T>(
 			url: reqwest::Url,
 			builder: reqwest::r#async::RequestBuilder,
@@ -91,7 +89,7 @@ impl Client {
 
 		let body = serde_urlencoded::to_string(body);
 
-		Box::pinned(inner(url, builder, body))
+		inner(url, builder, body)
 	}
 }
 
@@ -106,9 +104,8 @@ lazy_static! {
 	static ref WWW_FORM_URL_ENCODED: reqwest::header::HeaderValue = reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded");
 }
 
-// TODO: Use existential type when https://github.com/rust-lang/rust/issues/53443 is fixed
-// pub(crate) existential type GetObjectFuture<T>: Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
-// existential type PostObjectFuture<T>: Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub existential type GetObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub existential type PostObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 
 /// A login failure response.
 #[derive(Debug, serde_derive::Deserialize)]
