@@ -8,6 +8,7 @@
 	futures_api,
 	pin,
 	unrestricted_attribute_tokens,
+	unsized_locals,
 )]
 
 #![deny(missing_docs)]
