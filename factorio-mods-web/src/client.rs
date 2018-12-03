@@ -96,6 +96,7 @@ impl Client {
 lazy_static! {
 	static ref WHITELISTED_HOSTS: std::collections::HashSet<&'static str> = vec![
 		"auth.factorio.com",
+		"direct.mods-data.factorio.com",
 		"mods.factorio.com",
 		"mods-data.factorio.com",
 	].into_iter().collect();
@@ -117,14 +118,10 @@ async fn send(
 	builder: reqwest::r#async::RequestBuilder,
 	url: reqwest::Url,
 ) -> crate::Result<(reqwest::r#async::Response, reqwest::Url)> {
-	let is_whitelisted_host = match url.host_str() {
-		Some(host) if WHITELISTED_HOSTS.contains(host) => true,
-		_ => false,
+	match url.host_str() {
+		Some(host) if WHITELISTED_HOSTS.contains(host) => (),
+		_ => return Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
 	};
-
-	if !is_whitelisted_host {
-		return Err(crate::ErrorKind::NotWhitelistedHost(url).into());
-	}
 
 	let response = match await!(futures_util::compat::Future01CompatExt::compat(builder.send())) {
 		Ok(response) => response,
