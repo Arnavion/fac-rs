@@ -105,7 +105,7 @@ impl<F> futures_core::Stream for DownloadStream<F> where F: std::future::Future<
 	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
 		unsafe {
 			loop {
-				let (response, download_url) = match std::pin::Pin::get_mut_unchecked(self.as_mut()) {
+				let (response, download_url) = match std::pin::Pin::get_unchecked_mut(self.as_mut()) {
 					DownloadStream::Fetch(f) => match std::pin::Pin::new_unchecked(f).poll(lw) {
 						std::task::Poll::Pending => return std::task::Poll::Pending,
 						std::task::Poll::Ready(Ok(value)) => value,
@@ -121,7 +121,7 @@ impl<F> futures_core::Stream for DownloadStream<F> where F: std::future::Future<
 				};
 
 				let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
-				std::pin::Pin::set(self.as_mut(), DownloadStream::Response(body, Some(download_url)));
+				std::pin::Pin::set(&mut self, DownloadStream::Response(body, Some(download_url)));
 			}
 		}
 	}
@@ -205,7 +205,7 @@ impl futures_core::Stream for SearchStream<'_> {
 
 					None => match next_page_url.take() {
 						Some(next_page_url) => (
-							Some(SearchStreamState::WaitingForPage(Box::pinned(self.client.get_object(next_page_url)))),
+							Some(SearchStreamState::WaitingForPage(Box::pin(self.client.get_object(next_page_url)))),
 							None,
 						),
 						None => (
@@ -288,7 +288,7 @@ mod tests {
 	fn search_list_all_mods() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| Box::pinned(
+		run_test(|api| Box::pin(
 			api.search("")
 			.fold(0usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
 			.map(|count| {
@@ -301,7 +301,7 @@ mod tests {
 	fn search_by_title() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| Box::pinned(
+		run_test(|api| Box::pin(
 			api.search("bob's functions library mod")
 			.into_future()
 			.map(|(result, _)| {
@@ -315,7 +315,7 @@ mod tests {
 	fn search_non_existing() {
 		use futures_util::{ FutureExt, StreamExt };
 
-		run_test(|api| Box::pinned(
+		run_test(|api| Box::pin(
 			api.search("arnavion's awesome mod")
 			.into_future()
 			.map(|(result, _)| assert!(result.is_none()))));
@@ -327,7 +327,7 @@ mod tests {
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_string());
 
-		run_test(|api| Box::pinned(
+		run_test(|api| Box::pin(
 			api.get(&mod_name)
 			.map(|mod_| {
 				let mod_ = mod_.unwrap();

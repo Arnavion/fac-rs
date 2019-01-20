@@ -6,7 +6,6 @@
 	await_macro,
 	existential_type,
 	futures_api,
-	pin,
 	unrestricted_attribute_tokens,
 	unsized_locals,
 )]
@@ -18,7 +17,7 @@
 	clippy::const_static_lifetime,
 	clippy::default_trait_access,
 	clippy::large_enum_variant,
-	clippy::stutter,
+	clippy::module_name_repetitions,
 	clippy::use_self,
 )]
 

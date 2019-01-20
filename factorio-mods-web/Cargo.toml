@@ -10,8 +10,8 @@ either = "1.4.x"
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 failure = "0.1.x"
 failure_derive = "0.1.x"
-futures-core-preview = { version = "0.3.0-alpha.10", features = ["either"] }
-futures-util-preview = { version = "0.3.0-alpha.10", features = ["compat"] }
+futures-core-preview = { version = "0.3.0-alpha.12", features = ["either"] }
+futures-util-preview = { version = "0.3.0-alpha.12", features = ["compat"] }
 itertools = "0.7.x"
 lazy_static = "1.2.x"
 reqwest = "0.9.x"
@@ -20,5 +20,5 @@ serde_derive = "1.0.x"
 serde_urlencoded = "0.5.x"
 
 [dev-dependencies]
-futures-util-preview = { version = "0.3.0-alpha.10", features = ["compat"] }
+futures-util-preview = { version = "0.3.0-alpha.12", features = ["compat"] }
 tokio = "0.1.x"

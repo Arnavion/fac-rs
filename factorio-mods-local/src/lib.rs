@@ -13,7 +13,7 @@
 	clippy::const_static_lifetime,
 	clippy::default_trait_access,
 	clippy::similar_names,
-	clippy::stutter,
+	clippy::module_name_repetitions,
 	clippy::too_many_arguments,
 	clippy::use_self,
 )]

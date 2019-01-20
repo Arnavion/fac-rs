@@ -6,7 +6,6 @@
 	await_macro,
 	futures_api,
 	nll,
-	pin,
 )]
 
 #![deny(clippy::all, clippy::pedantic)]
@@ -117,48 +116,48 @@ fn main() -> Result<(), DisplayableError> {
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().context("Could not start tokio runtime")?;
 
 		match options.subcommand {
-			SubCommand::Cache(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::Cache(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				options.config,
 			))))?,
 
-			SubCommand::Disable(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::Disable(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
 			))))?,
 
-			SubCommand::Enable(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::Enable(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
 			))))?,
 
-			SubCommand::Install(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				options.config,
-				prompt_override,
-			))))?,
-
-			SubCommand::List(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			))))?,
-
-			SubCommand::Remove(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::Install(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 				options.config,
 				prompt_override,
 			))))?,
 
-			SubCommand::Search(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::List(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
+				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			))))?,
+
+			SubCommand::Remove(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
+				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+				options.config,
+				prompt_override,
+			))))?,
+
+			SubCommand::Search(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 			))))?,
 
-			SubCommand::Show(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::Show(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 			))))?,
 
-			SubCommand::Update(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pinned(parameters.run(
+			SubCommand::Update(parameters) => runtime.block_on(futures::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 				options.config,

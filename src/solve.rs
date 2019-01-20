@@ -317,7 +317,7 @@ impl std::future::Future for SolutionFuture<'_> {
 								new.push(CacheFuture::Download(Some(DownloadFuture {
 									mod_name: mod_name.clone(),
 									release_version: release.version,
-									chunk_stream: Box::pinned(chunk_stream),
+									chunk_stream: Box::pin(chunk_stream),
 									download_file,
 									download_filename,
 									download_displayable_filename,
@@ -427,7 +427,7 @@ fn get(
 	if already_fetching.insert(mod_name.clone()) {
 		println!("    Getting {} ...", mod_name);
 
-		let f = Box::pinned(web_api.get(&mod_name));
+		let f = Box::pin(web_api.get(&mod_name));
 		new.push(CacheFuture::Get(Some((mod_name, f))));
 	}
 }

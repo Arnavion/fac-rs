@@ -12,7 +12,7 @@ factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
 failure = { version = "0.1.x", features = ["backtrace"] }
 failure_derive = "0.1.x"
-futures-preview = "0.3.0-alpha.10"
+futures-preview = "0.3.0-alpha.12"
 itertools = "0.7.x"
 lazy_static = "1.2.x"
 multimap = "0.4.x"
