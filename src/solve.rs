@@ -140,7 +140,7 @@ fn compute_diff(
 	to_install.extend(solution);
 
 	{
-		let to_upgrade =
+		let to_upgrade: Vec<_> =
 			itertools::Itertools::sorted_by(
 				to_uninstall.iter().filter_map(|installed_mod|
 					to_install.get(&installed_mod.info.name)
@@ -149,7 +149,8 @@ fn compute_diff(
 					installed_mod1.info.name.cmp(&installed_mod2.info.name)
 					.then_with(|| installed_mod1.info.version.cmp(&installed_mod2.info.version))
 					.then_with(|| cached_mod1.info.name.cmp(&cached_mod2.info.name))
-					.then_with(|| cached_mod1.info.version.cmp(&cached_mod2.info.version)));
+					.then_with(|| cached_mod1.info.version.cmp(&cached_mod2.info.version)))
+			.collect();
 
 		if !to_upgrade.is_empty() {
 			println!();
@@ -164,10 +165,11 @@ fn compute_diff(
 		installed_mod1.info.name.cmp(&installed_mod2.info.name)
 		.then_with(|| installed_mod1.info.version.cmp(&installed_mod2.info.version)));
 
-	let to_install =
+	let to_install: Vec<_> =
 		itertools::Itertools::sorted_by(to_install.into_iter().map(|(_, cached_mod)| cached_mod), |cached_mod1, cached_mod2|
 			cached_mod1.info.name.cmp(&cached_mod2.info.name)
-			.then_with(|| cached_mod1.info.version.cmp(&cached_mod2.info.version)));
+			.then_with(|| cached_mod1.info.version.cmp(&cached_mod2.info.version)))
+		.collect();
 
 	if !to_uninstall.is_empty() {
 		println!();

@@ -13,7 +13,7 @@ factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
 failure = { version = "0.1.x", features = ["backtrace"] }
 failure_derive = "0.1.x"
 futures-preview = "0.3.0-alpha.12"
-itertools = "0.7.x"
+itertools = "0.8.x"
 lazy_static = "1.2.x"
 multimap = "0.4.x"
 package = { version = "0.1.0", path = "./package" }
