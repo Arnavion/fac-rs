@@ -1,11 +1,9 @@
 //! A CLI tool to manage Factorio mods.
 
 #![feature(
-	arbitrary_self_types,
 	async_await,
 	await_macro,
 	futures_api,
-	nll,
 )]
 
 #![deny(rust_2018_idioms, warnings)]

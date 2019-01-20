@@ -1,13 +1,11 @@
 //! API to interface with <https://mods.factorio.com/>
 
 #![feature(
-	arbitrary_self_types,
 	async_await,
 	await_macro,
 	existential_type,
 	futures_api,
 	unrestricted_attribute_tokens,
-	unsized_locals,
 )]
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]
