@@ -110,7 +110,7 @@ impl<'de> serde::Deserialize<'de> for Dependency {
 		impl serde::de::Visitor<'_> for Visitor {
 			type Value = Dependency;
 
-			fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+			fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 				formatter.write_str("a string")
 			}
 
@@ -187,7 +187,7 @@ pub fn fixup_version(s: &str) -> String {
 	}), ".")
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
 	static ref DEPENDENCY_REGEX: regex::Regex = regex::Regex::new(r"^(\??)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
 }
 

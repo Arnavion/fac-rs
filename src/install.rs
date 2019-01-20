@@ -1,4 +1,4 @@
-lazy_static! {
+lazy_static::lazy_static! {
 	static ref REQUIREMENT_REGEX: regex::Regex = regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap();
 }
 

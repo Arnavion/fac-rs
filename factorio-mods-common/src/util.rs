@@ -8,7 +8,7 @@ pub fn deserialize_string_or_seq_string<'de, T, D>(deserializer: D) -> Result<Ve
 	impl<'de, T> serde::de::Visitor<'de> for Visitor<T> where T: serde::Deserialize<'de> {
 		type Value = Vec<T>;
 
-		fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 			write!(f, "a string or sequence of strings")
 		}
 
@@ -52,7 +52,7 @@ impl<'de, 'a, E> serde::Deserializer<'de> for StringNewTypeStructDeserializer<'a
 		visitor.visit_str(self.0)
 	}
 
-	forward_to_deserialize_any! {
+	serde::forward_to_deserialize_any! {
 		bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str bytes
 		byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct map
 		struct enum identifier ignored_any

@@ -141,7 +141,7 @@ enum SearchStreamState {
 }
 
 impl std::fmt::Debug for SearchStreamState {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match *self {
 			SearchStreamState::WaitingForPage(_) =>
 				f.debug_tuple("WaitingForPage")
@@ -265,7 +265,7 @@ fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<reqwest::Url>, D::E
 	}
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
 	static ref BASE_URL: reqwest::Url = "https://mods.factorio.com/".parse().unwrap();
 	static ref MODS_URL: reqwest::Url = "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap();
 	static ref LOGIN_URL: reqwest::Url = "https://auth.factorio.com/api-login".parse().unwrap();
@@ -275,7 +275,7 @@ lazy_static! {
 mod tests {
 	use super::*;
 
-	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> std::pin::Pin<Box<std::future::Future<Output = ()> + 'r>> {
+	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'r>> {
 		use futures_util::FutureExt;
 
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();

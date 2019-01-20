@@ -1,6 +1,6 @@
 //! Common types and functionality used by the other factorio-mods crates.
 
-#![deny(missing_docs)]
+#![deny(missing_docs, rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
@@ -8,12 +8,6 @@
 	clippy::indexing_slicing,
 	clippy::use_self,
 )]
-
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate serde;
-
-#[cfg(test)]
-extern crate serde_json;
 
 mod types;
 pub use self::types::*;

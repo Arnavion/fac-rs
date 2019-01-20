@@ -6,7 +6,7 @@
 	unrestricted_attribute_tokens,
 )]
 
-#![deny(missing_docs)]
+#![deny(missing_docs, rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
@@ -17,8 +17,6 @@
 	clippy::too_many_arguments,
 	clippy::use_self,
 )]
-
-#[macro_use] extern crate lazy_static;
 
 mod api;
 pub use self::api::{ API };

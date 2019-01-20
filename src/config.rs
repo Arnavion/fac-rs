@@ -42,7 +42,7 @@ impl Config {
 
 		let (mods,) = match std::fs::File::open(&config_file_path) {
 			Ok(mut file) => {
-				let config: StoredConfig =
+				let config: StoredConfig<'_> =
 					serde_json::from_reader(&mut file)
 					.with_context(|_| format!("Could not parse JSON file {}", config_file_path_displayable))?;
 				let StoredConfig::V1 { mods } = config;

@@ -2,10 +2,11 @@
 
 #![recursion_limit = "200"]
 
+#![deny(rust_2018_idioms, warnings)]
+
 #![deny(clippy::all, clippy::pedantic)]
 
 extern crate proc_macro;
-#[macro_use] extern crate quote;
 
 /// Derives `serde::Deserialize` on the newtype.
 #[proc_macro_derive(newtype_deserialize)]
@@ -25,7 +26,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 		let expecting_str = format!("a string that can be deserialized into a {}", struct_name);
 		let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
 
-		let result = quote! {
+		let result = quote::quote! {
 			impl<'de> serde::Deserialize<'de> for #struct_name {
 				fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: serde::Deserializer<'de> {
 					struct Visitor;
@@ -33,7 +34,7 @@ pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro:
 					impl serde::de::Visitor<'_> for Visitor {
 						type Value = #struct_name;
 
-						fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+						fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 							formatter.write_str(#expecting_str)
 						}
 
@@ -64,9 +65,9 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 			Some(Type::SemverVersion) |
 			Some(Type::SemverVersionReq) |
 			Some(Type::String) |
-			Some(Type::U64) => quote! {
+			Some(Type::U64) => quote::quote! {
 				impl std::fmt::Display for #struct_name {
-					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+					fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 						self.0.fmt(f)
 					}
 				}
@@ -89,7 +90,7 @@ pub fn derive_newtype_fromstr(input: proc_macro::TokenStream) -> proc_macro::Tok
 
 		let result = match ty {
 			Some(Type::String) => {
-				quote! {
+				quote::quote! {
 					impl std::str::FromStr for #struct_name {
 						type Err = std::string::ParseError;
 

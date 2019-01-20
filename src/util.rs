@@ -52,7 +52,7 @@ pub async fn ensure_user_credentials<'a>(
 		}
 
 		let username = {
-			let prompt: std::borrow::Cow<_> = existing_username.as_ref().map_or("Username: ".into(), |username| format!("Username [{}]: ", username).into());
+			let prompt: std::borrow::Cow<'_, _> = existing_username.as_ref().map_or("Username: ".into(), |username| format!("Username [{}]: ", username).into());
 			rprompt::prompt_reply_stdout(&prompt).context("Could not read username")?
 		};
 

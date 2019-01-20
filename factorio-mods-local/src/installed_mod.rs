@@ -166,7 +166,7 @@ pub fn find(
 	}))
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
 	static ref DEFAULT_GAME_VERSION: factorio_mods_common::ModVersionReq = factorio_mods_common::ModVersionReq("0.12".parse().unwrap());
 	static ref DEFAULT_DEPENDENCIES: Vec<factorio_mods_common::Dependency> = vec![factorio_mods_common::Dependency {
 		name: factorio_mods_common::ModName("base".to_string()),

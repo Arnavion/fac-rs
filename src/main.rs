@@ -8,6 +8,8 @@
 	nll,
 )]
 
+#![deny(rust_2018_idioms, warnings)]
+
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::const_static_lifetime,
@@ -18,8 +20,6 @@
 	clippy::type_complexity,
 	clippy::use_self,
 )]
-
-#[macro_use] extern crate lazy_static;
 
 use factorio_mods_web::reqwest;
 
@@ -172,7 +172,7 @@ fn main() -> Result<(), DisplayableError> {
 struct DisplayableError(failure::Error);
 
 impl std::fmt::Debug for DisplayableError {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		writeln!(f, "{}", self.0.as_fail())?;
 
 		for fail in self.0.iter_causes() {

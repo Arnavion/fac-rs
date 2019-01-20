@@ -10,7 +10,7 @@
 	unsized_locals,
 )]
 
-#![deny(missing_docs)]
+#![deny(missing_docs, rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
@@ -21,8 +21,7 @@
 	clippy::use_self,
 )]
 
-#[macro_use] extern crate lazy_static;
-pub extern crate reqwest;
+pub use reqwest;
 
 mod api;
 pub use self::api::{ API };

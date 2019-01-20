@@ -23,7 +23,7 @@ impl failure::Fail for Error {
 }
 
 impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		self.kind.fmt(f)
 	}
 }
@@ -95,7 +95,7 @@ pub enum ErrorKind {
 pub struct DisplayablePathBuf(pub std::path::PathBuf);
 
 impl std::fmt::Display for DisplayablePathBuf {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", self.0.display())
 	}
 }

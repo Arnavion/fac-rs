@@ -93,7 +93,7 @@ impl Client {
 	}
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
 	static ref WHITELISTED_HOSTS: std::collections::HashSet<&'static str> = vec![
 		"auth.factorio.com",
 		"direct.mods-data.factorio.com",

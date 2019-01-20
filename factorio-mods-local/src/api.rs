@@ -158,7 +158,7 @@ impl API {
 	}
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
 	static ref FACTORIO_SEARCH_PATHS: Vec<std::path::PathBuf> = {
 		let mut result = vec![];
 
@@ -259,7 +259,7 @@ fn deserialize_mod_list_mod_enabled<'de, D>(deserializer: D) -> Result<bool, D::
 	impl serde::de::Visitor<'_> for Visitor {
 		type Value = bool;
 
-		fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 			write!(f, r#""true" or "false" or true or false"#)
 		}
 

@@ -4,6 +4,8 @@
 	unrestricted_attribute_tokens,
 )]
 
+#![deny(rust_2018_idioms, warnings)]
+
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::cyclomatic_complexity,
@@ -75,7 +77,7 @@ impl<Name, Version> std::fmt::Display for Error<Name, Version> where
 	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 {
-	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		self.kind.fmt(f)
 	}
 }
@@ -372,7 +374,7 @@ fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) 
 }
 
 struct Solution<'a, P>(std::collections::HashMap<&'a <P as Package>::Name, &'a P>) where
-	P: Package + 'a,
+	P: Package,
 	<P as Package>::Name: Eq + std::hash::Hash,
 ;
 
@@ -423,7 +425,7 @@ impl<P> Eq for Solution<'_, P>
 {
 }
 
-struct Permutater<'a, T> where T: 'a {
+struct Permutater<'a, T> {
 	state: Vec<usize>,
 	possibilities: &'a [&'a [T]],
 	run_once: bool,
