@@ -26,7 +26,7 @@ impl API {
 	pub fn search<'a>(
 		&'a self,
 		query: &'a str,
-	) -> impl futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + 'a {
+	) -> SearchResponse<'a> {
 		let query = query.to_lowercase();
 		SearchStream {
 			query,
@@ -36,7 +36,7 @@ impl API {
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get(&self, mod_name: &factorio_mods_common::ModName) -> impl std::future::Future<Output = crate::Result<crate::Mod>> + 'static {
+	pub fn get(&self, mod_name: &factorio_mods_common::ModName) -> GetResponse {
 		let mut mod_url = self.mods_url.clone();
 		mod_url.path_segments_mut().unwrap().push(&mod_name.0);
 		let future = self.client.get_object(mod_url);
@@ -52,9 +52,7 @@ impl API {
 		&self,
 		username: factorio_mods_common::ServiceUsername,
 		password: &str,
-	) -> impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static {
-		// TODO: Replace return type with client::PostObjectFuture
-
+	) -> LoginResponse {
 		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
 		async {
@@ -68,7 +66,7 @@ impl API {
 		&self,
 		release: &crate::ModRelease,
 		user_credentials: &factorio_mods_common::UserCredentials,
-	) -> impl futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static {
+	) -> DownloadResponse {
 		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
@@ -89,9 +87,10 @@ impl API {
 	}
 }
 
-// TODO: Use existential type when https://github.com/rust-lang/rust/issues/53443 is fixed
-// pub existential type GetResponse: std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
-// pub existential type DownloadResponse: futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
+pub existential type DownloadResponse: futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
+pub existential type GetResponse: std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
+pub existential type LoginResponse: std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
+pub existential type SearchResponse<'a>: futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'a;
 
 #[derive(Debug)]
 enum DownloadStream<F> {

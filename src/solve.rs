@@ -456,14 +456,14 @@ fn parse_cached_mod(
 }
 
 enum CacheFuture {
-	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, std::pin::Pin<Box<dyn std::future::Future<Output = factorio_mods_web::Result<factorio_mods_web::Mod>>>>)>),
+	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, std::pin::Pin<Box<factorio_mods_web::GetResponse>>)>),
 	Download(Option<DownloadFuture>),
 }
 
 struct DownloadFuture {
 	mod_name: std::rc::Rc<factorio_mods_common::ModName>,
 	release_version: factorio_mods_common::ReleaseVersion,
-	chunk_stream: std::pin::Pin<Box<dyn futures::stream::Stream<Item = factorio_mods_web::Result<crate::reqwest::r#async::Chunk>>>>,
+	chunk_stream: std::pin::Pin<Box<factorio_mods_web::DownloadResponse>>,
 	download_file: std::io::BufWriter<std::fs::File>,
 	download_filename: std::path::PathBuf,
 	download_displayable_filename: String,

@@ -105,8 +105,8 @@ lazy_static::lazy_static! {
 	static ref WWW_FORM_URL_ENCODED: reqwest::header::HeaderValue = reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded");
 }
 
-pub existential type GetObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
-pub existential type PostObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub(crate) existential type GetObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub(crate) existential type PostObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 
 /// A login failure response.
 #[derive(Debug, serde_derive::Deserialize)]

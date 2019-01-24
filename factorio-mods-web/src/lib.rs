@@ -22,7 +22,7 @@
 pub use reqwest;
 
 mod api;
-pub use self::api::{ API };
+pub use self::api::{ API, DownloadResponse, GetResponse, LoginResponse, SearchResponse };
 
 mod client;
 
