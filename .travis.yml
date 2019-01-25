@@ -2,7 +2,7 @@ language: rust
 rust:
 - nightly
 
-script: rustup component add clippy-preview && cd $CRATE && cargo build --verbose && cargo test --verbose && cargo clippy --verbose
+script: cd $CRATE && cargo build --verbose && cargo test --verbose && rustup component add clippy-preview && cargo clippy --verbose
 
 env:
 - CRATE=factorio-mods-common
