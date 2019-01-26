@@ -191,7 +191,7 @@ fn default_dependencies() -> Vec<factorio_mods_common::Dependency> {
 
 struct GenIterator<G>(G);
 
-impl<G> Iterator for GenIterator<G> where G: std::ops::Generator<Return = ()> {
+impl<G> Iterator for GenIterator<G> where G: std::ops::Generator<Return = ()> + Unpin {
 	type Item = G::Yield;
 
 	fn next(&mut self) -> Option<Self::Item> {

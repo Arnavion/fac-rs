@@ -81,9 +81,9 @@ impl API {
 					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into())))),
 		};
 
-		let future = self.client.get_zip(download_url);
+		let fetch = self.client.get_zip(download_url);
 
-		either::Either::Right(DownloadStream::Fetch(future))
+		either::Either::Right(DownloadStream::Fetch(Box::pin(fetch)))
 	}
 }
 
@@ -92,36 +92,35 @@ pub existential type GetResponse: std::future::Future<Output = crate::Result<cra
 pub existential type LoginResponse: std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
 pub existential type SearchResponse<'a>: futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'a;
 
-#[derive(Debug)]
-enum DownloadStream<F> {
-	Fetch(F),
+enum DownloadStream {
+	Fetch(std::pin::Pin<Box<crate::client::GetZipFuture>>),
 	Response(futures_util::compat::Compat01As03<reqwest::r#async::Decoder>, Option<reqwest::Url>),
 }
 
-impl<F> futures_core::Stream for DownloadStream<F> where F: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> {
+impl futures_core::Stream for DownloadStream {
 	type Item = crate::Result<reqwest::r#async::Chunk>;
 
 	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
-		unsafe {
-			loop {
-				let (response, download_url) = match std::pin::Pin::get_unchecked_mut(self.as_mut()) {
-					DownloadStream::Fetch(f) => match std::pin::Pin::new_unchecked(f).poll(lw) {
-						std::task::Poll::Pending => return std::task::Poll::Pending,
-						std::task::Poll::Ready(Ok(value)) => value,
-						std::task::Poll::Ready(Err(err)) => return std::task::Poll::Ready(Some(Err(err))),
+		loop {
+			return match &mut *self {
+				DownloadStream::Fetch(f) => match std::future::Future::poll(f.as_mut(), lw) {
+					std::task::Poll::Pending => std::task::Poll::Pending,
+					std::task::Poll::Ready(Ok((response, download_url))) => {
+						let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
+						*self = DownloadStream::Response(body, Some(download_url));
+						continue;
 					},
+					std::task::Poll::Ready(Err(err)) => std::task::Poll::Ready(Some(Err(err))),
+				},
 
-					DownloadStream::Response(body, download_url) => return match std::pin::Pin::new_unchecked(body).poll_next(lw) {
-						std::task::Poll::Pending => std::task::Poll::Pending,
-						std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
-						std::task::Poll::Ready(Some(Err(err))) => std::task::Poll::Ready(Some(Err(crate::ErrorKind::HTTP(download_url.take().unwrap(), err).into()))),
-						std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
-					},
-				};
-
-				let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
-				std::pin::Pin::set(&mut self, DownloadStream::Response(body, Some(download_url)));
-			}
+				DownloadStream::Response(body, download_url) => match std::pin::Pin::new(body).poll_next(lw) {
+					std::task::Poll::Pending => std::task::Poll::Pending,
+					std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
+					std::task::Poll::Ready(Some(Err(err))) =>
+						std::task::Poll::Ready(download_url.take().map(|download_url| Err(crate::ErrorKind::HTTP(download_url, err).into()))),
+					std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
+				},
+			};
 		}
 	}
 }
@@ -163,7 +162,7 @@ impl futures_core::Stream for SearchStream<'_> {
 	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
 		loop {
 			let (next_state, result) = match &mut self.state {
-				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(std::pin::Pin::new(page), lw) {
+				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(page.as_mut(), lw) {
 					std::task::Poll::Pending =>
 						return std::task::Poll::Pending,
 
@@ -182,7 +181,7 @@ impl futures_core::Stream for SearchStream<'_> {
 							Some(SearchStreamState::Ended),
 							Some(std::task::Poll::Ready(Some(Err(err)))),
 						),
-					}
+					},
 				},
 
 				SearchStreamState::HavePage(results, next_page_url) => match results.next() {

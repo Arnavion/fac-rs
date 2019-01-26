@@ -50,7 +50,7 @@ impl Client {
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
-	pub fn get_zip(&self, url: reqwest::Url) -> impl std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static {
+	pub fn get_zip(&self, url: reqwest::Url) -> GetZipFuture {
 		let builder = self.inner.get(url.clone());
 
 		async {
@@ -106,6 +106,7 @@ lazy_static::lazy_static! {
 }
 
 pub(crate) existential type GetObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub(crate) existential type GetZipFuture: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
 pub(crate) existential type PostObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 
 /// A login failure response.

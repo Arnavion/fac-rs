@@ -262,7 +262,7 @@ impl std::future::Future for SolutionFuture<'_> {
 
 			match &mut this.pending[i] {
 				CacheFuture::Get(get) => match get {
-					Some((mod_name, f)) => match std::pin::Pin::new(f).poll(lw) {
+					Some((mod_name, f)) => match f.as_mut().poll(lw) {
 						std::task::Poll::Pending => (),
 
 						std::task::Poll::Ready(Ok(mod_)) => {
@@ -344,7 +344,7 @@ impl std::future::Future for SolutionFuture<'_> {
 
 				CacheFuture::Download(download) => match download {
 					Some(f) => loop {
-						match <_ as futures::Stream>::poll_next(std::pin::Pin::new(&mut f.chunk_stream), lw) {
+						match <_ as futures::Stream>::poll_next(f.chunk_stream.as_mut(), lw) {
 							std::task::Poll::Pending => break,
 
 							std::task::Poll::Ready(Some(Ok(chunk))) =>
