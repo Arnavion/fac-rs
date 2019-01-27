@@ -14,9 +14,8 @@ impl SubCommand {
 		let web_api = web_api?;
 
 		let mut mods = web_api.search(&self.query);
-		let mut mods = std::pin::Pin::new(&mut mods);
 
-		while let Some(mod_) = await!(futures::StreamExt::next(&mut *mods)) {
+		while let Some(mod_) = await!(futures::StreamExt::next(&mut mods)) {
 			let mod_ = mod_.context("Could not retrieve mods")?;
 
 			println!("{}", mod_.title);

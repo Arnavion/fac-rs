@@ -18,9 +18,8 @@ impl SubCommand {
 				await!(web_api.get(&name))
 				.with_context(|_| format!("Could not retrieve mod {}", name))
 			}));
-		let mut mods = std::pin::Pin::new(&mut mods);
 
-		while let Some(mod_) = await!(futures::StreamExt::next(&mut *mods)) {
+		while let Some(mod_) = await!(futures::StreamExt::next(&mut mods)) {
 			let mod_ = mod_?;
 
 			println!("Name: {}", mod_.name);
