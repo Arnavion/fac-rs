@@ -8,7 +8,7 @@ pub struct API {
 	base_url: reqwest::Url,
 	mods_url: reqwest::Url,
 	login_url: reqwest::Url,
-	client: crate::client::Client,
+	client: std::sync::Arc<crate::client::Client>,
 }
 
 impl API {
@@ -18,19 +18,16 @@ impl API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
 			login_url: LOGIN_URL.clone(),
-			client: crate::client::Client::new(builder)?,
+			client: std::sync::Arc::new(crate::client::Client::new(builder)?),
 		})
 	}
 
 	/// Searches for mods matching the given criteria.
-	pub fn search<'a>(
-		&'a self,
-		query: &'a str,
-	) -> SearchResponse<'a> {
+	pub fn search(&self, query: &str) -> SearchResponse {
 		let query = query.to_lowercase();
 		SearchStream {
 			query,
-			client: &self.client,
+			client: self.client.clone(),
 			state: SearchStreamState::HavePage(vec![].into_iter(), Some(self.mods_url.clone())),
 		}
 	}
@@ -90,7 +87,7 @@ impl API {
 pub existential type DownloadResponse: futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
 pub existential type GetResponse: std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
 pub existential type LoginResponse: std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
-pub existential type SearchResponse<'a>: futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'a;
+pub existential type SearchResponse: futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
 
 enum DownloadStream {
 	Fetch(std::pin::Pin<Box<crate::client::GetZipFuture>>),
@@ -126,9 +123,9 @@ impl futures_core::Stream for DownloadStream {
 }
 
 #[derive(Debug)]
-struct SearchStream<'a> {
+struct SearchStream {
 	query: String,
-	client: &'a crate::client::Client,
+	client: std::sync::Arc<crate::client::Client>,
 	state: SearchStreamState,
 }
 
@@ -156,7 +153,7 @@ impl std::fmt::Debug for SearchStreamState {
 	}
 }
 
-impl futures_core::Stream for SearchStream<'_> {
+impl futures_core::Stream for SearchStream {
 	type Item = crate::Result<crate::SearchResponseMod>;
 
 	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
