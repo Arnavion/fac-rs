@@ -97,7 +97,7 @@ enum DownloadStream {
 impl futures_core::Stream for DownloadStream {
 	type Item = crate::Result<reqwest::r#async::Chunk>;
 
-	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::Waker) -> std::task::Poll<Option<Self::Item>> {
 		loop {
 			return match &mut *self {
 				DownloadStream::Fetch(f) => match std::future::Future::poll(f.as_mut(), lw) {
@@ -156,7 +156,7 @@ impl std::fmt::Debug for SearchStreamState {
 impl futures_core::Stream for SearchStream {
 	type Item = crate::Result<crate::SearchResponseMod>;
 
-	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Option<Self::Item>> {
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::Waker) -> std::task::Poll<Option<Self::Item>> {
 		loop {
 			let (next_state, result) = match &mut self.state {
 				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(page.as_mut(), lw) {

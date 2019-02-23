@@ -252,7 +252,7 @@ impl std::future::Future for SolutionFuture<'_> {
 		std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	), failure::Error>;
 
-	fn poll(mut self: std::pin::Pin<&mut Self>, lw: &std::task::LocalWaker) -> std::task::Poll<Self::Output> {
+	fn poll(mut self: std::pin::Pin<&mut Self>, lw: &std::task::Waker) -> std::task::Poll<Self::Output> {
 		let this = &mut *self;
 
 		let mut i = 0;
