@@ -19,7 +19,7 @@ multimap = "0.4.x"
 package = { version = "0.1.0", path = "./package" }
 petgraph = "0.4.x"
 regex = "1.1.x"
-rpassword = "2.1.x"
+rpassword = "3.x"
 rprompt = "1.0.x"
 semver = "0.9.x"
 serde = "1.0.x"
