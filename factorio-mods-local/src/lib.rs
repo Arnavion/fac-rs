@@ -3,7 +3,6 @@
 #![feature(
 	generators,
 	generator_trait,
-	unrestricted_attribute_tokens,
 )]
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]

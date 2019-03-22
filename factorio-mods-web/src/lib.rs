@@ -5,7 +5,6 @@
 	await_macro,
 	existential_type,
 	futures_api,
-	unrestricted_attribute_tokens,
 )]
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]

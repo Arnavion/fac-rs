@@ -1,14 +1,10 @@
 //! Solves the given set of packages and requirements to produce a solution of packages to be installed.
 
-#![feature(
-	unrestricted_attribute_tokens,
-)]
-
 #![deny(rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::cyclomatic_complexity,
+	clippy::cognitive_complexity,
 	clippy::default_trait_access,
 	clippy::indexing_slicing,
 	clippy::similar_names,
