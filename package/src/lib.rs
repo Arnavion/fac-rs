@@ -215,7 +215,6 @@ pub fn compute_solution<I>(
 				};
 
 				// All required dependencies satisfied
-				#[allow(clippy::redundant_closure)] // TODO: Clippy bug: https://github.com/rust-lang/rust-clippy/issues/3802
 				let keep = keep &&
 					package.dependencies().iter()
 					.filter(|dep| dep.required())

@@ -252,7 +252,7 @@ impl std::future::Future for SolutionFuture<'_> {
 		std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	), failure::Error>;
 
-	fn poll(mut self: std::pin::Pin<&mut Self>, lw: &std::task::Waker) -> std::task::Poll<Self::Output> {
+	fn poll(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
 		let this = &mut *self;
 
 		let mut i = 0;
@@ -262,7 +262,7 @@ impl std::future::Future for SolutionFuture<'_> {
 
 			match &mut this.pending[i] {
 				CacheFuture::Get(get) => match get {
-					Some((mod_name, f)) => match f.as_mut().poll(lw) {
+					Some((mod_name, f)) => match f.as_mut().poll(cx) {
 						std::task::Poll::Pending => (),
 
 						std::task::Poll::Ready(Ok(mod_)) => {
@@ -344,7 +344,7 @@ impl std::future::Future for SolutionFuture<'_> {
 
 				CacheFuture::Download(download) => match download {
 					Some(f) => loop {
-						match <_ as futures::Stream>::poll_next(f.chunk_stream.as_mut(), lw) {
+						match <_ as futures_core::Stream>::poll_next(f.chunk_stream.as_mut(), cx) {
 							std::task::Poll::Pending => break,
 
 							std::task::Poll::Ready(Some(Ok(chunk))) =>

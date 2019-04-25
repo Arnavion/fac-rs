@@ -5,9 +5,10 @@ pub struct EnableSubCommand {
 }
 
 impl EnableSubCommand {
-	pub async fn run<'a>(
+	#[allow(clippy::needless_lifetimes)] // TODO: Clippy bug https://github.com/rust-lang/rust-clippy/issues/3988
+	pub async fn run(
 		self,
-		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
+		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
 	) -> Result<(), failure::Error> {
 		await!(enable_disable(self.names, local_api, prompt_override, true))?;
@@ -22,9 +23,10 @@ pub struct DisableSubCommand {
 }
 
 impl DisableSubCommand {
-	pub async fn run<'a>(
+	#[allow(clippy::needless_lifetimes)] // TODO: Clippy bug https://github.com/rust-lang/rust-clippy/issues/3988
+	pub async fn run(
 		self,
-		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
+		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
 	) -> Result<(), failure::Error> {
 		await!(enable_disable(self.names, local_api, prompt_override, false))?;

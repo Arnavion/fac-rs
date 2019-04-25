@@ -4,7 +4,6 @@
 	async_await,
 	await_macro,
 	existential_type,
-	futures_api,
 )]
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]

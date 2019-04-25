@@ -3,9 +3,10 @@ pub struct SubCommand {
 }
 
 impl SubCommand {
-	pub async fn run<'a>(
+	#[allow(clippy::needless_lifetimes)] // TODO: Clippy bug https://github.com/rust-lang/rust-clippy/issues/3988
+	pub async fn run(
 		self,
-		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
+		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 	) -> Result<(), failure::Error> {
 		use failure::ResultExt;
 

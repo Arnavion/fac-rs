@@ -169,22 +169,19 @@ fn parse_version_req(s: &str) -> Result<semver::VersionReq, semver::ReqParseErro
 
 /// Fixes up some bad version strings returned by the web API into something valid for the `semver` crate.
 pub fn fixup_version(s: &str) -> String {
-	itertools::join(s.split('.').enumerate().map(|(i, part)| {
-		let part =
-			if i == 0 && part.starts_with('0') {
-				"0".to_string() + part.trim_matches('0')
+	itertools::join(s.split('.').map(|part|
+		if part.starts_with('0') {
+			let rest = part.trim_start_matches('0');
+			if rest.is_empty() {
+				"0"
 			}
 			else {
-				part.trim_matches('0').to_string()
-			};
-
-		if part.is_empty() {
-			"0".to_string()
+				rest
+			}
 		}
 		else {
 			part
-		}
-	}), ".")
+		}), ".")
 }
 
 lazy_static::lazy_static! {
@@ -228,6 +225,7 @@ mod tests {
 		test_deserialize_release_version_inner(r#""0.14.0""#, "0.14.0");
 		test_deserialize_release_version_inner(r#""0.2.02""#, "0.2.2");
 		test_deserialize_release_version_inner(r#""0.14.00""#, "0.14.0");
+		test_deserialize_release_version_inner(r#""016.0.5""#, "16.0.5");
 	}
 
 	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, required: bool) {

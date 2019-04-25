@@ -5,21 +5,22 @@ pub struct SubCommand {
 }
 
 impl SubCommand {
-	pub async fn run<'a>(
+	#[allow(clippy::needless_lifetimes)] // TODO: Clippy bug https://github.com/rust-lang/rust-clippy/issues/3988
+	pub async fn run(
 		self,
-		web_api: Result<&'a factorio_mods_web::API, failure::Error>,
+		web_api: Result<&'_ factorio_mods_web::API, failure::Error>,
 	) -> Result<(), failure::Error> {
 		use failure::ResultExt;
 
 		let web_api = web_api?;
 
-		let mut mods =
-			futures::stream::futures_ordered(self.names.into_iter().map(|name| async move {
+		let mut mods: futures_util::stream::FuturesOrdered<_> =
+			self.names.into_iter().map(|name| async move {
 				await!(web_api.get(&name))
 				.with_context(|_| format!("Could not retrieve mod {}", name))
-			}));
+			}).collect();
 
-		while let Some(mod_) = await!(futures::StreamExt::next(&mut mods)) {
+		while let Some(mod_) = await!(futures_util::StreamExt::next(&mut mods)) {
 			let mod_ = mod_?;
 
 			println!("Name: {}", mod_.name);

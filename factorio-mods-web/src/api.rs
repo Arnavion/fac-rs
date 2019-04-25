@@ -97,10 +97,10 @@ enum DownloadStream {
 impl futures_core::Stream for DownloadStream {
 	type Item = crate::Result<reqwest::r#async::Chunk>;
 
-	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::Waker) -> std::task::Poll<Option<Self::Item>> {
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
 		loop {
 			return match &mut *self {
-				DownloadStream::Fetch(f) => match std::future::Future::poll(f.as_mut(), lw) {
+				DownloadStream::Fetch(f) => match std::future::Future::poll(f.as_mut(), cx) {
 					std::task::Poll::Pending => std::task::Poll::Pending,
 					std::task::Poll::Ready(Ok((response, download_url))) => {
 						let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
@@ -110,7 +110,7 @@ impl futures_core::Stream for DownloadStream {
 					std::task::Poll::Ready(Err(err)) => std::task::Poll::Ready(Some(Err(err))),
 				},
 
-				DownloadStream::Response(body, download_url) => match std::pin::Pin::new(body).poll_next(lw) {
+				DownloadStream::Response(body, download_url) => match std::pin::Pin::new(body).poll_next(cx) {
 					std::task::Poll::Pending => std::task::Poll::Pending,
 					std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
 					std::task::Poll::Ready(Some(Err(err))) =>
@@ -156,10 +156,10 @@ impl std::fmt::Debug for SearchStreamState {
 impl futures_core::Stream for SearchStream {
 	type Item = crate::Result<crate::SearchResponseMod>;
 
-	fn poll_next(mut self: std::pin::Pin<&mut Self>, lw: &std::task::Waker) -> std::task::Poll<Option<Self::Item>> {
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
 		loop {
 			let (next_state, result) = match &mut self.state {
-				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(page.as_mut(), lw) {
+				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(page.as_mut(), cx) {
 					std::task::Poll::Pending =>
 						return std::task::Poll::Pending,
 
