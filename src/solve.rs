@@ -1,4 +1,4 @@
-use failure::{ Fail, ResultExt };
+use failure::ResultExt;
 
 /// Computes which old mods to uninstall and which new mods to install based on the given reqs.
 /// Asks the user for confirmation, then applies the diff.
@@ -309,25 +309,20 @@ impl std::future::Future for SolutionFuture<'_> {
 									}
 								}
 
-								let mut download_file = std::fs::OpenOptions::new();
-								let download_file = download_file.create(true).truncate(true).write(true);
-								let download_file =
-									download_file.open(&download_filename)
-									.with_context(|_| format!("Could not open {} for writing", download_displayable_filename))?;
-								let download_file = std::io::BufWriter::new(download_file);
-
 								let chunk_stream = this.web_api.download(&release, &this.user_credentials);
 
-								new.push(CacheFuture::Download(Some(DownloadFuture {
-									mod_name: mod_name.clone(),
-									release_version: release.version,
-									chunk_stream: Box::pin(chunk_stream),
-									download_file,
-									download_filename,
-									download_displayable_filename,
-									filename,
-									displayable_filename,
-								})));
+								new.push(CacheFuture::Download(Some((
+									mod_name.clone(),
+									release.version,
+
+									Box::pin(download(
+										chunk_stream,
+										download_filename,
+										download_displayable_filename,
+
+										filename,
+										displayable_filename,
+									))))));
 							}
 						},
 
@@ -345,47 +340,23 @@ impl std::future::Future for SolutionFuture<'_> {
 				},
 
 				CacheFuture::Download(download) => match download {
-					Some(f) => loop {
-						match <_ as futures_core::Stream>::poll_next(f.chunk_stream.as_mut(), cx) {
-							std::task::Poll::Pending => break,
+					Some((mod_name, release_version, f)) => match f.as_mut().poll(cx) {
+						std::task::Poll::Ready(Ok((filename, displayable_filename))) => {
+							let (mod_name, release_version, _) = download.take().unwrap();
 
-							std::task::Poll::Ready(Some(Ok(chunk))) =>
-								std::io::Write::write_all(&mut f.download_file, &chunk)
-								.with_context(|_| format!("Could not write to file {}", f.download_displayable_filename))?,
+							println!("        Downloading {} {} ... parsing", mod_name, release_version);
 
-							std::task::Poll::Ready(Some(Err(err))) =>
-								return std::task::Poll::Ready(
-									Err(err.context(format!("Could not download release {} {}", f.mod_name, f.release_version))
-									.into())),
+							parse_cached_mod(filename, &displayable_filename, &mut this.already_fetching, &mut new, &mut this.packages, this.web_api)?;
 
-							std::task::Poll::Ready(None) => {
-								let DownloadFuture {
-									mod_name,
-									release_version,
-									mut download_file,
-									download_filename,
-									download_displayable_filename,
-									filename,
-									displayable_filename,
-									..
-								} = download.take().unwrap();
+							println!("        Downloading {} {} ... done", mod_name, release_version);
+						},
 
-								println!("        Downloading {} {} ... parsing", mod_name, release_version);
+						std::task::Poll::Ready(Err(err)) =>
+							return std::task::Poll::Ready(
+								Err(err.context(format!("Could not download release {} {}", mod_name, release_version))
+								.into())),
 
-								std::io::Write::flush(&mut download_file)
-								.with_context(|_| format!("Could not write to file {}", download_displayable_filename))?;
-								drop(download_file);
-
-								std::fs::rename(&download_filename, &filename)
-								.with_context(|_| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename))?;
-
-								parse_cached_mod(filename.clone(), &displayable_filename, &mut this.already_fetching, &mut new, &mut this.packages, this.web_api)?;
-
-								println!("        Downloading {} {} ... done", mod_name, release_version);
-
-								break;
-							},
-						}
+						std::task::Poll::Pending => (),
 					},
 
 					None => unreachable!(),
@@ -436,6 +407,41 @@ fn get(
 	}
 }
 
+async fn download(
+	chunk_stream: factorio_mods_web::DownloadResponse,
+	download_filename: std::path::PathBuf,
+	download_displayable_filename: String,
+
+	filename: std::path::PathBuf,
+	displayable_filename: String,
+) -> Result<(std::path::PathBuf, String), failure::Error> {
+	let mut chunk_stream = chunk_stream; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60498
+
+	let download_file =
+		std::fs::OpenOptions::new()
+		.create(true).truncate(true).write(true)
+		.open(&download_filename)
+		.with_context(|_| format!("Could not open {} for writing", download_displayable_filename))?;
+	let mut download_file = std::io::BufWriter::new(download_file);
+
+	while let Some(chunk) = await!(futures_util::stream::StreamExt::next(&mut chunk_stream)) {
+		let chunk = chunk?;
+
+		std::io::Write::write_all(&mut download_file, &chunk)
+			.with_context(|_| format!("Could not write to file {}", displayable_filename))?;
+	}
+
+	std::io::Write::flush(&mut download_file)
+		.with_context(|_| format!("Could not write to file {}", displayable_filename))?;
+
+	drop(download_file);
+
+	std::fs::rename(&download_filename, &filename)
+		.with_context(|_| format!("Could not rename {} to {}", download_displayable_filename, displayable_filename))?;
+
+	Ok((filename, displayable_filename))
+}
+
 fn parse_cached_mod(
 	filename: std::path::PathBuf,
 	displayable_filename: &str,
@@ -459,18 +465,11 @@ fn parse_cached_mod(
 
 enum CacheFuture {
 	Get(Option<(std::rc::Rc<factorio_mods_common::ModName>, std::pin::Pin<Box<factorio_mods_web::GetResponse>>)>),
-	Download(Option<DownloadFuture>),
-}
-
-struct DownloadFuture {
-	mod_name: std::rc::Rc<factorio_mods_common::ModName>,
-	release_version: factorio_mods_common::ReleaseVersion,
-	chunk_stream: std::pin::Pin<Box<factorio_mods_web::DownloadResponse>>,
-	download_file: std::io::BufWriter<std::fs::File>,
-	download_filename: std::path::PathBuf,
-	download_displayable_filename: String,
-	filename: std::path::PathBuf,
-	displayable_filename: String,
+	Download(Option<(
+		std::rc::Rc<factorio_mods_common::ModName>,
+		factorio_mods_common::ReleaseVersion,
+		std::pin::Pin<Box<dyn std::future::Future<Output = Result<(std::path::PathBuf, String), failure::Error>>>>,
+	)>),
 }
 
 #[derive(Clone, Debug)]
