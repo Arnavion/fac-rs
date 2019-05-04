@@ -15,7 +15,7 @@ pub struct API {
 impl API {
 	/// Constructs an API object. Tries to detect the local Factorio install in some pre-defined locations.
 	pub fn new() -> crate::Result<Self> {
-		let base_info_file_path = FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
+		let base_info_file_path = FACTORIO_SEARCH_PATHS.iter().find_map(|search_path| {
 			let search_path = std::path::Path::new(search_path);
 			let base_info_file_path = search_path.join("data").join("base").join("info.json");
 			if base_info_file_path.is_file() {
@@ -24,7 +24,7 @@ impl API {
 			else {
 				None
 			}
-		}).next().ok_or(crate::ErrorKind::DataPath)?;
+		}).ok_or(crate::ErrorKind::DataPath)?;
 
 		let game_version = {
 			let base_info_file = match std::fs::File::open(&base_info_file_path) {
@@ -36,7 +36,7 @@ impl API {
 		};
 
 		let (mods_directory, mod_list_file_path, player_data_json_file_path) =
-			FACTORIO_SEARCH_PATHS.iter().filter_map(|search_path| {
+			FACTORIO_SEARCH_PATHS.iter().find_map(|search_path| {
 				let search_path = std::path::Path::new(search_path);
 
 				let mods_directory = search_path.join("mods");
@@ -49,7 +49,7 @@ impl API {
 				else {
 					None
 				}
-			}).next().ok_or(crate::ErrorKind::WritePath)?;
+			}).ok_or(crate::ErrorKind::WritePath)?;
 
 		Ok(API {
 			game_version,
