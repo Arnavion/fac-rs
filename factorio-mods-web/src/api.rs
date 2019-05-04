@@ -74,13 +74,13 @@ impl API {
 			},
 
 			Err(err) =>
-				return either::Either::Left(futures_util::stream::once(futures_util::future::ready(Err(
+				return futures_util::future::Either::Left(futures_util::stream::once(futures_util::future::ready(Err(
 					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into())))),
 		};
 
 		let fetch = self.client.get_zip(download_url);
 
-		either::Either::Right(DownloadStream::Fetch(Box::pin(fetch)))
+		futures_util::future::Either::Right(DownloadStream::Fetch(Box::pin(fetch)))
 	}
 }
 

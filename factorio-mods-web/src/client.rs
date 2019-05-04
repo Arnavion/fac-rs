@@ -143,9 +143,10 @@ async fn send(
 	}
 }
 
-async fn json<T>(mut response: reqwest::r#async::Response, url: reqwest::Url) -> crate::Result<(T, reqwest::Url)>
+async fn json<T>(response: reqwest::r#async::Response, url: reqwest::Url) -> crate::Result<(T, reqwest::Url)>
 	where T: serde::de::DeserializeOwned + 'static
 {
+	let mut response = response; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60498
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
 	match await!(futures_util::compat::Future01CompatExt::compat(response.json())) {
 		Ok(object) => Ok((object, url)),

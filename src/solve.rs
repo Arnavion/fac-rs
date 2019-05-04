@@ -7,9 +7,11 @@ use failure::{ Fail, ResultExt };
 pub async fn compute_and_apply_diff<'a>(
 	local_api: &'a factorio_mods_local::API,
 	web_api: &'a factorio_mods_web::API,
-	mut config: crate::config::Config,
+	config: crate::config::Config,
 	prompt_override: Option<bool>,
 ) -> Result<(), failure::Error> {
+	let mut config = config; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60498
+
 	let user_credentials = await!(crate::util::ensure_user_credentials(local_api, web_api, prompt_override))?;
 
 	let game_version = local_api.game_version();
