@@ -298,11 +298,19 @@ mod tests {
 
 		run_test(|api| Box::pin(
 			api.search("bob's functions library mod")
+			.filter_map(|mod_| {
+				let mod_ = mod_.unwrap();
+				println!("{:?}", mod_);
+				if mod_.title.0 == "Bob's Functions Library mod" {
+					futures_util::future::ready(Some(mod_))
+				}
+				else {
+					futures_util::future::ready(None)
+				}
+			})
 			.into_future()
 			.map(|(result, _)| {
-				let mod_ = result.unwrap().unwrap();
-				println!("{:?}", mod_);
-				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
+				let _ = result.unwrap();
 			})));
 	}
 
