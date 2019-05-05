@@ -10,7 +10,7 @@ pub async fn compute_and_apply_diff<'a>(
 	config: crate::config::Config,
 	prompt_override: Option<bool>,
 ) -> Result<(), failure::Error> {
-	let mut config = config; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60498
+	let mut config = config; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60566
 
 	let user_credentials = await!(crate::util::ensure_user_credentials(local_api, web_api, prompt_override))?;
 
@@ -415,7 +415,7 @@ async fn download(
 	filename: std::path::PathBuf,
 	displayable_filename: String,
 ) -> Result<(std::path::PathBuf, String), failure::Error> {
-	let mut chunk_stream = chunk_stream; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60498
+	let mut chunk_stream = chunk_stream; // TODO: Workaround for https://github.com/rust-lang/rust/issues/60566
 
 	let download_file =
 		std::fs::OpenOptions::new()
