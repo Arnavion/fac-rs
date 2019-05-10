@@ -128,42 +128,37 @@ pub fn find(
 	let name_pattern = name_pattern.map_or(std::borrow::Cow::Borrowed("*"), std::borrow::Cow::Owned);
 	let matcher = globset::Glob::new(&name_pattern).map_err(|err| crate::ErrorKind::Pattern(name_pattern.into_owned(), err))?.compile_matcher();
 
-	Ok(GenIterator(move || for directory_entry in directory_entries {
-		match directory_entry {
-			Ok(directory_entry) => {
-				let path = directory_entry.path();
+	Ok(directory_entries
+		.filter_map(move |directory_entry| {
+			let directory_entry = match directory_entry {
+				Ok(directory_entry) => directory_entry,
+				Err(err) => return Some(Err(err.into())),
+			};
 
-				let matches = path.file_name().map_or(false, |filename| matcher.is_match(filename));
-				if !matches {
-					continue;
+			let path = directory_entry.path();
+
+			let matches = path.file_name().map_or(false, |filename| matcher.is_match(filename));
+			if !matches {
+				return None;
+			}
+
+			let installed_mod = match InstalledMod::parse(path) {
+				Ok(installed_mod) => installed_mod,
+
+				Err(err) => match err.kind() {
+					crate::ErrorKind::UnknownModFormat(_) => return None,
+					_ => return Some(Err(err)),
+				},
+			};
+
+			if let Some(version) = &version {
+				if version != &installed_mod.info.version {
+					return None;
 				}
+			}
 
-				let installed_mod = match InstalledMod::parse(path) {
-					Ok(installed_mod) => installed_mod,
-
-					Err(err) => {
-						match err.kind() {
-							crate::ErrorKind::UnknownModFormat(_) => (),
-							_ => yield Err(err),
-						}
-
-						continue;
-					},
-				};
-
-				if let Some(ref version) = version {
-					if version != &installed_mod.info.version {
-						continue;
-					}
-				}
-
-				yield Ok(installed_mod);
-			},
-
-			Err(err) =>
-				yield Err(err.into()),
-		}
-	}))
+			Some(Ok(installed_mod))
+		}))
 }
 
 lazy_static::lazy_static! {
@@ -187,17 +182,4 @@ fn default_game_version() -> factorio_mods_common::ModVersionReq {
 /// Used as the default value of the `dependencies` field in a mod's `info.json` if the field doesn't exist.
 fn default_dependencies() -> Vec<factorio_mods_common::Dependency> {
 	DEFAULT_DEPENDENCIES.clone()
-}
-
-struct GenIterator<G>(G);
-
-impl<G> Iterator for GenIterator<G> where G: std::ops::Generator<Return = ()> + Unpin {
-	type Item = G::Yield;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		match std::ops::Generator::resume(std::pin::Pin::new(&mut self.0)) {
-			std::ops::GeneratorState::Yielded(value) => Some(value),
-			std::ops::GeneratorState::Complete(()) => None,
-		}
-	}
 }

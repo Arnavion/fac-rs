@@ -1,10 +1,5 @@
 //! API to interface with the local Factorio installation.
 
-#![feature(
-	generators,
-	generator_trait,
-)]
-
 #![deny(missing_docs, rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
