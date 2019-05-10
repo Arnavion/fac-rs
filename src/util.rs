@@ -67,7 +67,7 @@ pub async fn ensure_user_credentials<'a>(
 
 		let password = rpassword::prompt_password_stdout("Password (not shown): ").context("Could not read password")?;
 
-		match await!(web_api.login(username.clone(), &password)) {
+		match web_api.login(username.clone(), &password).await {
 			Ok(user_credentials) => {
 				println!("Logged in successfully.");
 				local_api.save_user_credentials(user_credentials.clone()).context("Could not save player-data.json")?;

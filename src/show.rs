@@ -16,11 +16,11 @@ impl SubCommand {
 
 		let mut mods: futures_util::stream::FuturesOrdered<_> =
 			self.names.into_iter().map(|name| async move {
-				await!(web_api.get(&name))
+				web_api.get(&name).await
 				.with_context(|_| format!("Could not retrieve mod {}", name))
 			}).collect();
 
-		while let Some(mod_) = await!(futures_util::StreamExt::next(&mut mods)) {
+		while let Some(mod_) = futures_util::StreamExt::next(&mut mods).await {
 			let mod_ = mod_?;
 
 			println!("Name: {}", mod_.name);

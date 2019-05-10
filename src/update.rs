@@ -15,7 +15,7 @@ impl SubCommand {
 
 		let config = crate::config::Config::load(local_api, config_file_path)?;
 
-		await!(crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
+		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;
 
 		Ok(())
 	}

@@ -22,7 +22,7 @@ impl SubCommand {
 			config.mods.remove(&name);
 		}
 
-		await!(crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
+		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;
 
 		Ok(())
 	}

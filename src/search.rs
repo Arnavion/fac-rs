@@ -16,7 +16,7 @@ impl SubCommand {
 
 		let mut mods = web_api.search(&self.query);
 
-		while let Some(mod_) = await!(futures_util::StreamExt::next(&mut mods)) {
+		while let Some(mod_) = futures_util::StreamExt::next(&mut mods).await {
 			let mod_ = mod_.context("Could not retrieve mods")?;
 
 			println!("{}", mod_.title);

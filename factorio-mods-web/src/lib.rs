@@ -2,7 +2,6 @@
 
 #![feature(
 	async_await,
-	await_macro,
 	existential_type,
 )]
 

@@ -55,7 +55,7 @@ impl SubCommand {
 			config.mods.insert(requirement.name, requirement.version);
 		}
 
-		await!(crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override))?;
+		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;
 
 		Ok(())
 	}

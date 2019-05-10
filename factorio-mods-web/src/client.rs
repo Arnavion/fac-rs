@@ -44,8 +44,8 @@ impl Client {
 
 		async {
 			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone());
-			let (response, url) = await!(send(builder, url))?;
-			Ok(await!(json(response, url))?)
+			let (response, url) = send(builder, url).await?;
+			Ok(json(response, url).await?)
 		}
 	}
 
@@ -55,7 +55,7 @@ impl Client {
 
 		async {
 			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
-			let (response, url) = await!(send(builder, url))?;
+			let (response, url) = send(builder, url).await?;
 			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
 			Ok((response, url))
 		}
@@ -81,8 +81,8 @@ impl Client {
 				.header(reqwest::header::CONTENT_TYPE, WWW_FORM_URL_ENCODED.clone())
 				.body(body);
 
-			let (response, url) = await!(send(builder, url))?;
-			Ok(await!(json(response, url))?)
+			let (response, url) = send(builder, url).await?;
+			Ok(json(response, url).await?)
 		}
 
 		let builder = self.inner.post(url.clone());
@@ -124,7 +124,7 @@ async fn send(
 		_ => return Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
 	};
 
-	let response = match await!(futures_util::compat::Future01CompatExt::compat(builder.send())) {
+	let response = match futures_util::compat::Future01CompatExt::compat(builder.send()).await {
 		Ok(response) => response,
 		Err(err) => return Err(crate::ErrorKind::HTTP(url, err).into()),
 	};
@@ -133,7 +133,7 @@ async fn send(
 		reqwest::StatusCode::OK => Ok((response, url)),
 
 		reqwest::StatusCode::UNAUTHORIZED => {
-			let (object, _): (LoginFailureResponse, _) = await!(json(response, url))?;
+			let (object, _): (LoginFailureResponse, _) = json(response, url).await?;
 			Err(crate::ErrorKind::LoginFailure(object.message).into())
 		},
 
@@ -147,7 +147,7 @@ async fn json<T>(mut response: reqwest::r#async::Response, url: reqwest::Url) ->
 	where T: serde::de::DeserializeOwned + 'static
 {
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
-	match await!(futures_util::compat::Future01CompatExt::compat(response.json())) {
+	match futures_util::compat::Future01CompatExt::compat(response.json()).await {
 		Ok(object) => Ok((object, url)),
 		Err(err) => Err(crate::ErrorKind::HTTP(url, err).into()),
 	}

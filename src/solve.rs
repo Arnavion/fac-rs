@@ -10,7 +10,7 @@ pub async fn compute_and_apply_diff<'a>(
 	mut config: crate::config::Config,
 	prompt_override: Option<bool>,
 ) -> Result<(), failure::Error> {
-	let user_credentials = await!(crate::util::ensure_user_credentials(local_api, web_api, prompt_override))?;
+	let user_credentials = crate::util::ensure_user_credentials(local_api, web_api, prompt_override).await?;
 
 	let game_version = local_api.game_version();
 
@@ -25,7 +25,7 @@ pub async fn compute_and_apply_diff<'a>(
 	println!("Updating cache ...");
 
 	let solution_future = SolutionFuture::new(web_api, user_credentials, game_version, config.mods, cache_directory, cache_directory_canonicalized);
-	let (solution, mut reqs) = await!(solution_future)?;
+	let (solution, mut reqs) = solution_future.await?;
 
 	reqs.remove(&factorio_mods_common::ModName("base".to_string()));
 	config.mods = reqs;
@@ -421,7 +421,7 @@ async fn download(
 		.with_context(|_| format!("Could not open {} for writing", download_displayable_filename))?;
 	let mut download_file = std::io::BufWriter::new(download_file);
 
-	while let Some(chunk) = await!(futures_util::stream::StreamExt::next(&mut chunk_stream)) {
+	while let Some(chunk) = futures_util::stream::StreamExt::next(&mut chunk_stream).await {
 		let chunk = chunk?;
 
 		std::io::Write::write_all(&mut download_file, &chunk)

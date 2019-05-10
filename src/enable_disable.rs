@@ -11,7 +11,7 @@ impl EnableSubCommand {
 		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
 	) -> Result<(), failure::Error> {
-		await!(enable_disable(self.names, local_api, prompt_override, true))?;
+		enable_disable(self.names, local_api, prompt_override, true).await?;
 		Ok(())
 	}
 }
@@ -29,7 +29,7 @@ impl DisableSubCommand {
 		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
 	) -> Result<(), failure::Error> {
-		await!(enable_disable(self.names, local_api, prompt_override, false))?;
+		enable_disable(self.names, local_api, prompt_override, false).await?;
 		Ok(())
 	}
 }

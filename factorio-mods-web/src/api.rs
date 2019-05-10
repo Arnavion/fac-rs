@@ -39,7 +39,7 @@ impl API {
 		let future = self.client.get_object(mod_url);
 
 		async {
-			let (mod_, _) = await!(future)?;
+			let (mod_, _) = future.await?;
 			Ok(mod_)
 		}
 	}
@@ -53,7 +53,7 @@ impl API {
 		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
 		async {
-			let ((token,), _) = await!(future)?;
+			let ((token,), _) = future.await?;
 			Ok(factorio_mods_common::UserCredentials { username, token })
 		}
 	}
