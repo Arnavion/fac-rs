@@ -52,7 +52,8 @@ impl SubCommand {
 		let mut config = crate::config::Config::load(local_api, config_file_path)?;
 
 		for requirement in self.requirements {
-			config.mods.insert(requirement.name, requirement.version);
+			// TODO: Workaround for https://github.com/rust-lang/rust/issues/61579
+			let _ = config.mods.insert(requirement.name, requirement.version);
 		}
 
 		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;
