@@ -85,10 +85,6 @@ impl Config {
 
 		Ok(())
 	}
-
-	pub fn cache_directory(&self) -> Result<std::path::PathBuf, failure::Error> {
-		Ok(appdirs::user_cache_dir(Some("fac"), None).map_err(|()| failure::err_msg("Could not derive path to cache directory"))?)
-	}
 }
 
 fn serialize_config_mods<S>(

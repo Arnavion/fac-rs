@@ -4,13 +4,13 @@
 
 /// Wraps a `reqwest::unstable::r#async::Client` to only allow limited operations on it.
 #[derive(Debug)]
-pub struct Client {
+pub(crate) struct Client {
 	inner: reqwest::r#async::Client,
 }
 
 impl Client {
 	/// Creates a new `Client` object.
-	pub fn new(builder: Option<reqwest::r#async::ClientBuilder>) -> crate::Result<Self> {
+	pub(crate) fn new(builder: Option<reqwest::r#async::ClientBuilder>) -> crate::Result<Self> {
 		let builder = builder.unwrap_or_else(reqwest::r#async::ClientBuilder::new);
 
 		let mut default_headers = reqwest::header::HeaderMap::new();
@@ -39,30 +39,53 @@ impl Client {
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
-	pub fn get_object<T>(&self, url: reqwest::Url) -> GetObjectFuture<T> where T: serde::de::DeserializeOwned + 'static {
+	pub(crate) fn get_object<T>(&self, url: reqwest::Url) -> GetObjectFuture<T> where T: serde::de::DeserializeOwned + 'static {
 		let builder = self.inner.get(url.clone());
 
 		async {
 			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone());
-			let (response, url) = send(builder, url).await?;
+			let (response, url) = send(builder, url, false).await?;
 			Ok(json(response, url).await?)
 		}
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
-	pub fn get_zip(&self, url: reqwest::Url) -> GetZipFuture {
+	pub(crate) fn get_zip(&self, url: reqwest::Url, range: Option<&str>) -> GetZipFuture {
 		let builder = self.inner.get(url.clone());
+
+		let is_range_request;
+		let builder =
+			if let Some(range) = range {
+				is_range_request = true;
+				builder.header(reqwest::header::RANGE, range)
+			}
+			else {
+				is_range_request = false;
+				builder
+			};
+
+		async move {
+			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
+			let (response, url) = send(builder, url, is_range_request).await?;
+			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
+			Ok((response, url))
+		}
+	}
+
+	/// HEADs the given URL using the given client, and returns an application/zip response.
+	pub(crate) fn head_zip(&self, url: reqwest::Url) -> HeadZipFuture {
+		let builder = self.inner.head(url.clone());
 
 		async {
 			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
-			let (response, url) = send(builder, url).await?;
+			let (response, url) = send(builder, url, false).await?;
 			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
 			Ok((response, url))
 		}
 	}
 
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
-	pub fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> PostObjectFuture<T>
+	pub(crate) fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> PostObjectFuture<T>
 		where B: serde::Serialize, T: serde::de::DeserializeOwned + 'static
 	{
 		async fn inner<T>(
@@ -81,7 +104,7 @@ impl Client {
 				.header(reqwest::header::CONTENT_TYPE, WWW_FORM_URL_ENCODED.clone())
 				.body(body);
 
-			let (response, url) = send(builder, url).await?;
+			let (response, url) = send(builder, url, false).await?;
 			Ok(json(response, url).await?)
 		}
 
@@ -107,6 +130,7 @@ lazy_static::lazy_static! {
 
 pub(crate) existential type GetObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 pub(crate) existential type GetZipFuture: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
+pub(crate) existential type HeadZipFuture: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
 pub(crate) existential type PostObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 
 /// A login failure response.
@@ -118,6 +142,7 @@ struct LoginFailureResponse {
 async fn send(
 	builder: reqwest::r#async::RequestBuilder,
 	url: reqwest::Url,
+	is_range_request: bool,
 ) -> crate::Result<(reqwest::r#async::Response, reqwest::Url)> {
 	match url.host_str() {
 		Some(host) if WHITELISTED_HOSTS.contains(host) => (),
@@ -130,14 +155,15 @@ async fn send(
 	};
 
 	match response.status() {
-		reqwest::StatusCode::OK => Ok((response, url)),
+		reqwest::StatusCode::OK if !is_range_request => Ok((response, url)),
+		reqwest::StatusCode::PARTIAL_CONTENT if is_range_request => Ok((response, url)),
+
+		reqwest::StatusCode::FOUND => Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
 
 		reqwest::StatusCode::UNAUTHORIZED => {
 			let (object, _): (LoginFailureResponse, _) = json(response, url).await?;
 			Err(crate::ErrorKind::LoginFailure(object.message).into())
 		},
-
-		reqwest::StatusCode::FOUND => Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
 
 		code => Err(crate::ErrorKind::StatusCode(url, code).into()),
 	}

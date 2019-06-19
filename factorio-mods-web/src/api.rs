@@ -58,11 +58,52 @@ impl API {
 		}
 	}
 
+	/// Get the filesize for the specified mod release.
+	pub fn get_filesize(
+		&self,
+		release: &crate::ModRelease,
+		user_credentials: &factorio_mods_common::UserCredentials,
+	) -> GetFilesizeResponse {
+		let download_url = match self.base_url.join(&release.download_url.0) {
+			Ok(mut download_url) => {
+				download_url.query_pairs_mut()
+					.append_pair("username", &user_credentials.username.0)
+					.append_pair("token", &user_credentials.token.0);
+
+				download_url
+			},
+
+			Err(err) =>
+				return futures_util::future::Either::Left(futures_util::future::ready(Err(
+					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into()))),
+		};
+
+		let head = self.client.head_zip(download_url);
+
+		futures_util::future::Either::Right(async {
+			let (response, download_url) = head.await?;
+			let len = match response.headers().get(reqwest::header::CONTENT_LENGTH) {
+				Some(len) => len,
+				None => return Err(crate::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_owned()).into()),
+			};
+			let len = match len.to_str() {
+				Ok(len) => len,
+				Err(err) => return Err(crate::ErrorKind::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err)).into()),
+			};
+			let len = match len.parse() {
+				Ok(len) => len,
+				Err(err) => return Err(crate::ErrorKind::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err)).into()),
+			};
+			Ok(len)
+		})
+	}
+
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
 	pub fn download(
 		&self,
 		release: &crate::ModRelease,
 		user_credentials: &factorio_mods_common::UserCredentials,
+		range: Option<&str>,
 	) -> DownloadResponse {
 		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
@@ -78,7 +119,7 @@ impl API {
 					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into())))),
 		};
 
-		let fetch = self.client.get_zip(download_url);
+		let fetch = self.client.get_zip(download_url, range);
 
 		futures_util::future::Either::Right(DownloadStream::Fetch(Box::pin(fetch)))
 	}
@@ -86,6 +127,7 @@ impl API {
 
 pub existential type DownloadResponse: futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
 pub existential type GetResponse: std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
+pub existential type GetFilesizeResponse: std::future::Future<Output = crate::Result<u64>> + 'static;
 pub existential type LoginResponse: std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
 pub existential type SearchResponse: futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
 

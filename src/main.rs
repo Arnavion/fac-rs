@@ -19,7 +19,6 @@
 
 use factorio_mods_web::reqwest;
 
-mod cache;
 mod enable_disable;
 mod install;
 mod list;
@@ -53,9 +52,6 @@ pub struct Options {
 
 #[derive(Debug, structopt_derive::StructOpt)]
 pub enum SubCommand {
-	#[structopt(name = "cache", about = "Manage the local mods cache.")]
-	Cache(cache::SubCommand),
-
 	#[structopt(name = "disable", about = "Disable mods")]
 	Disable(enable_disable::DisableSubCommand),
 
@@ -112,11 +108,6 @@ fn main() -> Result<(), DisplayableError> {
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().context("Could not start tokio runtime")?;
 
 		match options.subcommand {
-			SubCommand::Cache(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				options.config,
-			))))?,
-
 			SubCommand::Disable(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
