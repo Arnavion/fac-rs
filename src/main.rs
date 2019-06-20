@@ -8,7 +8,6 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::const_static_lifetime,
 	clippy::default_trait_access,
 	clippy::indexing_slicing,
 	clippy::large_enum_variant,

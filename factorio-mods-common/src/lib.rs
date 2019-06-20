@@ -4,7 +4,6 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::const_static_lifetime,
 	clippy::indexing_slicing,
 	clippy::use_self,
 )]

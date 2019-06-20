@@ -4,7 +4,6 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::const_static_lifetime,
 	clippy::default_trait_access,
 	clippy::similar_names,
 	clippy::module_name_repetitions,

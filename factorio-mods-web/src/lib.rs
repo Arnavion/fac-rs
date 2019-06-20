@@ -9,7 +9,6 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::const_static_lifetime,
 	clippy::default_trait_access,
 	clippy::large_enum_variant,
 	clippy::module_name_repetitions,
