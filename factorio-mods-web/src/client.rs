@@ -5,7 +5,7 @@
 /// Wraps a `reqwest::unstable::r#async::Client` to only allow limited operations on it.
 #[derive(Debug)]
 pub(crate) struct Client {
-	inner: reqwest::r#async::Client,
+	inner: std::sync::Arc<reqwest::r#async::Client>,
 }
 
 impl Client {
@@ -35,37 +35,46 @@ impl Client {
 			.build()
 			.map_err(crate::ErrorKind::CreateClient)?;
 
-		Ok(Client { inner })
+		Ok(Client { inner: std::sync::Arc::new(inner) })
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
 	pub(crate) fn get_object<T>(&self, url: reqwest::Url) -> GetObjectFuture<T> where T: serde::de::DeserializeOwned + 'static {
-		let builder = self.inner.get(url.clone());
+		let inner = self.inner.clone();
 
-		async {
-			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone());
+		let url_clone = url.clone();
+		let builder = move ||
+			inner.get(url_clone.clone())
+			.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone());
+
+		async move {
 			let (response, url) = send(builder, url, false).await?;
 			Ok(json(response, url).await?)
 		}
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
-	pub(crate) fn get_zip(&self, url: reqwest::Url, range: Option<&str>) -> GetZipFuture {
-		let builder = self.inner.get(url.clone());
+	pub(crate) fn get_zip(&self, url: reqwest::Url, range: Option<String>) -> GetZipFuture {
+		let inner = self.inner.clone();
 
-		let is_range_request;
-		let builder =
-			if let Some(range) = range {
-				is_range_request = true;
-				builder.header(reqwest::header::RANGE, range)
-			}
-			else {
-				is_range_request = false;
-				builder
-			};
+		let is_range_request = range.is_some();
+
+		let url_clone = url.clone();
+		let builder = move || {
+			let builder = inner.get(url_clone.clone());
+
+			let builder =
+				if let Some(range) = &range {
+					builder.header(reqwest::header::RANGE, &**range)
+				}
+				else {
+					builder
+				};
+
+			builder.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone())
+		};
 
 		async move {
-			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
 			let (response, url) = send(builder, url, is_range_request).await?;
 			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
 			Ok((response, url))
@@ -74,10 +83,14 @@ impl Client {
 
 	/// HEADs the given URL using the given client, and returns an application/zip response.
 	pub(crate) fn head_zip(&self, url: reqwest::Url) -> HeadZipFuture {
-		let builder = self.inner.head(url.clone());
+		let inner = self.inner.clone();
 
-		async {
-			let builder = builder.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
+		let url_clone = url.clone();
+		let builder = move ||
+			inner.head(url_clone.clone())
+			.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
+
+		async move {
 			let (response, url) = send(builder, url, false).await?;
 			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
 			Ok((response, url))
@@ -88,31 +101,31 @@ impl Client {
 	pub(crate) fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> PostObjectFuture<T>
 		where B: serde::Serialize, T: serde::de::DeserializeOwned + 'static
 	{
-		async fn inner<T>(
-			url: reqwest::Url,
-			builder: reqwest::r#async::RequestBuilder,
+		// Separate inner fn so that the existential type is independent of B
+		async fn post_object_inner<T>(
+			inner: std::sync::Arc<reqwest::r#async::Client>,
 			body: Result<String, serde_urlencoded::ser::Error>,
+			url: reqwest::Url,
 		) -> crate::Result<(T, reqwest::Url)> where T: serde::de::DeserializeOwned + 'static {
 			let body = match body {
 				Ok(body) => body,
 				Err(err) => return Err(crate::ErrorKind::Serialize(url, err).into()),
 			};
 
-			let builder =
-				builder
+			let url_clone = url.clone();
+			let builder = move ||
+				inner.post(url_clone.clone())
 				.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone())
 				.header(reqwest::header::CONTENT_TYPE, WWW_FORM_URL_ENCODED.clone())
-				.body(body);
+				.body(body.clone());
 
 			let (response, url) = send(builder, url, false).await?;
 			Ok(json(response, url).await?)
 		}
 
-		let builder = self.inner.post(url.clone());
-
+		let inner = self.inner.clone();
 		let body = serde_urlencoded::to_string(body);
-
-		inner(url, builder, body)
+		post_object_inner(inner, body, url)
 	}
 }
 
@@ -140,7 +153,7 @@ struct LoginFailureResponse {
 }
 
 async fn send(
-	builder: reqwest::r#async::RequestBuilder,
+	mut builder: impl FnMut() -> reqwest::r#async::RequestBuilder,
 	url: reqwest::Url,
 	is_range_request: bool,
 ) -> crate::Result<(reqwest::r#async::Response, reqwest::Url)> {
@@ -149,9 +162,42 @@ async fn send(
 		_ => return Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
 	};
 
-	let response = match futures_util::compat::Future01CompatExt::compat(builder.send()).await {
-		Ok(response) => response,
-		Err(err) => return Err(crate::ErrorKind::HTTP(url, err).into()),
+	#[cfg_attr(not(windows), allow(clippy::never_loop))]
+	let response = loop {
+		let builder = builder();
+
+		match futures_util::compat::Future01CompatExt::compat(builder.send()).await {
+			Ok(response) => break response,
+			Err(err) => {
+				// native-tls sometimes fails with SEC_E_MESSAGE_ALTERED when using schannel. Retry to work around it.
+				#[cfg(windows)]
+				{
+					use std::error::Error;
+
+					if let Some(err) = err.source() {
+						if let Some(err) = err.downcast_ref::<std::io::Error>() {
+							if let Some(err) = err.get_ref() {
+								if let Some(err) = err.downcast_ref::<native_tls::Error>() {
+									// native_tls::Error doesn't impl Error::source, and its Error::cause impl forwards to the inner std::io::Error's cause
+									// rather than the std::io::Error itself. Since it's an OS error and not a Custom error, the cause is always None.
+									//
+									// So check its stringified value instead.
+									//
+									// The full error string contains the HRESULT message string provided by FormatMessageW. Since this is localized,
+									// only check the suffix generated by std::io::Error which is always in English.
+									if err.to_string().ends_with(&format!(" (os error {})", winapi::shared::winerror::SEC_E_MESSAGE_ALTERED)) {
+										eprintln!("Retrying request to {} because of transient SEC_E_MESSAGE_ALTERED error", url);
+										continue;
+									}
+								}
+							}
+						}
+					}
+				}
+
+				return Err(crate::ErrorKind::HTTP(url, err).into())
+			},
+		}
 	};
 
 	match response.status() {

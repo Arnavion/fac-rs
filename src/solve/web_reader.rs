@@ -90,7 +90,7 @@ impl futures_util::io::AsyncRead for WebReader<'_> {
 				}
 			}
 			else {
-				let response = this.api.download(&this.release, &this.user_credentials, Some(&format!("bytes={}-", key * REGION_LEN_MAX as u64)));
+				let response = this.api.download(&this.release, &this.user_credentials, Some(format!("bytes={}-", key * REGION_LEN_MAX as u64)));
 				let reader =
 					futures_util::try_stream::TryStreamExt::into_async_read(
 						Box::pin(
