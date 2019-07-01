@@ -1,1 +1,1 @@
-API to interface with https://mods.factorio.com/
+API to get / search / download mods from https://mods.factorio.com/
