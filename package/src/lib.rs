@@ -219,8 +219,10 @@ pub fn compute_solution<I>(
 					package.dependencies().iter()
 					.filter(|dep| dep.required())
 					.all(|dep|
-						name_to_node_indices.get_vec(dep.name()).unwrap().iter()
-						.any(|&dep_node_index| dep.version().as_ref().matches(graph[dep_node_index].version().as_ref())));
+						name_to_node_indices.get_vec(dep.name())
+						.map_or(false, |dep_node_indices|
+							dep_node_indices.iter()
+							.any(|&dep_node_index| dep.version().as_ref().matches(graph[dep_node_index].version().as_ref()))));
 
 				!keep
 			}));
