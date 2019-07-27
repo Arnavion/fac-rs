@@ -74,7 +74,7 @@ pub struct UserCredentials {
 
 /// A username used with the parts of the web API that require authentication.
 #[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,
@@ -83,7 +83,7 @@ pub struct ServiceUsername(pub String);
 
 /// A token used with the parts of the web API that require authentication.
 #[derive(
-	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
+	Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
 	serde_derive::Deserialize,

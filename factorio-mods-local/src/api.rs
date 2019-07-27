@@ -83,12 +83,18 @@ impl API {
 			Err(err) => return Err(crate::ErrorKind::FileIO(player_data_json_file_path.into(), err).into()),
 		};
 
-		let player_data: PlayerData = serde_json::from_reader(player_data_json_file).map_err(|err| crate::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?;
+		let PlayerData { service_username, service_token } =
+			serde_json::from_reader(player_data_json_file).map_err(|err| crate::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?;
 
-		Ok(match (player_data.service_username, player_data.service_token) {
-			(Some(username), Some(token)) => factorio_mods_common::UserCredentials { username, token },
-			(username, _) => return Err(crate::ErrorKind::IncompleteUserCredentials(username).into()),
-		})
+		if service_username.0.is_empty() {
+			return Err(crate::ErrorKind::IncompleteUserCredentials(None).into());
+		}
+
+		if service_token.0.is_empty() {
+			return Err(crate::ErrorKind::IncompleteUserCredentials(Some(service_username)).into());
+		}
+
+		Ok(factorio_mods_common::UserCredentials { username: service_username, token: service_token })
 	}
 
 	/// Saves the given user credentials to `player-data.json`
@@ -243,11 +249,13 @@ struct BaseInfo {
 /// Represents the contents of `player-data.json`
 #[derive(Debug, serde_derive::Deserialize)]
 struct PlayerData {
-	#[serde(rename(deserialize = "service-username"))]
-	service_username: Option<factorio_mods_common::ServiceUsername>,
+	// A clean install of Factorio defaults these fields to the empty string if the user has not logged in,
+	// so coerce them to the empty string even if they don't exist and treat empty string as if they don't exist.
+	#[serde(rename(deserialize = "service-username"), default)]
+	service_username: factorio_mods_common::ServiceUsername,
 
-	#[serde(rename(deserialize = "service-token"))]
-	service_token: Option<factorio_mods_common::ServiceToken>,
+	#[serde(rename(deserialize = "service-token"), default)]
+	service_token: factorio_mods_common::ServiceToken,
 }
 
 /// Deserializes the `enabled` field of a mod in `mod-list.json`, which can be a JSON string or a JSON boolean.
