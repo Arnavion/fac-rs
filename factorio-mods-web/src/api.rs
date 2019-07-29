@@ -327,7 +327,7 @@ mod tests {
 
 		run_test(|api| Box::pin(
 			api.search("")
-			.fold(0usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
+			.fold(0_usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
 			.map(|count| {
 				println!("Found {} mods", count);
 				assert!(count > 1700); // 1700+ as of 2017-06-21

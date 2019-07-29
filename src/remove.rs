@@ -19,8 +19,7 @@ impl SubCommand {
 
 		for mod_ in self.names {
 			let name = factorio_mods_common::ModName(mod_.to_string());
-			// TODO: Workaround for https://github.com/rust-lang/rust/issues/61579
-			let _ = config.mods.remove(&name);
+			config.mods.remove(&name);
 		}
 
 		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;

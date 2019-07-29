@@ -44,7 +44,6 @@ pub(super) enum FileMetaCorruptReason {
 	MissingMagic,
 }
 
-#[allow(clippy::needless_lifetimes)] // TODO: https://github.com/rust-lang/rust-clippy/issues/3988
 pub(super) async fn find_info_json(
 	reader: &mut (impl AsyncRead + AsyncSeek + Unpin),
 ) -> Result<factorio_mods_local::ModInfo, Error> {
@@ -143,7 +142,6 @@ struct CentralDirectoryEntry {
 }
 
 impl CentralDirectoryEntry {
-	#[allow(clippy::needless_lifetimes)] // TODO: https://github.com/rust-lang/rust-clippy/issues/3988
 	async fn parse(reader: &mut (impl AsyncRead + AsyncSeek + Unpin), i: usize) -> Result<Self, Error> {
 		if read_u32_le(reader).await? != 0x0201_4b50 {
 			return Err(Error::CentralDirectoryEntryCorrupt(i + 1, FileMetaCorruptReason::MissingMagic));
@@ -190,7 +188,6 @@ impl CentralDirectoryEntry {
 struct FileLocalHeader(FileMeta);
 
 impl FileLocalHeader {
-	#[allow(clippy::needless_lifetimes)] // TODO: https://github.com/rust-lang/rust-clippy/issues/3988
 	async fn parse(reader: &mut (impl AsyncRead + AsyncSeek + Unpin)) -> Result<Self, Error> {
 		if read_u32_le(reader).await? != 0x0403_4b50 {
 			return Err(Error::FileLocalHeaderCorrupt(FileMetaCorruptReason::MissingMagic));
@@ -225,14 +222,12 @@ impl FileLocalHeader {
 	}
 }
 
-#[allow(clippy::needless_lifetimes)] // TODO: https://github.com/rust-lang/rust-clippy/issues/3988
 async fn read_u16_le(reader: &mut (impl AsyncRead + Unpin)) -> Result<u16, Error> {
 	let mut buf = [0_u8; 2];
 	reader.read_exact(&mut buf).await.map_err(Error::Io)?;
 	Ok(u16::from_le_bytes(buf))
 }
 
-#[allow(clippy::needless_lifetimes)] // TODO: https://github.com/rust-lang/rust-clippy/issues/3988
 async fn read_u32_le(reader: &mut (impl AsyncRead + Unpin)) -> Result<u32, Error> {
 	let mut buf = [0_u8; 4];
 	reader.read_exact(&mut buf).await.map_err(Error::Io)?;

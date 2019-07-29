@@ -5,7 +5,6 @@ pub struct SubCommand {
 }
 
 impl SubCommand {
-	#[allow(clippy::needless_lifetimes)] // TODO: Clippy bug https://github.com/rust-lang/rust-clippy/issues/3988
 	pub async fn run(
 		self,
 		web_api: Result<&'_ factorio_mods_web::API, failure::Error>,
