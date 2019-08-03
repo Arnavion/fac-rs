@@ -21,7 +21,7 @@ libflate = "0.1"
 multimap = "0.5.x"
 package = { version = "0.1.0", path = "./package" }
 petgraph = "0.4.x"
-regex = "1.1.x"
+regex = "1.2"
 reqwest = "0.9"
 rpassword = "3.x"
 rprompt = "1.0.x"
