@@ -125,11 +125,11 @@ impl API {
 	}
 }
 
-pub existential type DownloadResponse: futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
-pub existential type GetResponse: std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
-pub existential type GetFilesizeResponse: std::future::Future<Output = crate::Result<u64>> + 'static;
-pub existential type LoginResponse: std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
-pub existential type SearchResponse: futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
+pub type DownloadResponse = impl futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
+pub type GetResponse = impl std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
+pub type GetFilesizeResponse = impl std::future::Future<Output = crate::Result<u64>> + 'static;
+pub type LoginResponse = impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
+pub type SearchResponse = impl futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
 
 enum DownloadStream {
 	Fetch(std::pin::Pin<Box<crate::client::GetZipFuture>>),

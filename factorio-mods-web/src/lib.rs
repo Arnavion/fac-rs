@@ -2,7 +2,7 @@
 
 #![feature(
 	async_await,
-	existential_type,
+	type_alias_impl_trait,
 )]
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]

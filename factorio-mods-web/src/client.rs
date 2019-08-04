@@ -101,7 +101,7 @@ impl Client {
 	pub(crate) fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> PostObjectFuture<T>
 		where B: serde::Serialize, T: serde::de::DeserializeOwned + 'static
 	{
-		// Separate inner fn so that the existential type is independent of B
+		// Separate inner fn so that the impl-trait type alias is independent of B
 		async fn post_object_inner<T>(
 			inner: std::sync::Arc<reqwest::r#async::Client>,
 			body: Result<String, serde_urlencoded::ser::Error>,
@@ -141,10 +141,10 @@ lazy_static::lazy_static! {
 	static ref WWW_FORM_URL_ENCODED: reqwest::header::HeaderValue = reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded");
 }
 
-pub(crate) existential type GetObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
-pub(crate) existential type GetZipFuture: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
-pub(crate) existential type HeadZipFuture: std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
-pub(crate) existential type PostObjectFuture<T>: std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub(crate) type GetObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub(crate) type GetZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
+pub(crate) type HeadZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
+pub(crate) type PostObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 
 /// A login failure response.
 #[derive(Debug, serde_derive::Deserialize)]
