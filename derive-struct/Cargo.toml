@@ -5,9 +5,9 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-proc-macro2 = "0.4.x"
-quote = "0.6.x"
-syn = "0.15.x"
+proc-macro2 = "1"
+quote = "1"
+syn = "1"
 
 [lib]
 proc-macro = true
