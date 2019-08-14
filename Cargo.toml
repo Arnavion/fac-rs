@@ -18,7 +18,6 @@ futures-util-preview = { version = "=0.3.0-alpha.18", features = ["compat", "io"
 itertools = "0.8.x"
 lazy_static = "1.3.x"
 libflate = "0.1"
-multimap = "0.5.x"
 package = { version = "0.1.0", path = "./package" }
 petgraph = "0.4.x"
 regex = "1.2"

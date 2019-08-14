@@ -185,13 +185,14 @@ pub fn compute_solution<I>(
 		let mut node_indices_to_remove = std::collections::HashSet::new();
 
 		{
-			let name_to_node_indices: multimap::MultiMap<_, _> = graph.node_indices().map(|node_index| {
+			let mut name_to_node_indices: std::collections::HashMap<_, Vec<petgraph::graph::NodeIndex>> = Default::default();
+			for node_index in graph.node_indices() {
 				let package = &graph[node_index];
-				(package.name(), node_index)
-			}).collect();
+				name_to_node_indices.entry(package.name()).or_default().push(node_index);
+			}
 
 			for name in reqs.keys() {
-				match name_to_node_indices.get_vec(name) {
+				match name_to_node_indices.get(name) {
 					Some(node_indices) if !node_indices.is_empty() => (),
 					_ => return Err(ErrorKind::NoPackagesMeetRequirements(name.clone()).into()),
 				}
@@ -219,7 +220,7 @@ pub fn compute_solution<I>(
 					package.dependencies().iter()
 					.filter(|dep| dep.required())
 					.all(|dep|
-						name_to_node_indices.get_vec(dep.name())
+						name_to_node_indices.get(dep.name())
 						.map_or(false, |dep_node_indices|
 							dep_node_indices.iter()
 							.any(|&dep_node_index| dep.version().as_ref().matches(graph[dep_node_index].version().as_ref()))));
@@ -228,7 +229,7 @@ pub fn compute_solution<I>(
 			}));
 
 			if node_indices_to_remove.is_empty() {
-				for (_, node_indices) in name_to_node_indices.iter_all() {
+				for node_indices in name_to_node_indices.values() {
 					for &node_index1 in node_indices {
 						let package1 = &graph[node_index1];
 
@@ -271,7 +272,7 @@ pub fn compute_solution<I>(
 
 			if node_indices_to_remove.is_empty() {
 				for req in reqs.keys() {
-					let node_indices = name_to_node_indices.get_vec(req).unwrap();
+					let node_indices = name_to_node_indices.get(req).unwrap();
 
 					let mut common_conflicts = None;
 
@@ -315,11 +316,11 @@ pub fn compute_solution<I>(
 	}
 
 	let possibilities: Vec<_> = {
-		let name_to_packages: multimap::MultiMap<_, _> =
-			graph.into_nodes_edges().0.into_iter().map(|node| {
-				let package = node.weight;
-				(package.name().clone(), Some(package))
-			}).collect();
+		let mut name_to_packages: std::collections::HashMap<_, Vec<_>> = Default::default();
+		for node in graph.into_nodes_edges().0 {
+			let package = node.weight;
+			name_to_packages.entry(package.name().clone()).or_default().push(Some(package));
+		}
 
 		name_to_packages.into_iter().map(|(name, mut packages)| {
 			if !reqs.contains_key(&name) {

@@ -42,11 +42,11 @@ pub async fn enable_disable<'a>(
 
 	let local_api = local_api?;
 
-	let all_installed_mods: Result<multimap::MultiMap<_, _>, failure::Error> =
-		local_api.installed_mods().context("Could not enumerate installed mods")?
-		.map(|mod_| Ok(mod_.map(|mod_| (mod_.info.name.clone(), mod_)).context("Could not process an installed mod")?))
-		.collect();
-	let all_installed_mods = all_installed_mods.context("Could not enumerate installed mods")?;
+	let mut all_installed_mods: std::collections::HashMap<_, Vec<_>> = Default::default();
+	for mod_ in local_api.installed_mods().context("Could not enumerate installed mods")? {
+		let mod_ = mod_.context("Could not process an installed mod")?;
+		all_installed_mods.entry(mod_.info.name.clone()).or_default().push(mod_);
+	}
 
 	for (name, installed_mods) in &all_installed_mods {
 		if installed_mods.len() > 1 {
