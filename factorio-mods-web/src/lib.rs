@@ -1,7 +1,6 @@
 //! API to interface with <https://mods.factorio.com/>
 
 #![feature(
-	async_await,
 	type_alias_impl_trait,
 )]
 

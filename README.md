@@ -23,7 +23,7 @@ cargo +nightly build --release
 
 This creates the `fac` binary at `./target/release/fac`
 
-`fac` requires a nightly compiler since it uses some unstable features (async-await, impl-trait-type-aliases).
+`fac` requires a nightly compiler since it uses an unstable feature (impl-trait-type-aliases).
 
 
 # Run
