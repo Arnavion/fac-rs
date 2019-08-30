@@ -12,8 +12,6 @@
 	clippy::use_self,
 )]
 
-use factorio_mods_web::reqwest;
-
 mod enable_disable;
 mod install;
 mod list;
@@ -26,27 +24,31 @@ mod config;
 mod solve;
 mod util;
 
+use failure::Fail;
+
+use factorio_mods_web::reqwest;
+
 #[derive(Debug, structopt_derive::StructOpt)]
 #[structopt(raw(setting = "structopt::clap::AppSettings::VersionlessSubcommands"))]
-pub struct Options {
+pub(crate) struct Options {
 	#[structopt(help = "Path to fac config file. Defaults to .../fac/config.json", short = "c", parse(from_os_str))]
-	pub config: Option<std::path::PathBuf>,
+	config: Option<std::path::PathBuf>,
 
 	#[structopt(help = "HTTP proxy URL")]
-	pub proxy: Option<String>,
+	proxy: Option<String>,
 
 	#[structopt(help = "Answer yes to all prompts", short = "y")]
-	pub yes: bool,
+	yes: bool,
 
 	#[structopt(help = "Answer no to all prompts", short = "n", conflicts_with = "yes")]
-	pub no: bool,
+	no: bool,
 
 	#[structopt(subcommand)]
-	pub subcommand: SubCommand,
+	subcommand: SubCommand,
 }
 
 #[derive(Debug, structopt_derive::StructOpt)]
-pub enum SubCommand {
+pub(crate) enum SubCommand {
 	#[structopt(name = "disable", about = "Disable mods")]
 	Disable(enable_disable::DisableSubCommand),
 
@@ -97,10 +99,41 @@ fn main() -> Result<(), DisplayableError> {
 			(true, true) => unreachable!(),
 		};
 
-		let local_api = factorio_mods_local::API::new().context("Could not initialize local API").map_err(Into::into);
+		let mut config = crate::config::Config::load(options.config)?;
+
+		let local_api: Result<_, failure::Error> = match (&config.install_directory, &config.user_directory) {
+			(Some(install_directory), Some(user_directory)) =>
+				factorio_mods_local::API::new(install_directory, user_directory)
+				.context("Could not initialize local API").map_err(Into::into),
+
+			(None, _) => Err(
+				factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::InstallDirectoryNotFound)
+				.context("Could not initialize local API").into()),
+
+			(_, None) => Err(
+				factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::UserDirectoryNotFound)
+				.context("Could not initialize local API").into()),
+		};
+
+		if config.mods.is_none() {
+			if let Ok(local_api) = &local_api {
+				// Default mods list is the list of all currently installed mods with a * requirement
+				let installed_mods: Result<_, failure::Error> =
+					local_api.installed_mods().context("Could not enumerate installed mods")?
+					.map(|mod_| Ok(
+						mod_
+						.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
+						.context("Could not process an installed mod")?))
+					.collect();
+				let mods = installed_mods.context("Could not enumerate installed mods")?;
+				config.mods = Some(mods);
+			}
+		}
+
 		let web_api = factorio_mods_web::API::new(client).context("Could not initialize web API").map_err(Into::into);
 
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().context("Could not start tokio runtime")?;
+
 
 		match options.subcommand {
 			SubCommand::Disable(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
@@ -116,7 +149,7 @@ fn main() -> Result<(), DisplayableError> {
 			SubCommand::Install(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				options.config,
+				config,
 				prompt_override,
 			))))?,
 
@@ -127,7 +160,7 @@ fn main() -> Result<(), DisplayableError> {
 			SubCommand::Remove(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				options.config,
+				config,
 				prompt_override,
 			))))?,
 
@@ -142,7 +175,7 @@ fn main() -> Result<(), DisplayableError> {
 			SubCommand::Update(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				options.config,
+				config,
 				prompt_override,
 			))))?,
 		}

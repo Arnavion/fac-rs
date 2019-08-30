@@ -13,20 +13,16 @@ pub struct API {
 }
 
 impl API {
-	/// Constructs an API object. Tries to detect the local Factorio install in some pre-defined locations.
-	pub fn new() -> crate::Result<Self> {
-		let base_info_file_path = FACTORIO_SEARCH_PATHS.iter().find_map(|search_path| {
-			let search_path = std::path::Path::new(search_path);
-			let base_info_file_path = search_path.join("data").join("base").join("info.json");
-			if base_info_file_path.is_file() {
-				Some(base_info_file_path)
-			}
-			else {
-				None
-			}
-		}).ok_or(crate::ErrorKind::DataPath)?;
-
+	/// Constructs an API object.
+	pub fn new(install_directory: &std::path::Path, user_directory: &std::path::Path) -> crate::Result<Self> {
 		let game_version = {
+			let mut base_info_file_path = install_directory.join("data");
+			base_info_file_path.push("base");
+			base_info_file_path.push("info.json");
+			if !base_info_file_path.is_file() {
+				return Err(crate::ErrorKind::InstallDirectoryNotFound.into());
+			}
+
 			let base_info_file = match std::fs::File::open(&base_info_file_path) {
 				Ok(base_info_file) => base_info_file,
 				Err(err) => return Err(crate::ErrorKind::FileIO(base_info_file_path.into(), err).into()),
@@ -35,21 +31,17 @@ impl API {
 			base_info.version
 		};
 
-		let (mods_directory, mod_list_file_path, player_data_json_file_path) =
-			FACTORIO_SEARCH_PATHS.iter().find_map(|search_path| {
-				let search_path = std::path::Path::new(search_path);
-
-				let mods_directory = search_path.join("mods");
-				let mod_list_file_path = mods_directory.join("mod-list.json");
-				let player_data_json_file_path = search_path.join("player-data.json");
-
-				if mod_list_file_path.is_file() && player_data_json_file_path.is_file() {
-					Some((mods_directory, mod_list_file_path, player_data_json_file_path))
-				}
-				else {
-					None
-				}
-			}).ok_or(crate::ErrorKind::WritePath)?;
+		let (mods_directory, mod_list_file_path, player_data_json_file_path) = {
+			let mods_directory = user_directory.join("mods");
+			let mod_list_file_path = mods_directory.join("mod-list.json");
+			let player_data_json_file_path = user_directory.join("player-data.json");
+			if mod_list_file_path.is_file() && player_data_json_file_path.is_file() {
+				(mods_directory, mod_list_file_path, player_data_json_file_path)
+			}
+			else {
+				return Err(crate::ErrorKind::UserDirectoryNotFound.into());
+			}
+		};
 
 		Ok(API {
 			game_version,
@@ -162,67 +154,6 @@ impl API {
 		};
 		Ok(serde_json::from_reader(mod_list_file).map_err(|err| crate::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?)
 	}
-}
-
-lazy_static::lazy_static! {
-	static ref FACTORIO_SEARCH_PATHS: Vec<std::path::PathBuf> = {
-		let mut result = vec![];
-
-		if let Ok(current_dir) = std::env::current_dir() {
-			result.push(current_dir.clone());
-
-			let current_directory = current_dir.join("factorio");
-			if current_directory.is_dir() {
-				result.push(current_directory);
-			}
-
-			if let Some(parent_dir) = current_dir.parent() {
-				result.push(std::path::PathBuf::from(parent_dir));
-
-				let parent_directory = current_dir.join("factorio");
-				if parent_directory.is_dir() {
-					result.push(parent_directory);
-				}
-			}
-		}
-
-		if let Ok(user_data_dir) = appdirs::user_data_dir(Some("factorio"), None, false) {
-			if user_data_dir.is_dir() {
-				result.push(user_data_dir);
-			}
-		}
-
-		if let Ok(user_data_dir) = appdirs::user_data_dir(Some("Steam"), None, false) {
-			let mut steam_directory = user_data_dir;
-			steam_directory.push("steamapps");
-			steam_directory.push("common");
-			steam_directory.push("Factorio");
-			if steam_directory.is_dir() {
-				result.push(steam_directory);
-			}
-		}
-
-		if cfg!(windows) {
-			if let Some(appdata) = std::env::var_os("APPDATA") {
-				let appdata_directory = std::path::Path::new(&appdata).join("factorio");
-				if appdata_directory.is_dir() {
-					result.push(appdata_directory);
-				}
-			}
-
-			result.push(std::path::PathBuf::from(r"C:\Program Files (x86)\Steam\steamapps\common\Factorio"));
-		}
-
-		if cfg!(target_os = "linux") {
-			if let Some(home) = std::env::var_os("HOME") {
-				let home_directory = std::path::Path::new(&home);
-				result.push(home_directory.join("factorio"));
-				result.push(home_directory.join(".factorio"));
-			}
-		}
-
-		result
-	};
 }
 
 /// Represents the contents of `mod-list.json`

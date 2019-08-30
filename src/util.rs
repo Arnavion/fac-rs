@@ -1,6 +1,6 @@
 use failure::{ Fail, ResultExt };
 
-pub fn wrapping_println(s: &str, indent: &str) {
+pub(crate) fn wrapping_println(s: &str, indent: &str) {
 	#[allow(clippy::single_match_else)] // Bad clippy lint - false positive
 	match term_size::dimensions() {
 		Some((width, _)) => {
@@ -24,7 +24,7 @@ pub fn wrapping_println(s: &str, indent: &str) {
 	}
 }
 
-pub async fn ensure_user_credentials<'a>(
+pub(crate) async fn ensure_user_credentials<'a>(
 	local_api: &'a factorio_mods_local::API,
 	web_api: &'a factorio_mods_web::API,
 	prompt_override: Option<bool>,
@@ -87,7 +87,7 @@ pub async fn ensure_user_credentials<'a>(
 	}
 }
 
-pub fn prompt_continue(prompt_override: Option<bool>) -> Result<bool, failure::Error> {
+pub(crate) fn prompt_continue(prompt_override: Option<bool>) -> Result<bool, failure::Error> {
 	match prompt_override {
 		Some(true) => {
 			println!("Continue? [y/n]: y");

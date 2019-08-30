@@ -1,11 +1,11 @@
 #[derive(Debug, structopt_derive::StructOpt)]
-pub struct EnableSubCommand {
+pub(crate) struct EnableSubCommand {
 	#[structopt(help = "mods to enable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
 impl EnableSubCommand {
-	pub async fn run(
+	pub(crate) async fn run(
 		self,
 		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
@@ -16,13 +16,13 @@ impl EnableSubCommand {
 }
 
 #[derive(Debug, structopt_derive::StructOpt)]
-pub struct DisableSubCommand {
+pub(crate) struct DisableSubCommand {
 	#[structopt(help = "mods to disable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
 impl DisableSubCommand {
-	pub async fn run(
+	pub(crate) async fn run(
 		self,
 		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 		prompt_override: Option<bool>,
@@ -32,7 +32,7 @@ impl DisableSubCommand {
 	}
 }
 
-pub async fn enable_disable<'a>(
+pub(crate) async fn enable_disable<'a>(
 	mods: Vec<factorio_mods_common::ModName>,
 	local_api: Result<&'a factorio_mods_local::API, failure::Error>,
 	prompt_override: Option<bool>,

@@ -80,11 +80,11 @@ pub enum ErrorKind {
 
 	/// The local Factorio installation could not be found.
 	#[fail(display = "The local Factorio installation could not be found")]
-	DataPath,
+	InstallDirectoryNotFound,
 
-	/// The local Factorio installation could not be found.
-	#[fail(display = "The local Factorio installation could not be found")]
-	WritePath,
+	/// The Factorio user directory could not be found.
+	#[fail(display = "The Factorio user directory could not be found")]
+	UserDirectoryNotFound,
 
 	/// The credentials stored in `player-data.json` do not have both username and service token.
 	#[fail(display = "Valid API credentials were not found in player-data.json")]

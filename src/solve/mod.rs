@@ -7,7 +7,7 @@ use failure::{ Fail, ResultExt };
 /// Asks the user for confirmation, then applies the diff.
 ///
 /// Returns true if the diff was successfully applied or empty.
-pub async fn compute_and_apply_diff<'a>(
+pub(crate) async fn compute_and_apply_diff<'a>(
 	local_api: &'a factorio_mods_local::API,
 	web_api: &'a factorio_mods_web::API,
 	mut config: crate::config::Config,
@@ -19,11 +19,12 @@ pub async fn compute_and_apply_diff<'a>(
 
 	println!("Getting mod information ...");
 
-	let solution_future = SolutionFuture::new(web_api, user_credentials.clone(), game_version, config.mods);
+	let mods = config.mods.take().unwrap();
+	let solution_future = SolutionFuture::new(web_api, user_credentials.clone(), game_version, mods);
 	let (solution, mut reqs) = solution_future.await?;
 
 	let _ = reqs.remove(&factorio_mods_common::ModName("base".to_string()));
-	config.mods = reqs;
+	config.mods = Some(reqs);
 
 	let solution =
 		solution

@@ -1,9 +1,9 @@
 #[derive(Debug, structopt_derive::StructOpt)]
-pub struct SubCommand {
+pub(crate) struct SubCommand {
 }
 
 impl SubCommand {
-	pub async fn run(
+	pub(crate) async fn run(
 		self,
 		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
 	) -> Result<(), failure::Error> {

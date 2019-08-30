@@ -1,11 +1,11 @@
 #[derive(Debug, structopt_derive::StructOpt)]
-pub struct SubCommand {
+pub(crate) struct SubCommand {
 	#[structopt(help = "mods to show", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
 impl SubCommand {
-	pub async fn run(
+	pub(crate) async fn run(
 		self,
 		web_api: Result<&'_ factorio_mods_web::API, failure::Error>,
 	) -> Result<(), failure::Error> {
