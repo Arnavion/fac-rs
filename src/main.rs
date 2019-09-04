@@ -29,7 +29,8 @@ use failure::Fail;
 use factorio_mods_web::reqwest;
 
 #[derive(Debug, structopt_derive::StructOpt)]
-#[structopt(raw(setting = "structopt::clap::AppSettings::VersionlessSubcommands"))]
+#[structopt(about, author)]
+#[structopt(setting(structopt::clap::AppSettings::VersionlessSubcommands))]
 pub(crate) struct Options {
 	#[structopt(help = "Path to fac config file. Defaults to .../fac/config.json", short = "c", parse(from_os_str))]
 	config: Option<std::path::PathBuf>,
