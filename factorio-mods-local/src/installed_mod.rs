@@ -166,7 +166,7 @@ lazy_static::lazy_static! {
 	static ref DEFAULT_DEPENDENCIES: Vec<factorio_mods_common::Dependency> = vec![factorio_mods_common::Dependency {
 		name: factorio_mods_common::ModName("base".to_string()),
 		version: factorio_mods_common::ModVersionReq(semver::VersionReq::any()),
-		required: true,
+		kind: package::DependencyKind::Required,
 	}];
 }
 

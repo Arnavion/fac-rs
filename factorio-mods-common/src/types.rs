@@ -99,8 +99,8 @@ pub struct Dependency {
 	/// The version of the dependency.
 	pub version: ModVersionReq,
 
-	/// Whether the dependency is required or not.
-	pub required: bool,
+	/// The kind of the dependency.
+	pub kind: package::DependencyKind,
 }
 
 impl<'de> serde::Deserialize<'de> for Dependency {
@@ -123,7 +123,6 @@ impl<'de> serde::Deserialize<'de> for Dependency {
 	}
 }
 
-#[cfg(feature = "package")]
 impl package::Dependency for Dependency {
 	type Name = ModName;
 	type Version = ModVersionReq;
@@ -136,8 +135,8 @@ impl package::Dependency for Dependency {
 		&self.version
 	}
 
-	fn required(&self) -> bool {
-		self.required
+	fn kind(&self) -> package::DependencyKind {
+		self.kind
 	}
 }
 
@@ -185,7 +184,7 @@ pub fn fixup_version(s: &str) -> String {
 }
 
 lazy_static::lazy_static! {
-	static ref DEPENDENCY_REGEX: regex::Regex = regex::Regex::new(r"^(\??)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
+	static ref DEPENDENCY_REGEX: regex::Regex = regex::Regex::new(r"^((?:\?|\(\?\)|!)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
 }
 
 /// Parses the given string as a Dependency
@@ -193,7 +192,12 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Err
 	let captures = DEPENDENCY_REGEX.captures(s)
 		.ok_or_else(|| serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
 
-	let required = captures[1].is_empty();
+	let kind = match &captures[1] {
+		"!" => package::DependencyKind::Conflicts,
+		"?" | "(?)" => package::DependencyKind::Optional,
+		"" => package::DependencyKind::Required,
+		_ => unreachable!(),
+	};
 
 	let name = ModName(captures[2].to_string());
 
@@ -206,7 +210,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Err
 				.map_err(|err| serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, std::error::Error::description(&err))))
 		})?;
 
-	Ok(Dependency { name, version: ModVersionReq(version_req), required, })
+	Ok(Dependency { name, version: ModVersionReq(version_req), kind, })
 }
 
 #[cfg(test)]
@@ -228,21 +232,23 @@ mod tests {
 		test_deserialize_release_version_inner(r#""016.0.5""#, "16.0.5");
 	}
 
-	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, required: bool) {
-		let expected = Dependency { name: ModName(name.to_string()), version: ModVersionReq(version.parse().unwrap()), required };
+	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, kind: package::DependencyKind) {
+		let expected = Dependency { name: ModName(name.to_string()), version: ModVersionReq(version.parse().unwrap()), kind };
 		let actual: Dependency = serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}
 
 	#[test]
 	fn test_deserialize_dependency() {
-		test_deserialize_dependency_inner(r#""base""#, "base", "*", true);
-		test_deserialize_dependency_inner(r#""? base""#, "base", "*", false);
-		test_deserialize_dependency_inner(r#""?base""#, "base", "*", false);
-		test_deserialize_dependency_inner(r#""base >= 0.14.0""#, "base", ">=0.14.0", true);
-		test_deserialize_dependency_inner(r#""? base >= 0.14.0""#, "base", ">=0.14.0", false);
-		test_deserialize_dependency_inner(r#""base >= 0.14.00""#, "base", ">=0.14.0", true);
-		test_deserialize_dependency_inner(r#""some name with spaces >= 1.2.3""#, "some name with spaces", ">=1.2.3", true);
-		test_deserialize_dependency_inner(r#""? some name with spaces >= 1.2.3""#, "some name with spaces", ">=1.2.3", false);
+		test_deserialize_dependency_inner(r#""base""#, "base", "*", package::DependencyKind::Required);
+		test_deserialize_dependency_inner(r#""? base""#, "base", "*", package::DependencyKind::Optional);
+		test_deserialize_dependency_inner(r#""?base""#, "base", "*", package::DependencyKind::Optional);
+		test_deserialize_dependency_inner(r#""(?)base""#, "base", "*", package::DependencyKind::Optional);
+		test_deserialize_dependency_inner(r#""base >= 0.14.0""#, "base", ">=0.14.0", package::DependencyKind::Required);
+		test_deserialize_dependency_inner(r#""? base >= 0.14.0""#, "base", ">=0.14.0", package::DependencyKind::Optional);
+		test_deserialize_dependency_inner(r#""base >= 0.14.00""#, "base", ">=0.14.0", package::DependencyKind::Required);
+		test_deserialize_dependency_inner(r#""some name with spaces >= 1.2.3""#, "some name with spaces", ">=1.2.3", package::DependencyKind::Required);
+		test_deserialize_dependency_inner(r#""? some name with spaces >= 1.2.3""#, "some name with spaces", ">=1.2.3", package::DependencyKind::Optional);
+		test_deserialize_dependency_inner(r#""!foo""#, "foo", "*", package::DependencyKind::Conflicts);
 	}
 }

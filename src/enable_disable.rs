@@ -64,7 +64,7 @@ pub(crate) async fn enable_disable<'a>(
 	for node_index in graph.node_indices() {
 		let installed_mod = &graph[node_index];
 		for dep in &installed_mod.info.dependencies {
-			if dep.required && dep.name.0 != "base" {
+			if dep.kind == package::DependencyKind::Required && dep.name.0 != "base" {
 				if let Some(&dep_node_index) = name_to_node_index.get(&dep.name) {
 					if enable {
 						edges_to_add.push((node_index, dep_node_index));

@@ -379,7 +379,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 						std::task::Poll::Ready(Ok(mod_info)) => {
 							let (mod_name, release, _) = get_info_json.take().unwrap();
 
-							for dep in mod_info.dependencies.iter().filter(|dep| dep.required && dep.name.0 != "base") {
+							for dep in mod_info.dependencies.iter().filter(|dep| dep.kind == package::DependencyKind::Required && dep.name.0 != "base") {
 								get(dep.name.clone().into(), &mut this.already_fetching, &mut new, this.web_api);
 							}
 

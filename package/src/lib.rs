@@ -8,6 +8,7 @@
 	clippy::default_trait_access,
 	clippy::indexing_slicing,
 	clippy::similar_names,
+	clippy::too_many_lines,
 	clippy::type_complexity,
 	clippy::use_self,
 )]
@@ -28,7 +29,14 @@ pub trait Dependency {
 
 	fn name(&self) -> &Self::Name;
 	fn version(&self) -> &Self::Version;
-	fn required(&self) -> bool;
+	fn kind(&self) -> DependencyKind;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DependencyKind {
+	Conflicts,
+	Optional,
+	Required,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -153,9 +161,10 @@ pub fn compute_solution<I>(
 						continue;
 					}
 
-					match (dep.required(), dep.version().as_ref().matches(package2.version().as_ref())) {
-						(true, true) => requires = true,
-						(false, false) => conflicts = true,
+					match (dep.kind(), dep.version().as_ref().matches(package2.version().as_ref())) {
+						(DependencyKind::Required, true) => requires = true,
+						(DependencyKind::Conflicts, true) |
+						(DependencyKind::Optional, false) => conflicts = true,
 						_ => continue,
 					}
 				}
@@ -218,7 +227,7 @@ pub fn compute_solution<I>(
 				// All required dependencies satisfied
 				let keep = keep &&
 					package.dependencies().iter()
-					.filter(|dep| dep.required())
+					.filter(|dep| dep.kind() == DependencyKind::Required)
 					.all(|dep|
 						name_to_node_indices.get(dep.name())
 						.map_or(false, |dep_node_indices|
@@ -363,7 +372,7 @@ fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) 
 					return false;
 				}
 			}
-			else if dep.required() {
+			else if dep.kind() == DependencyKind::Required {
 				return false;
 			}
 		}
