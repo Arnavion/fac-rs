@@ -28,7 +28,17 @@ pub(crate) struct Config {
 impl Config {
 	pub fn load(path: Option<std::path::PathBuf>) -> Result<Self, failure::Error>{
 		let config_file_path = match path {
-			Some(path) => path,
+			Some(path) =>
+				if path.iter().count() == 1 {
+					let mut user_config_dir = dirs::config_dir().ok_or_else(|| failure::err_msg("Could not derive path to config directory"))?;
+					user_config_dir.push("fac");
+					user_config_dir.push(path);
+					user_config_dir
+				}
+				else {
+					path
+				},
+
 			None => {
 				let mut user_config_dir = dirs::config_dir().ok_or_else(|| failure::err_msg("Could not derive path to config directory"))?;
 				user_config_dir.push("fac");

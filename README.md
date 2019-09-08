@@ -69,7 +69,7 @@ Each key in the `mods` object is the name of the mod as it appears in the mod UR
 
 If the config file doesn't exist, `fac` will create a default one with all the mods that are already installed in the game directory.
 
-You can maintain multiple config files with arbitrary names and choose which one to use with the `-c` parameter. For example, you might want to have a default `config.json` for one game, and a `config.bobangels.json` for another game. You can then use `fac update` when you want to play the first game, and `fac -c .../fac/config.bobangels.json update` when you want to play the second game. This is particularly useful for multiplayer games.
+You can maintain multiple config files with arbitrary names and choose which one to use with the `-c` parameter. For example, you might want to have a default `config.json` for one save, and a `config.bobangels.json` for another save. You can then use `fac update` when you want to play the first save, and `fac -c config.bobangels.json update` when you want to play the second save. This is particularly useful for multiplayer games.
 
 You can get the mod names and versions from the https://mods.factorio.com website. Alterntively you can use `fac search` and `fac show`:
 
