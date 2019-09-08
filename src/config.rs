@@ -30,16 +30,11 @@ impl Config {
 		let config_file_path = match path {
 			Some(path) => path,
 			None => {
-				let user_config_dir = appdirs::user_config_dir(Some("fac"), None, false).map_err(|()| failure::err_msg("Could not derive path to config directory"))?;
-
-				if let Err(err) = std::fs::create_dir(&user_config_dir) {
-					match err.kind() {
-						std::io::ErrorKind::AlreadyExists => (),
-						_ => return Err(err.context(format!("Could not create config directory {}", user_config_dir.display())).into()),
-					}
-				}
-
-				user_config_dir.join("config.json")
+				let mut user_config_dir = dirs::config_dir().ok_or_else(|| failure::err_msg("Could not derive path to config directory"))?;
+				user_config_dir.push("fac");
+				std::fs::create_dir_all(&user_config_dir).with_context(|_| format!("Could not create config directory {}", user_config_dir.display()))?;
+				user_config_dir.push("config.json");
+				user_config_dir
 			},
 		};
 
@@ -70,7 +65,7 @@ impl Config {
 				Some(install_directory)
 			}
 			else {
-				FACTORIO_SEARCH_PATHS.iter().find_map(|search_path| {
+				FACTORIO_INSTALL_SEARCH_PATHS.iter().find_map(|search_path| {
 					let search_path = std::path::Path::new(search_path);
 					let base_info_file_path = search_path.join("data").join("base").join("info.json");
 					if base_info_file_path.is_file() {
@@ -87,7 +82,7 @@ impl Config {
 				Some(user_directory)
 			}
 			else {
-				FACTORIO_SEARCH_PATHS.iter().find_map(|search_path| {
+				FACTORIO_USER_SEARCH_PATHS.iter().find_map(|search_path| {
 					let search_path = std::path::Path::new(search_path);
 
 					let mods_directory = search_path.join("mods");
@@ -130,60 +125,61 @@ impl Config {
 }
 
 lazy_static::lazy_static! {
-	static ref FACTORIO_SEARCH_PATHS: Vec<std::path::PathBuf> = {
+	static ref FACTORIO_INSTALL_SEARCH_PATHS: Vec<std::path::PathBuf> = {
 		let mut result = vec![];
 
-		if let Ok(current_dir) = std::env::current_dir() {
-			result.push(current_dir.clone());
-
-			let current_directory = current_dir.join("factorio");
-			if current_directory.is_dir() {
-				result.push(current_directory);
+		if cfg!(windows) {
+			if let Some(path) = std::env::var_os("ProgramW6432") {
+				let mut path: std::path::PathBuf = path.into();
+				path.push("Steam");
+				path.push("steamapps");
+				path.push("common");
+				path.push("Factorio");
+				result.push(path);
+			}
+			if let Some(path) = std::env::var_os("ProgramFiles") {
+				let mut path: std::path::PathBuf = path.into();
+				path.push("Steam");
+				path.push("steamapps");
+				path.push("common");
+				path.push("Factorio");
+				result.push(path);
+			}
+		}
+		else {
+			if let Some(mut path) = dirs::home_dir() {
+				path.push(".steam");
+				path.push("steam");
+				path.push("steamapps");
+				path.push("common");
+				path.push("Factorio");
+				result.push(path);
 			}
 
-			if let Some(parent_dir) = current_dir.parent() {
-				result.push(std::path::PathBuf::from(parent_dir));
-
-				let parent_directory = current_dir.join("factorio");
-				if parent_directory.is_dir() {
-					result.push(parent_directory);
-				}
+			if let Some(mut path) = dirs::data_dir() {
+				path.push("Steam");
+				path.push("steamapps");
+				path.push("common");
+				path.push("Factorio");
+				result.push(path);
 			}
 		}
 
-		if let Ok(user_data_dir) = appdirs::user_data_dir(Some("factorio"), None, false) {
-			if user_data_dir.is_dir() {
-				result.push(user_data_dir);
-			}
-		}
+		result
+	};
 
-		if let Ok(user_data_dir) = appdirs::user_data_dir(Some("Steam"), None, false) {
-			let mut steam_directory = user_data_dir;
-			steam_directory.push("steamapps");
-			steam_directory.push("common");
-			steam_directory.push("Factorio");
-			if steam_directory.is_dir() {
-				result.push(steam_directory);
-			}
-		}
+	static ref FACTORIO_USER_SEARCH_PATHS: Vec<std::path::PathBuf> = {
+		let mut result = vec![];
 
 		if cfg!(windows) {
-			if let Some(appdata) = std::env::var_os("APPDATA") {
-				let appdata_directory = std::path::Path::new(&appdata).join("factorio");
-				if appdata_directory.is_dir() {
-					result.push(appdata_directory);
-				}
+			if let Some(mut path) = dirs::data_dir() {
+				path.push("Factorio");
+				result.push(path);
 			}
-
-			result.push(std::path::PathBuf::from(r"C:\Program Files (x86)\Steam\steamapps\common\Factorio"));
 		}
-
-		if cfg!(target_os = "linux") {
-			if let Some(home) = std::env::var_os("HOME") {
-				let home_directory = std::path::Path::new(&home);
-				result.push(home_directory.join("factorio"));
-				result.push(home_directory.join(".factorio"));
-			}
+		else if let Some(mut path) = dirs::home_dir() {
+			path.push(".factorio");
+			result.push(path);
 		}
 
 		result

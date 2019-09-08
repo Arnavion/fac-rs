@@ -109,11 +109,11 @@ fn main() -> Result<(), DisplayableError> {
 
 			(None, _) => Err(
 				factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::InstallDirectoryNotFound)
-				.context("Could not initialize local API").into()),
+				.context(r#"Could not initialize local API. Consider setting "install_directory" to the path in the config file."#).into()),
 
 			(_, None) => Err(
 				factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::UserDirectoryNotFound)
-				.context("Could not initialize local API").into()),
+				.context(r#"Could not initialize local API. Consider setting "user_directory" to the path in the config file."#).into()),
 		};
 
 		if config.mods.is_none() {

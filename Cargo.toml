@@ -6,8 +6,8 @@ description = "Mod manager for Factorio"
 edition = "2018"
 
 [dependencies]
-appdirs = "0.2.x"
 crc32fast = "1"
+dirs = "2"
 factorio-mods-common = { version = "0.1.0", path = "./factorio-mods-common" }
 factorio-mods-local = { version = "0.1.0", path = "./factorio-mods-local" }
 factorio-mods-web = { version = "0.1.0", path = "./factorio-mods-web" }
