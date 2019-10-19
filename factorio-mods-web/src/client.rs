@@ -5,13 +5,13 @@
 /// Wraps a `reqwest::unstable::r#async::Client` to only allow limited operations on it.
 #[derive(Debug)]
 pub(crate) struct Client {
-	inner: std::sync::Arc<reqwest::r#async::Client>,
+	inner: std::sync::Arc<reqwest::Client>,
 }
 
 impl Client {
 	/// Creates a new `Client` object.
-	pub(crate) fn new(builder: Option<reqwest::r#async::ClientBuilder>) -> crate::Result<Self> {
-		let builder = builder.unwrap_or_else(reqwest::r#async::ClientBuilder::new);
+	pub(crate) fn new(builder: Option<reqwest::ClientBuilder>) -> crate::Result<Self> {
+		let builder = builder.unwrap_or_else(reqwest::ClientBuilder::new);
 
 		let mut default_headers = reqwest::header::HeaderMap::new();
 		default_headers.insert(
@@ -103,7 +103,7 @@ impl Client {
 	{
 		// Separate inner fn so that the impl-trait type alias is independent of B
 		async fn post_object_inner<T>(
-			inner: std::sync::Arc<reqwest::r#async::Client>,
+			inner: std::sync::Arc<reqwest::Client>,
 			body: Result<String, serde_urlencoded::ser::Error>,
 			url: reqwest::Url,
 		) -> crate::Result<(T, reqwest::Url)> where T: serde::de::DeserializeOwned + 'static {
@@ -142,8 +142,8 @@ lazy_static::lazy_static! {
 }
 
 pub(crate) type GetObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
-pub(crate) type GetZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
-pub(crate) type HeadZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::r#async::Response, reqwest::Url)>> + 'static;
+pub(crate) type GetZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::Response, reqwest::Url)>> + 'static;
+pub(crate) type HeadZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::Response, reqwest::Url)>> + 'static;
 pub(crate) type PostObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 
 /// A login failure response.
@@ -153,10 +153,10 @@ struct LoginFailureResponse {
 }
 
 async fn send(
-	mut builder: impl FnMut() -> reqwest::r#async::RequestBuilder,
+	mut builder: impl FnMut() -> reqwest::RequestBuilder,
 	url: reqwest::Url,
 	is_range_request: bool,
-) -> crate::Result<(reqwest::r#async::Response, reqwest::Url)> {
+) -> crate::Result<(reqwest::Response, reqwest::Url)> {
 	match url.host_str() {
 		Some(host) if WHITELISTED_HOSTS.contains(host) => (),
 		_ => return Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
@@ -166,7 +166,7 @@ async fn send(
 	let response = loop {
 		let builder = builder();
 
-		match futures_util::compat::Future01CompatExt::compat(builder.send()).await {
+		match builder.send().await {
 			Ok(response) => break response,
 			Err(err) => {
 				// native-tls sometimes fails with SEC_E_MESSAGE_ALTERED when using schannel. Retry to work around it.
@@ -215,18 +215,18 @@ async fn send(
 	}
 }
 
-async fn json<T>(mut response: reqwest::r#async::Response, url: reqwest::Url) -> crate::Result<(T, reqwest::Url)>
+async fn json<T>(response: reqwest::Response, url: reqwest::Url) -> crate::Result<(T, reqwest::Url)>
 	where T: serde::de::DeserializeOwned + 'static
 {
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
-	match futures_util::compat::Future01CompatExt::compat(response.json()).await {
+	match response.json().await {
 		Ok(object) => Ok((object, url)),
 		Err(err) => Err(crate::ErrorKind::HTTP(url, err).into()),
 	}
 }
 
 fn expect_content_type(
-	response: &reqwest::r#async::Response,
+	response: &reqwest::Response,
 	url: reqwest::Url,
 	expected_mime: &reqwest::header::HeaderValue,
 ) -> crate::Result<reqwest::Url> {

@@ -31,7 +31,7 @@ enum DataRegion<'a> {
 	Downloaded(Vec<u8>),
 }
 
-type ReqwestResponseReader<'a> = futures_util::try_stream::IntoAsyncRead<std::pin::Pin<Box<dyn Stream<Item = std::io::Result<reqwest::r#async::Chunk>> + 'a>>>;
+type ReqwestResponseReader<'a> = futures_util::try_stream::IntoAsyncRead<std::pin::Pin<Box<dyn Stream<Item = std::io::Result<bytes::Bytes>> + 'a>>>;
 
 const REGION_LEN_MAX: usize = 1024 * 8;
 

@@ -5,22 +5,24 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+bytes = "0.4"
 derive-struct = { version = "0.1.0", path = "../derive-struct" }
 factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
 failure = "0.1.x"
 failure_derive = "0.1.x"
 futures-core-preview = { version = "=0.3.0-alpha.19" }
-futures-util-preview = { version = "=0.3.0-alpha.19", features = ["compat"] }
+futures-util-preview = { version = "=0.3.0-alpha.19" }
 itertools = "0.8.x"
 lazy_static = "1"
-reqwest = "0.9.x"
+reqwest = { version = "0.10.0-alpha.1", features = ["json"] }
 serde = "1.0.x"
 serde_derive = "1.0.x"
-serde_urlencoded = "0.5.x"
+serde_urlencoded = "0.6"
+url = "2"
 
 [target.'cfg(windows)'.dependencies]
 native-tls = "0.2"
 winapi = { version = "0.3", features = ["winerror"] }
 
 [dev-dependencies]
-tokio = "0.1.x"
+tokio = "0.2.0-alpha.6"

@@ -13,7 +13,7 @@ pub struct API {
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(builder: Option<reqwest::r#async::ClientBuilder>) -> crate::Result<Self> {
+	pub fn new(builder: Option<reqwest::ClientBuilder>) -> crate::Result<Self> {
 		Ok(API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
@@ -125,7 +125,7 @@ impl API {
 	}
 }
 
-pub type DownloadResponse = impl futures_core::Stream<Item = crate::Result<reqwest::r#async::Chunk>> + 'static;
+pub type DownloadResponse = impl futures_core::Stream<Item = crate::Result<bytes::Bytes>> + 'static;
 pub type GetResponse = impl std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
 pub type GetFilesizeResponse = impl std::future::Future<Output = crate::Result<u64>> + 'static;
 pub type LoginResponse = impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
@@ -133,11 +133,11 @@ pub type SearchResponse = impl futures_core::Stream<Item = crate::Result<crate::
 
 enum DownloadStream {
 	Fetch(std::pin::Pin<Box<crate::client::GetZipFuture>>),
-	Response(futures_util::compat::Compat01As03<reqwest::r#async::Decoder>, Option<reqwest::Url>),
+	Response(std::pin::Pin<Box<dyn futures_core::Stream<Item = Result<bytes::Bytes, reqwest::Error>>>>, Option<reqwest::Url>),
 }
 
 impl futures_core::Stream for DownloadStream {
-	type Item = crate::Result<reqwest::r#async::Chunk>;
+	type Item = crate::Result<bytes::Bytes>;
 
 	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
 		loop {
@@ -145,14 +145,20 @@ impl futures_core::Stream for DownloadStream {
 				DownloadStream::Fetch(f) => match std::future::Future::poll(f.as_mut(), cx) {
 					std::task::Poll::Pending => std::task::Poll::Pending,
 					std::task::Poll::Ready(Ok((response, download_url))) => {
-						let body = futures_util::compat::Stream01CompatExt::compat(response.into_body());
-						*self = DownloadStream::Response(body, Some(download_url));
+						async fn next_chunk(mut response: reqwest::Response) -> Option<(Result<bytes::Bytes, reqwest::Error>, reqwest::Response)> {
+							let chunk = response.chunk().await;
+							let chunk = chunk.transpose()?;
+							Some((chunk, response))
+						}
+
+						let body = futures_util::stream::unfold(response, next_chunk);
+						*self = DownloadStream::Response(Box::pin(body), Some(download_url));
 						continue;
 					},
 					std::task::Poll::Ready(Err(err)) => std::task::Poll::Ready(Some(Err(err))),
 				},
 
-				DownloadStream::Response(body, download_url) => match std::pin::Pin::new(body).poll_next(cx) {
+				DownloadStream::Response(body, download_url) => match body.as_mut().poll_next(cx) {
 					std::task::Poll::Pending => std::task::Poll::Pending,
 					std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
 					std::task::Poll::Ready(Some(Err(err))) =>
@@ -318,7 +324,7 @@ mod tests {
 		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 		let api = API::new(None).unwrap();
 		let result = test(&api).map(|()| Ok::<_, crate::Error>(()));
-		runtime.block_on(futures_util::TryFutureExt::compat(result)).unwrap();
+		runtime.block_on(result).unwrap();
 	}
 
 	#[test]

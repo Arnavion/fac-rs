@@ -85,7 +85,7 @@ fn main() -> Result<(), DisplayableError> {
 		let options: Options = structopt::StructOpt::from_args();
 
 		let client = if let Some(proxy_url) = options.proxy {
-			let builder = crate::reqwest::r#async::ClientBuilder::new();
+			let builder = crate::reqwest::ClientBuilder::new();
 			let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("Couldn't parse proxy URL")?);
 			Some(builder)
 		}
@@ -133,52 +133,52 @@ fn main() -> Result<(), DisplayableError> {
 
 		let web_api = factorio_mods_web::API::new(client).context("Could not initialize web API").map_err(Into::into);
 
-		let mut runtime = tokio::runtime::current_thread::Runtime::new().context("Could not start tokio runtime")?;
+		let runtime = tokio::runtime::Runtime::new().context("Could not start tokio runtime")?;
 
 
 		match options.subcommand {
-			SubCommand::Disable(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
+			SubCommand::Disable(parameters) => runtime.block_on(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
-			))))?,
+			))?,
 
-			SubCommand::Enable(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
+			SubCommand::Enable(parameters) => runtime.block_on(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				prompt_override,
-			))))?,
+			))?,
 
-			SubCommand::Install(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
+			SubCommand::Install(parameters) => runtime.block_on(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 				config,
 				prompt_override,
-			))))?,
+			))?,
 
-			SubCommand::List(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
+			SubCommand::List(parameters) => runtime.block_on(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			))))?,
+			))?,
 
-			SubCommand::Remove(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				config,
-				prompt_override,
-			))))?,
-
-			SubCommand::Search(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-			))))?,
-
-			SubCommand::Show(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-			))))?,
-
-			SubCommand::Update(parameters) => runtime.block_on(futures_util::TryFutureExt::compat(Box::pin(parameters.run(
+			SubCommand::Remove(parameters) => runtime.block_on(parameters.run(
 				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
 				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
 				config,
 				prompt_override,
-			))))?,
+			))?,
+
+			SubCommand::Search(parameters) => runtime.block_on(parameters.run(
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			))?,
+
+			SubCommand::Show(parameters) => runtime.block_on(parameters.run(
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			))?,
+
+			SubCommand::Update(parameters) => runtime.block_on(parameters.run(
+				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+				config,
+				prompt_override,
+			))?,
 		}
 
 		Ok(())

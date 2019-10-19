@@ -50,7 +50,7 @@ pub enum ErrorKind {
 
 	/// Parsing a URL failed
 	#[fail(display = "Could not parse URL {}", _0)]
-	Parse(String, #[cause] reqwest::UrlError),
+	Parse(String, #[cause] url::ParseError),
 
 	/// An HTTP request did not have a successful status code
 	#[fail(display = "Request to URL {} returned {}", _0, _1)]
