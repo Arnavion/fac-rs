@@ -6,17 +6,17 @@ edition = "2018"
 
 [dependencies]
 bytes = "0.4"
-derive-struct = { version = "0.1.0", path = "../derive-struct" }
-factorio-mods-common = { version = "0.1.0", path = "../factorio-mods-common" }
-failure = "0.1.x"
-failure_derive = "0.1.x"
+derive-struct = { path = "../derive-struct" }
+factorio-mods-common = { path = "../factorio-mods-common" }
+failure = "0.1"
+failure_derive = "0.1"
 futures-core-preview = { version = "=0.3.0-alpha.19" }
 futures-util-preview = { version = "=0.3.0-alpha.19" }
-itertools = "0.8.x"
+itertools = "0.8"
 lazy_static = "1"
 reqwest = { version = "0.10.0-alpha.1", features = ["json"] }
-serde = "1.0.x"
-serde_derive = "1.0.x"
+serde = "1"
+serde_derive = "1"
 serde_urlencoded = "0.6"
 url = "2"
 
