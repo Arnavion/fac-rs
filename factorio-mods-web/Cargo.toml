@@ -10,8 +10,8 @@ derive-struct = { path = "../derive-struct" }
 factorio-mods-common = { path = "../factorio-mods-common" }
 failure = "0.1"
 failure_derive = "0.1"
-futures-core-preview = { version = "=0.3.0-alpha.19" }
-futures-util-preview = { version = "=0.3.0-alpha.19" }
+futures-core = "0.3"
+futures-util = "0.3"
 itertools = "0.8"
 lazy_static = "1"
 reqwest = { version = "0.10.0-alpha.1", features = ["json"] }

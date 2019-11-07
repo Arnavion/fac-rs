@@ -14,8 +14,8 @@ factorio-mods-local = { path = "./factorio-mods-local" }
 factorio-mods-web = { path = "./factorio-mods-web" }
 failure = { version = "0.1", features = ["backtrace"] }
 failure_derive = "0.1"
-futures-core-preview = "=0.3.0-alpha.19"
-futures-util-preview = { version = "=0.3.0-alpha.19", features = ["io"] }
+futures-core = "0.3"
+futures-util = { version = "0.3", features = ["io"] }
 itertools = "0.8"
 lazy_static = "1"
 libflate = "0.1"

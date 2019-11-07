@@ -8,7 +8,7 @@ use std::future::Future;
 use std::io::Read;
 
 use futures_core::Stream;
-use futures_util::try_future::TryFutureExt;
+use futures_util::future::TryFutureExt;
 
 pub(super) struct WebReader<'a> {
 	api: &'a factorio_mods_web::API,
@@ -31,7 +31,7 @@ enum DataRegion<'a> {
 	Downloaded(Vec<u8>),
 }
 
-type ReqwestResponseReader<'a> = futures_util::try_stream::IntoAsyncRead<std::pin::Pin<Box<dyn Stream<Item = std::io::Result<bytes::Bytes>> + 'a>>>;
+type ReqwestResponseReader<'a> = futures_util::stream::IntoAsyncRead<std::pin::Pin<Box<dyn Stream<Item = std::io::Result<bytes::Bytes>> + 'a>>>;
 
 const REGION_LEN_MAX: usize = 1024 * 8;
 
@@ -92,9 +92,9 @@ impl futures_util::io::AsyncRead for WebReader<'_> {
 			else {
 				let response = this.api.download(&this.release, &this.user_credentials, Some(format!("bytes={}-", key * REGION_LEN_MAX as u64)));
 				let reader =
-					futures_util::try_stream::TryStreamExt::into_async_read(
+					futures_util::stream::TryStreamExt::into_async_read(
 						Box::pin(
-							futures_util::try_stream::TryStreamExt::map_err(
+							futures_util::stream::TryStreamExt::map_err(
 								response,
 								|err| super::io_error_from_fail(&err))) as _);
 				let download = download_region(reader, key, this.len);

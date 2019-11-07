@@ -91,7 +91,7 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 				&mods_directory_canonicalized,
 				&user_credentials))
 		.collect();
-	futures_util::try_stream::TryStreamExt::try_for_each_concurrent(download_futures, None, futures_util::future::ok).await?;
+	futures_util::stream::TryStreamExt::try_for_each_concurrent(download_futures, None, futures_util::future::ok).await?;
 
 	config.save()?;
 
