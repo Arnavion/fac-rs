@@ -291,21 +291,7 @@ struct Pagination {
 /// Pagination link information in a paged response.
 #[derive(Debug, serde_derive::Deserialize)]
 struct PaginationLinks {
-	#[serde(deserialize_with = "deserialize_url")]
 	next: Option<reqwest::Url>,
-}
-
-// TODO: Remove when url supports serde 1.0 (https://github.com/servo/rust-url/pull/327) and reqwest enables or exposes its "serde" feature
-fn deserialize_url<'de, D>(deserializer: D) -> Result<Option<reqwest::Url>, D::Error> where D: serde::Deserializer<'de> {
-	let url: Option<String> = serde::Deserialize::deserialize(deserializer)?;
-	match url {
-		Some(url) => match url.parse() {
-			Ok(url) => Ok(Some(url)),
-			Err(err) => Err(serde::de::Error::custom(format!("invalid URL {:?}: {}", url, std::error::Error::description(&err)))),
-		},
-
-		None => Ok(None),
-	}
 }
 
 lazy_static::lazy_static! {
