@@ -2,9 +2,9 @@
 
 `fac` has a few advantages over the game's built-in mod manager:
 
-- Much faster, since it doesn't require starting the game.
+- Much faster, since it doesn't require starting and restarting the game for every change.
 
-- Automatically downloads required dependencies without needing you to list them.
+- Automatically downloads required dependencies and keeps them up-to-date. Adds new dependencies and removes unneeded ones.
 
 - Automatically resolves version conflicts using a package solver.
 
@@ -31,13 +31,15 @@ This creates the `fac` binary at `./target/release/fac`
 fac --help
 
 
-# Installs the specified mods and adds them to the config file
-fac install ...
+# Installs the mods named "foo" and "bar". Also adds them to the config file.
+# If they have any dependencies, those are also installed recursively.
+fac install foo bar
 
-# Deletes the specified mods and removes them from the config file
-fac remove ...
+# Removes the mods named "foo" and "bar". Also removes them from the config file.
+# If they have any dependencies that are no longer necessary, those are also removed recursively.
+fac remove foo bar
 
-# Updates all mods with the latest versions as determined by the config file
+# Updates all mods to the latest versions. For mods specified in the config file, they are updated to the version specified in the config file.
 fac update
 ```
 
