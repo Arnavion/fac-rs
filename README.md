@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/Arnavion/fac-rs.svg?branch=master)](https://travis-ci.org/Arnavion/fac-rs)
-
 `fac` is a mod manager for [Factorio.](https://www.factorio.com) It can be used to install and update mods for the game.
 
 `fac` has a few advantages over the game's built-in mod manager:

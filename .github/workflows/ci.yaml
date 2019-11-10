@@ -1,0 +1,45 @@
+name: 'CI'
+
+on:
+- 'push'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        crate:
+        - 'factorio-mods-common'
+        - 'factorio-mods-local'
+        - 'factorio-mods-web'
+        - 'package'
+        - 'fac'
+    steps:
+    - uses: 'actions/checkout@v1'
+    - name: 'Install Rust'
+      uses: 'actions-rs/toolchain@v1'
+      with:
+        profile: 'minimal'
+        toolchain: 'nightly'
+        components: 'clippy'
+        default: true
+    - name: 'Build'
+      uses: 'actions-rs/cargo@v1'
+      with:
+        command: 'build'
+        args: "-p '${{ matrix.crate }}'"
+    - name: 'Test'
+      uses: 'actions-rs/cargo@v1'
+      with:
+        command: 'test'
+        args: "-p '${{ matrix.crate }}'"
+    - name: 'Clippy'
+      uses: 'actions-rs/cargo@v1'
+      with:
+        command: 'clippy'
+        args: "-p '${{ matrix.crate }}'"
+    - name: 'Clippy tests'
+      uses: 'actions-rs/cargo@v1'
+      with:
+        command: 'clippy'
+        args: "--tests -p '${{ matrix.crate }}'"
