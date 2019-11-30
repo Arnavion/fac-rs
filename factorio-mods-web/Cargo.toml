@@ -5,6 +5,7 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+async-stream = "0.2"
 bytes = "0.4"
 derive-struct = { path = "../derive-struct" }
 factorio-mods-common = { path = "../factorio-mods-common" }

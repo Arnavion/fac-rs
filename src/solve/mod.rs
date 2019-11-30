@@ -136,7 +136,7 @@ fn download_mod(
 
 	println!("    Installing {} {} ... downloading to {} ...", mod_name, release.version, download_displayable_target);
 
-	let mut chunk_stream = web_api.download(&release, &user_credentials, None);
+	let mut chunk_stream = Box::pin(web_api.download(&release, &user_credentials, None));
 
 	let download_file =
 		std::fs::OpenOptions::new()

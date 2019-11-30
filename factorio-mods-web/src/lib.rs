@@ -15,6 +15,8 @@
 	clippy::use_self,
 )]
 
+#![recursion_limit = "256"]
+
 pub use reqwest;
 
 mod api;

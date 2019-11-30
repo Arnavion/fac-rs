@@ -25,11 +25,45 @@ impl API {
 	/// Searches for mods matching the given criteria.
 	pub fn search(&self, query: &str) -> SearchResponse {
 		let query = query.to_lowercase();
-		SearchStream {
-			query,
-			client: self.client.clone(),
-			state: SearchStreamState::HavePage(vec![].into_iter(), Some(self.mods_url.clone())),
-		}
+		let client = self.client.clone();
+
+		let mut next_page_url = self.mods_url.clone();
+
+		Box::pin(async_stream::try_stream! {
+			loop {
+				let next_page: crate::Result<(PagedResponse<crate::SearchResponseMod>, _)> = client.get_object(next_page_url).await;
+				match next_page {
+					Ok((page, _)) => {
+						for mod_ in page.results {
+							if
+								mod_.name.0.to_lowercase().contains(&query) ||
+								mod_.title.0.to_lowercase().contains(&query) ||
+								mod_.owner.iter().any(|owner| owner.0.to_lowercase().contains(&query)) ||
+								mod_.summary.0.to_lowercase().contains(&query)
+							{
+								yield mod_;
+							}
+						}
+
+						if let Some(url) = page.pagination.links.next {
+							next_page_url = url;
+						}
+						else {
+							return;
+						}
+					},
+
+					Err(err) => match err.kind() {
+						crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND) => return,
+
+						_ => {
+							Err(err)?;
+							return;
+						},
+					},
+				}
+			}
+		})
 	}
 
 	/// Gets information about the specified mod.
@@ -121,7 +155,27 @@ impl API {
 
 		let fetch = self.client.get_zip(download_url, range);
 
-		futures_util::future::Either::Right(DownloadStream::Fetch(Box::pin(fetch)))
+		futures_util::future::Either::Right(async_stream::try_stream! {
+			let (mut response, download_url) = fetch.await?;
+			let mut download_url = Some(download_url);
+
+			loop {
+				let chunk = response.chunk().await;
+				match chunk {
+					Ok(Some(chunk)) => yield chunk,
+
+					Ok(None) => return,
+
+					Err(err) => {
+						if let Some(download_url) = download_url.take() {
+							Err(crate::ErrorKind::HTTP(download_url, err))?;
+						}
+
+						return;
+					},
+				}
+			}
+		})
 	}
 }
 
@@ -130,150 +184,6 @@ pub type GetResponse = impl std::future::Future<Output = crate::Result<crate::Mo
 pub type GetFilesizeResponse = impl std::future::Future<Output = crate::Result<u64>> + 'static;
 pub type LoginResponse = impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
 pub type SearchResponse = impl futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
-
-enum DownloadStream {
-	Fetch(std::pin::Pin<Box<crate::client::GetZipFuture>>),
-	Response(std::pin::Pin<Box<dyn futures_core::Stream<Item = Result<bytes::Bytes, reqwest::Error>>>>, Option<reqwest::Url>),
-}
-
-impl futures_core::Stream for DownloadStream {
-	type Item = crate::Result<bytes::Bytes>;
-
-	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
-		loop {
-			return match &mut *self {
-				DownloadStream::Fetch(f) => match std::future::Future::poll(f.as_mut(), cx) {
-					std::task::Poll::Pending => std::task::Poll::Pending,
-					std::task::Poll::Ready(Ok((response, download_url))) => {
-						async fn next_chunk(mut response: reqwest::Response) -> Option<(Result<bytes::Bytes, reqwest::Error>, reqwest::Response)> {
-							let chunk = response.chunk().await;
-							let chunk = chunk.transpose()?;
-							Some((chunk, response))
-						}
-
-						let body = futures_util::stream::unfold(response, next_chunk);
-						*self = DownloadStream::Response(Box::pin(body), Some(download_url));
-						continue;
-					},
-					std::task::Poll::Ready(Err(err)) => std::task::Poll::Ready(Some(Err(err))),
-				},
-
-				DownloadStream::Response(body, download_url) => match body.as_mut().poll_next(cx) {
-					std::task::Poll::Pending => std::task::Poll::Pending,
-					std::task::Poll::Ready(Some(Ok(chunk))) => std::task::Poll::Ready(Some(Ok(chunk))),
-					std::task::Poll::Ready(Some(Err(err))) =>
-						std::task::Poll::Ready(download_url.take().map(|download_url| Err(crate::ErrorKind::HTTP(download_url, err).into()))),
-					std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
-				},
-			};
-		}
-	}
-}
-
-#[derive(Debug)]
-struct SearchStream {
-	query: String,
-	client: std::sync::Arc<crate::client::Client>,
-	state: SearchStreamState,
-}
-
-enum SearchStreamState {
-	WaitingForPage(std::pin::Pin<Box<crate::client::GetObjectFuture<PagedResponse<crate::SearchResponseMod>>>>),
-	HavePage(std::vec::IntoIter<crate::SearchResponseMod>, Option<reqwest::Url>),
-	Ended,
-}
-
-impl std::fmt::Debug for SearchStreamState {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match *self {
-			SearchStreamState::WaitingForPage(_) =>
-				f.debug_tuple("WaitingForPage")
-				.finish(),
- 			SearchStreamState::HavePage(ref results, ref next_page_url) =>
-				f.debug_tuple("HavePage")
-				.field(&results.len())
-				.field(next_page_url)
-				.finish(),
- 			SearchStreamState::Ended =>
-				f.debug_tuple("Ended")
-				.finish(),
-		}
-	}
-}
-
-impl futures_core::Stream for SearchStream {
-	type Item = crate::Result<crate::SearchResponseMod>;
-
-	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
-		loop {
-			let (next_state, result) = match &mut self.state {
-				SearchStreamState::WaitingForPage(page) => match std::future::Future::poll(page.as_mut(), cx) {
-					std::task::Poll::Pending =>
-						return std::task::Poll::Pending,
-
-					std::task::Poll::Ready(Ok((page, _))) => (
-						Some(SearchStreamState::HavePage(page.results.into_iter(), page.pagination.links.next)),
-						None,
-					),
-
-					std::task::Poll::Ready(Err(err)) => match err.kind() {
-						crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND) => (
-							Some(SearchStreamState::Ended),
-							Some(std::task::Poll::Ready(None)),
-						),
-
-						_ => (
-							Some(SearchStreamState::Ended),
-							Some(std::task::Poll::Ready(Some(Err(err)))),
-						),
-					},
-				},
-
-				SearchStreamState::HavePage(results, next_page_url) => match results.next() {
-					Some(mod_) => {
-						let query = &*self.query;
-
-						if
-							mod_.name.0.to_lowercase().contains(query) ||
-							mod_.title.0.to_lowercase().contains(query) ||
-							mod_.owner.iter().any(|owner| owner.0.to_lowercase().contains(query)) ||
-							mod_.summary.0.to_lowercase().contains(query)
-						{
-							(None, Some(std::task::Poll::Ready(Some(Ok(mod_)))))
-						}
-						else {
-							(None, None)
-						}
-					},
-
-					None => match next_page_url.take() {
-						Some(next_page_url) => (
-							Some(SearchStreamState::WaitingForPage(Box::pin(self.client.get_object(next_page_url)))),
-							None,
-						),
-						None => (
-							Some(SearchStreamState::Ended),
-							Some(std::task::Poll::Ready(None)),
-						),
-					},
-				},
-
-				SearchStreamState::Ended => (
-					Some(SearchStreamState::Ended),
-					Some(std::task::Poll::Ready(None)),
-				),
-			};
-
-			if let Some(next_state) = next_state {
-				self.state = next_state;
-			}
-
-			if let Some(result) = result {
-				return result;
-			}
-		}
-	}
-}
 
 /// A single page of a paged response.
 #[derive(Debug, serde_derive::Deserialize)]
