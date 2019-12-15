@@ -214,72 +214,53 @@ lazy_static::lazy_static! {
 mod tests {
 	use super::*;
 
-	fn run_test<T>(test: T) where for<'r> T: FnOnce(&'r API) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + 'r>> {
-		use futures_util::FutureExt;
+	#[tokio::test]
+	async fn search_list_all_mods() {
+		use futures_util::TryStreamExt;
 
-		let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 		let api = API::new(None).unwrap();
-		let result = test(&api).map(|()| Ok::<_, crate::Error>(()));
-		runtime.block_on(result).unwrap();
-	}
-
-	#[test]
-	fn search_list_all_mods() {
-		use futures_util::{ FutureExt, StreamExt };
-
-		run_test(|api| Box::pin(
+		let count =
 			api.search("")
-			.fold(0_usize, |count, result| futures_util::future::ready(count + result.map(|_| 1).unwrap()))
-			.map(|count| {
-				println!("Found {} mods", count);
-				assert!(count > 1700); // 1700+ as of 2017-06-21
-			})));
+			.try_fold(0_usize, |count, _| futures_util::future::ready(Ok(count + 1)))
+			.await.unwrap();
+		println!("Found {} mods", count);
+		assert!(count > 5200); // 5200+ as of 2019-12-14
 	}
 
-	#[test]
-	fn search_by_title() {
-		use futures_util::{ FutureExt, StreamExt };
+	#[tokio::test]
+	async fn search_by_title() {
+		use futures_util::StreamExt;
 
-		run_test(|api| Box::pin(
-			api.search("bob's functions library mod")
-			.filter_map(|mod_| {
-				let mod_ = mod_.unwrap();
-				println!("{:?}", mod_);
-				if mod_.title.0 == "Bob's Functions Library mod" {
-					futures_util::future::ready(Some(mod_))
-				}
-				else {
-					futures_util::future::ready(None)
-				}
-			})
-			.into_future()
-			.map(|(result, _)| {
-				let _ = result.unwrap();
-			})));
+		let api = API::new(None).unwrap();
+
+		let mut search_results = api.search("bob's functions library mod");
+		while let Some(mod_) = search_results.next().await {
+			println!("{:?}", mod_);
+			let mod_ = mod_.unwrap();
+			if mod_.title.0 == "Bob's Functions Library mod" {
+				return;
+			}
+		}
+
+		panic!("boblibrary not found");
 	}
 
-	#[test]
-	fn search_non_existing() {
-		use futures_util::{ FutureExt, StreamExt };
+	#[tokio::test]
+	async fn search_non_existing() {
+		use futures_util::StreamExt;
 
-		run_test(|api| Box::pin(
-			api.search("arnavion's awesome mod")
-			.into_future()
-			.map(|(result, _)| assert!(result.is_none()))));
+		let api = API::new(None).unwrap();
+		let mut search_results = api.search("arnavion's awesome mod");
+		assert!(search_results.next().await.is_none());
 	}
 
-	#[test]
-	fn get() {
-		use futures_util::FutureExt;
+	#[tokio::test]
+	async fn get() {
+		let api = API::new(None).unwrap();
 
-		let mod_name = factorio_mods_common::ModName("boblibrary".to_string());
-
-		run_test(|api| Box::pin(
-			api.get(&mod_name)
-			.map(|mod_| {
-				let mod_ = mod_.unwrap();
-				println!("{:?}", mod_);
-				assert_eq!(mod_.title.0, "Bob's Functions Library mod");
-			})));
+		let mod_name = factorio_mods_common::ModName("boblibrary".to_owned());
+		let mod_ = api.get(&mod_name).await.unwrap();
+		println!("{:?}", mod_);
+		assert_eq!(mod_.title.0, "Bob's Functions Library mod");
 	}
 }

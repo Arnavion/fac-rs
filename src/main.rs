@@ -75,114 +75,110 @@ pub(crate) enum SubCommand {
 	Update(update::SubCommand),
 }
 
-fn main() -> Result<(), DisplayableError> {
+#[tokio::main]
+async fn main() -> Result<(), DisplayableError> {
 	use failure::ResultExt;
 
 	std::env::set_var("RUST_BACKTRACE", "1");
 
-	// Run everything in a separate thread because the default Windows main thread stack isn't big enough (1 MiB)
-	std::thread::spawn(|| {
-		let options: Options = structopt::StructOpt::from_args();
+	let options: Options = structopt::StructOpt::from_args();
 
-		let client = if let Some(proxy_url) = options.proxy {
-			let builder = crate::reqwest::ClientBuilder::new();
-			let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("Couldn't parse proxy URL")?);
-			Some(builder)
+	let client = if let Some(proxy_url) = options.proxy {
+		let builder = crate::reqwest::ClientBuilder::new();
+		let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("Couldn't parse proxy URL")?);
+		Some(builder)
+	}
+	else {
+		None
+	};
+
+	let prompt_override = match (options.yes, options.no) {
+		(true, false) => Some(true),
+		(false, true) => Some(false),
+		(false, false) => None,
+		(true, true) => unreachable!(),
+	};
+
+	let mut config = crate::config::Config::load(options.config)?;
+
+	let local_api: Result<_, failure::Error> = match (&config.install_directory, &config.user_directory) {
+		(Some(install_directory), Some(user_directory)) =>
+			factorio_mods_local::API::new(install_directory, user_directory)
+			.context("Could not initialize local API").map_err(Into::into),
+
+		(None, _) => Err(
+			factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::InstallDirectoryNotFound)
+			.context(r#"Could not initialize local API. Consider setting "install_directory" to the path in the config file."#).into()),
+
+		(_, None) => Err(
+			factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::UserDirectoryNotFound)
+			.context(r#"Could not initialize local API. Consider setting "user_directory" to the path in the config file."#).into()),
+	};
+
+	if config.mods.is_none() {
+		if let Ok(local_api) = &local_api {
+			// Default mods list is the list of all currently installed mods with a * requirement
+			let installed_mods: Result<_, failure::Error> =
+				local_api.installed_mods().context("Could not enumerate installed mods")?
+				.map(|mod_| Ok(
+					mod_
+					.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
+					.context("Could not process an installed mod")?))
+				.collect();
+			let mods = installed_mods.context("Could not enumerate installed mods")?;
+			config.mods = Some(mods);
 		}
-		else {
-			None
-		};
+	}
 
-		let prompt_override = match (options.yes, options.no) {
-			(true, false) => Some(true),
-			(false, true) => Some(false),
-			(false, false) => None,
-			(true, true) => unreachable!(),
-		};
-
-		let mut config = crate::config::Config::load(options.config)?;
-
-		let local_api: Result<_, failure::Error> = match (&config.install_directory, &config.user_directory) {
-			(Some(install_directory), Some(user_directory)) =>
-				factorio_mods_local::API::new(install_directory, user_directory)
-				.context("Could not initialize local API").map_err(Into::into),
-
-			(None, _) => Err(
-				factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::InstallDirectoryNotFound)
-				.context(r#"Could not initialize local API. Consider setting "install_directory" to the path in the config file."#).into()),
-
-			(_, None) => Err(
-				factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::UserDirectoryNotFound)
-				.context(r#"Could not initialize local API. Consider setting "user_directory" to the path in the config file."#).into()),
-		};
-
-		if config.mods.is_none() {
-			if let Ok(local_api) = &local_api {
-				// Default mods list is the list of all currently installed mods with a * requirement
-				let installed_mods: Result<_, failure::Error> =
-					local_api.installed_mods().context("Could not enumerate installed mods")?
-					.map(|mod_| Ok(
-						mod_
-						.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
-						.context("Could not process an installed mod")?))
-					.collect();
-				let mods = installed_mods.context("Could not enumerate installed mods")?;
-				config.mods = Some(mods);
-			}
-		}
-
-		let web_api = factorio_mods_web::API::new(client).context("Could not initialize web API").map_err(Into::into);
-
-		let runtime = tokio::runtime::Runtime::new().context("Could not start tokio runtime")?;
+	let web_api = factorio_mods_web::API::new(client).context("Could not initialize web API").map_err(Into::into);
 
 
-		match options.subcommand {
-			SubCommand::Disable(parameters) => runtime.block_on(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				prompt_override,
-			))?,
+	match options.subcommand {
+		SubCommand::Disable(parameters) => parameters.run(
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			prompt_override,
+		).await?,
 
-			SubCommand::Enable(parameters) => runtime.block_on(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				prompt_override,
-			))?,
+		SubCommand::Enable(parameters) => parameters.run(
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			prompt_override,
+		).await?,
 
-			SubCommand::Install(parameters) => runtime.block_on(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				config,
-				prompt_override,
-			))?,
+		SubCommand::Install(parameters) => parameters.run(
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			config,
+			prompt_override,
+		).await?,
 
-			SubCommand::List(parameters) => runtime.block_on(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			))?,
+		SubCommand::List(parameters) => parameters.run(
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+		).await?,
 
-			SubCommand::Remove(parameters) => runtime.block_on(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				config,
-				prompt_override,
-			))?,
+		SubCommand::Remove(parameters) => parameters.run(
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			config,
+			prompt_override,
+		).await?,
 
-			SubCommand::Search(parameters) => runtime.block_on(parameters.run(
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-			))?,
+		SubCommand::Search(parameters) => parameters.run(
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+		).await?,
 
-			SubCommand::Show(parameters) => runtime.block_on(parameters.run(
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-			))?,
+		SubCommand::Show(parameters) => parameters.run(
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+		).await?,
 
-			SubCommand::Update(parameters) => runtime.block_on(parameters.run(
-				match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-				match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
-				config,
-				prompt_override,
-			))?,
-		}
+		SubCommand::Update(parameters) => parameters.run(
+			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			config,
+			prompt_override,
+		).await?,
+	}
 
-		Ok(())
-	}).join().unwrap().map_err(DisplayableError)
+	Ok(())
 }
 
 struct DisplayableError(failure::Error);
@@ -200,5 +196,11 @@ impl std::fmt::Debug for DisplayableError {
 		writeln!(f, "{}", self.0.backtrace())?;
 
 		Ok(())
+	}
+}
+
+impl<T> From<T> for DisplayableError where T: Into<failure::Error> {
+	fn from(err: T) -> Self {
+		DisplayableError(err.into())
 	}
 }

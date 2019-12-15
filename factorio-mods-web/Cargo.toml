@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 async-stream = "0.2"
-bytes = "0.4"
+bytes = "0.5"
 derive-struct = { path = "../derive-struct" }
 factorio-mods-common = { path = "../factorio-mods-common" }
 failure = "0.1"
@@ -15,7 +15,7 @@ futures-core = "0.3"
 futures-util = "0.3"
 itertools = "0.8"
 lazy_static = "1"
-reqwest = { version = "0.10.0-alpha.2", features = ["json"] }
+reqwest = { git = "https://github.com/seanmonstar/reqwest", rev = "5d639ecbde270bb44c4703c168cfce4729d9e2b3", features = ["json"] }
 serde = "1"
 serde_derive = "1"
 serde_urlencoded = "0.6"
@@ -26,4 +26,4 @@ native-tls = "0.2"
 winapi = { version = "0.3", features = ["winerror"] }
 
 [dev-dependencies]
-tokio = "0.2.0-alpha.6"
+tokio = { version = "0.2", features = ["macros"] }
