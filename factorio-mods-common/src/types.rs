@@ -207,7 +207,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Err
 		.or_else(|_| {
 			let fixed_version = captures[4].to_string() + &fixup_version(&captures[5]);
 			fixed_version.parse()
-				.map_err(|err| serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, std::error::Error::description(&err))))
+				.map_err(|err| serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, err)))
 		})?;
 
 	Ok(Dependency { name, version: ModVersionReq(version_req), kind, })

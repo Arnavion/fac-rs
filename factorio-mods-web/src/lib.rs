@@ -10,6 +10,7 @@
 #![allow(
 	clippy::default_trait_access,
 	clippy::large_enum_variant,
+	clippy::missing_errors_doc,
 	clippy::module_name_repetitions,
 	clippy::must_use_candidate,
 	clippy::use_self,

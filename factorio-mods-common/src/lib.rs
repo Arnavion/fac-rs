@@ -5,6 +5,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::indexing_slicing,
+	clippy::missing_errors_doc,
 	clippy::must_use_candidate,
 	clippy::use_self,
 )]

@@ -7,6 +7,8 @@
 	clippy::cognitive_complexity,
 	clippy::default_trait_access,
 	clippy::indexing_slicing,
+	clippy::missing_errors_doc,
+	clippy::mutable_key_type,
 	clippy::similar_names,
 	clippy::too_many_lines,
 	clippy::type_complexity,
