@@ -156,23 +156,24 @@ impl API {
 		let fetch = self.client.get_zip(download_url, range);
 
 		futures_util::future::Either::Right(async_stream::try_stream! {
-			let (mut response, download_url) = fetch.await?;
+			let (response, download_url) = fetch.await?;
+			let mut response = response.bytes_stream();
 			let mut download_url = Some(download_url);
 
 			loop {
-				let chunk = response.chunk().await;
+				let chunk = futures_util::StreamExt::next(&mut response).await;
 				match chunk {
-					Ok(Some(chunk)) => yield chunk,
+					Some(Ok(chunk)) => yield chunk,
 
-					Ok(None) => return,
-
-					Err(err) => {
+					Some(Err(err)) => {
 						if let Some(download_url) = download_url.take() {
 							Err(crate::ErrorKind::HTTP(download_url, err))?;
 						}
 
 						return;
 					},
+
+					None => return,
 				}
 			}
 		})

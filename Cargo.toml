@@ -22,7 +22,7 @@ libflate = "0.1"
 package = { path = "./package" }
 petgraph = "0.5"
 regex = "1.2"
-reqwest = { git = "https://github.com/seanmonstar/reqwest", rev = "5d639ecbde270bb44c4703c168cfce4729d9e2b3" }
+reqwest = "0.10"
 rpassword = "4"
 rprompt = "1"
 semver = "0.9"

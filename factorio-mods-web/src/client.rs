@@ -21,7 +21,7 @@ impl Client {
 
 		let inner =
 			builder
-			.redirect(reqwest::RedirectPolicy::custom(|attempt| {
+			.redirect(reqwest::redirect::Policy::custom(|attempt| {
 				if match attempt.url().host_str() {
 					Some(host) if WHITELISTED_HOSTS.contains(host) => true,
 					_ => false,

@@ -15,7 +15,7 @@ futures-core = "0.3"
 futures-util = "0.3"
 itertools = "0.8"
 lazy_static = "1"
-reqwest = { git = "https://github.com/seanmonstar/reqwest", rev = "5d639ecbde270bb44c4703c168cfce4729d9e2b3", features = ["json"] }
+reqwest = { version = "0.10", features = ["json", "stream"] }
 serde = "1"
 serde_derive = "1"
 serde_urlencoded = "0.6"
