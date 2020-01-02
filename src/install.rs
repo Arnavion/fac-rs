@@ -2,7 +2,7 @@ lazy_static::lazy_static! {
 	static ref REQUIREMENT_REGEX: regex::Regex = regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap();
 }
 
-#[derive(Debug, structopt_derive::StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 pub(crate) struct SubCommand {
 	#[structopt(help = "requirements to install", required = true)]
 	requirements: Vec<Requirement>,

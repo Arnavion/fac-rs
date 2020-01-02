@@ -28,7 +28,7 @@ use failure::Fail;
 
 use factorio_mods_web::reqwest;
 
-#[derive(Debug, structopt_derive::StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 #[structopt(about, author)]
 #[structopt(setting(structopt::clap::AppSettings::VersionlessSubcommands))]
 pub(crate) struct Options {
@@ -48,7 +48,7 @@ pub(crate) struct Options {
 	subcommand: SubCommand,
 }
 
-#[derive(Debug, structopt_derive::StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 pub(crate) enum SubCommand {
 	#[structopt(name = "disable", about = "Disable mods")]
 	Disable(enable_disable::DisableSubCommand),

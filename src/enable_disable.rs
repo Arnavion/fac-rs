@@ -1,4 +1,4 @@
-#[derive(Debug, structopt_derive::StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 pub(crate) struct EnableSubCommand {
 	#[structopt(help = "mods to enable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
@@ -15,7 +15,7 @@ impl EnableSubCommand {
 	}
 }
 
-#[derive(Debug, structopt_derive::StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 pub(crate) struct DisableSubCommand {
 	#[structopt(help = "mods to disable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,

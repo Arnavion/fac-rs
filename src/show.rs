@@ -1,4 +1,4 @@
-#[derive(Debug, structopt_derive::StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 pub(crate) struct SubCommand {
 	#[structopt(help = "mods to show", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
