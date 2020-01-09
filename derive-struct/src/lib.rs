@@ -9,8 +9,6 @@
 	clippy::must_use_candidate,
 )]
 
-extern crate proc_macro;
-
 /// Derives `serde::Deserialize` on the newtype.
 #[proc_macro_derive(newtype_deserialize)]
 pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

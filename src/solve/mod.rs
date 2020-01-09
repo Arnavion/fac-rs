@@ -416,8 +416,8 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 
 		println!("Getting mod information ... done");
 
-		let packages = std::mem::replace(&mut this.packages, Default::default());
-		let reqs = std::mem::replace(&mut this.reqs, Default::default());
+		let packages = std::mem::take(&mut this.packages);
+		let reqs = std::mem::take(&mut this.reqs);
 
 		println!();
 		println!("Computing solution...");
