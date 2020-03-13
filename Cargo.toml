@@ -16,7 +16,7 @@ failure = { version = "0.1", features = ["backtrace"] }
 failure_derive = "0.1"
 futures-core = "0.3"
 futures-util = { version = "0.3", features = ["io"] }
-itertools = "0.8"
+itertools = "0.9"
 lazy_static = "1"
 libflate = "0.1"
 package = { path = "./package" }

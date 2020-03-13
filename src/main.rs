@@ -118,15 +118,15 @@ async fn main() -> Result<(), DisplayableError> {
 	if config.mods.is_none() {
 		if let Ok(local_api) = &local_api {
 			// Default mods list is the list of all currently installed mods with a * requirement
-			let installed_mods: Result<_, failure::Error> =
-				local_api.installed_mods().context("Could not enumerate installed mods")?
-				.map(|mod_| Ok(
-					mod_
-					.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
-					.context("Could not process an installed mod")?))
-				.collect();
-			let mods = installed_mods.context("Could not enumerate installed mods")?;
-			config.mods = Some(mods);
+			let installed_mods =
+				itertools::Itertools::try_collect::<_, _, failure::Error>(
+					local_api.installed_mods().context("Could not enumerate installed mods")?
+					.map(|mod_| Ok(
+						mod_
+						.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
+						.context("Could not process an installed mod")?)))
+				.context("Could not enumerate installed mods")?;
+			config.mods = Some(installed_mods);
 		}
 	}
 
