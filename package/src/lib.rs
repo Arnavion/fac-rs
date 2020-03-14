@@ -489,15 +489,13 @@ impl<'a, T> Permutater<'a, T> where T: Copy {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-
 	#[test]
 	fn test_permutater() {
 		let possibilities = vec![vec![None, Some("a"), Some("b")], vec![None, Some("c")]];
 		let possibilities: Vec<_> = possibilities.iter().map(AsRef::as_ref).collect();
 		let mut values = vec![None; possibilities.len()];
 
-		let mut permutater = Permutater::new(&possibilities);
+		let mut permutater = super::Permutater::new(&possibilities);
 
 		assert!(permutater.next(&mut values));
 		assert_eq!(values, [None, None]);

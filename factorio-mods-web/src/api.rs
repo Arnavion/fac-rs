@@ -213,13 +213,11 @@ lazy_static::lazy_static! {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-
 	#[tokio::test]
 	async fn search_list_all_mods() {
 		use futures_util::TryStreamExt;
 
-		let api = API::new(None).unwrap();
+		let api = super::API::new(None).unwrap();
 		let count =
 			api.search("")
 			.try_fold(0_usize, |count, _| futures_util::future::ready(Ok(count + 1)))
@@ -232,7 +230,7 @@ mod tests {
 	async fn search_by_title() {
 		use futures_util::StreamExt;
 
-		let api = API::new(None).unwrap();
+		let api = super::API::new(None).unwrap();
 
 		let mut search_results = api.search("bob's functions library mod");
 		while let Some(mod_) = search_results.next().await {
@@ -250,14 +248,14 @@ mod tests {
 	async fn search_non_existing() {
 		use futures_util::StreamExt;
 
-		let api = API::new(None).unwrap();
+		let api = super::API::new(None).unwrap();
 		let mut search_results = api.search("arnavion's awesome mod");
 		assert!(search_results.next().await.is_none());
 	}
 
 	#[tokio::test]
 	async fn get() {
-		let api = API::new(None).unwrap();
+		let api = super::API::new(None).unwrap();
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_owned());
 		let mod_ = api.get(&mod_name).await.unwrap();

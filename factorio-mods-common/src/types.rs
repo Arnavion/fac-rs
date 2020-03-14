@@ -215,11 +215,9 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Err
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-
 	fn test_deserialize_release_version_inner(s: &str, expected: &str) {
-		let expected = ReleaseVersion(expected.parse().unwrap());
-		let actual: ReleaseVersion = serde_json::from_str(s).unwrap();
+		let expected = super::ReleaseVersion(expected.parse().unwrap());
+		let actual: super::ReleaseVersion = serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}
 
@@ -233,8 +231,8 @@ mod tests {
 	}
 
 	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, kind: package::DependencyKind) {
-		let expected = Dependency { name: ModName(name.to_string()), version: ModVersionReq(version.parse().unwrap()), kind };
-		let actual: Dependency = serde_json::from_str(s).unwrap();
+		let expected = super::Dependency { name: super::ModName(name.to_string()), version: super::ModVersionReq(version.parse().unwrap()), kind };
+		let actual: super::Dependency = serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}
 
