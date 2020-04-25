@@ -36,7 +36,7 @@ type ReqwestResponseReader<'a> = futures_util::stream::IntoAsyncRead<std::pin::P
 const REGION_LEN_MAX: usize = 1024 * 8;
 
 impl<'a> WebReader<'a> {
-	#[allow(clippy::new_ret_no_self)] // TODO: Can't return Self because of https://github.com/rust-lang/rust/issues/61949
+	// TODO: Can't return Self because of https://github.com/rust-lang/rust/issues/61949
 	pub(super) fn new(
 		api: &'a factorio_mods_web::API,
 		release: std::rc::Rc<factorio_mods_web::ModRelease>,

@@ -9,6 +9,7 @@
 	clippy::large_enum_variant,
 	clippy::similar_names,
 	clippy::type_complexity,
+	clippy::used_underscore_binding, // TODO: Workaround for https://github.com/rust-lang/rust-clippy/issues/5360
 	clippy::use_self,
 )]
 
