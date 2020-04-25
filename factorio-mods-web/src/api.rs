@@ -45,7 +45,7 @@ impl API {
 							}
 						}
 
-						if let Some(url) = page.pagination.links.next {
+						if let Some(url) = page.pagination.and_then(|pagination| pagination.links.next) {
 							next_page_url = url;
 						}
 						else {
@@ -189,7 +189,7 @@ pub type SearchResponse = impl futures_core::Stream<Item = crate::Result<crate::
 /// A single page of a paged response.
 #[derive(Debug, serde_derive::Deserialize)]
 struct PagedResponse<T> {
-	pagination: Pagination,
+	pagination: Option<Pagination>,
 	results: Vec<T>,
 }
 
