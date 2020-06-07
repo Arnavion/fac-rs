@@ -1,8 +1,3 @@
-#![allow(
-	clippy::identity_op,
-	clippy::single_match_else,
-)]
-
 use crate::{ ErrorExt, ResultExt };
 
 #[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize)]
@@ -27,8 +22,8 @@ pub(crate) struct Config {
 
 impl Config {
 	pub fn load(path: Option<std::path::PathBuf>) -> Result<Self, crate::Error>{
-		let config_file_path = match path {
-			Some(path) =>
+		let config_file_path =
+			if let Some(path) = path {
 				if path.iter().count() == 1 {
 					let mut user_config_dir = dirs::config_dir().ok_or_else(|| "could not derive path to config directory")?;
 					user_config_dir.push("fac");
@@ -37,16 +32,15 @@ impl Config {
 				}
 				else {
 					path
-				},
-
-			None => {
+				}
+			}
+			else {
 				let mut user_config_dir = dirs::config_dir().ok_or_else(|| "could not derive path to config directory")?;
 				user_config_dir.push("fac");
 				std::fs::create_dir_all(&user_config_dir).with_context(|| format!("could not create config directory {}", user_config_dir.display()))?;
 				user_config_dir.push("config.json");
 				user_config_dir
-			},
-		};
+			};
 
 		let config_file_path_displayable = config_file_path.display();
 

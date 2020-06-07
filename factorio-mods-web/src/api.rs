@@ -1,7 +1,3 @@
-#![allow(
-	clippy::single_match_else,
-)]
-
 /// Entry-point to the <https://mods.factorio.com/> API
 #[derive(Debug)]
 pub struct API {

@@ -1,26 +1,23 @@
 use crate::{ ErrorExt, ResultExt };
 
 pub(crate) fn wrapping_println(s: &str, indent: &str) {
-	#[allow(clippy::single_match_else)] // Bad clippy lint - false positive
-	match term_size::dimensions() {
-		Some((width, _)) => {
-			let wrapper = textwrap::Wrapper {
-				width,
-				initial_indent: indent,
-				subsequent_indent: indent,
-				break_words: true,
-				splitter: textwrap::NoHyphenation,
-			};
+	if let Some((width, _)) = term_size::dimensions() {
+		let wrapper = textwrap::Wrapper {
+			width,
+			initial_indent: indent,
+			subsequent_indent: indent,
+			break_words: true,
+			splitter: textwrap::NoHyphenation,
+		};
 
-			for line in s.split('\n') {
-				for line in wrapper.wrap_iter(line) {
-					println!("{}", line);
-				}
+		for line in s.split('\n') {
+			for line in wrapper.wrap_iter(line) {
+				println!("{}", line);
 			}
-		},
-
-		None =>
-			println!("{}{}", indent, s),
+		}
+	}
+	else {
+		println!("{}{}", indent, s);
 	}
 }
 

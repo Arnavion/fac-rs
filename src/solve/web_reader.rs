@@ -1,7 +1,6 @@
 #![allow(
 	clippy::cast_possible_truncation,
 	clippy::cast_sign_loss,
-	clippy::integer_division,
 )]
 
 pub(super) struct WebReader<'a> {

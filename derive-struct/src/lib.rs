@@ -5,9 +5,6 @@
 #![deny(rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
-#![allow(
-	clippy::must_use_candidate,
-)]
 
 /// Derives `serde::Deserialize` on the newtype.
 #[proc_macro_derive(newtype_deserialize)]

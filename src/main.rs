@@ -5,11 +5,8 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::default_trait_access,
-	clippy::indexing_slicing,
-	clippy::large_enum_variant,
 	clippy::similar_names,
 	clippy::type_complexity,
-	clippy::use_self,
 )]
 
 mod enable_disable;

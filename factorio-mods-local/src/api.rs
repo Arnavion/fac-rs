@@ -1,8 +1,3 @@
-#![allow(
-	clippy::identity_op,
-	clippy::single_match_else,
-)]
-
 /// Entry-point to the local Factorio API
 #[derive(Debug)]
 pub struct API {

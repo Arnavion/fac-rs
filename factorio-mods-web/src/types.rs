@@ -1,7 +1,3 @@
-#![allow(
-	clippy::single_match_else,
-)]
-
 /// A date and time string.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
