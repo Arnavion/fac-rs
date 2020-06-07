@@ -135,7 +135,7 @@ impl API {
 		&self,
 		release: &crate::ModRelease,
 		user_credentials: &factorio_mods_common::UserCredentials,
-		range: Option<String>,
+		range: Option<&str>,
 	) -> DownloadResponse {
 		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
