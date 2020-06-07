@@ -6,6 +6,7 @@
 #![allow(
 	clippy::cognitive_complexity,
 	clippy::default_trait_access,
+	clippy::implicit_hasher,
 	clippy::indexing_slicing,
 	clippy::missing_errors_doc,
 	clippy::mutable_key_type,
