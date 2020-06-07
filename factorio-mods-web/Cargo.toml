@@ -6,11 +6,10 @@ edition = "2018"
 
 [dependencies]
 async-stream = "0.2"
+backtrace = "0.3"
 bytes = "0.5"
 derive-struct = { path = "../derive-struct" }
 factorio-mods-common = { path = "../factorio-mods-common" }
-failure = "0.1"
-failure_derive = "0.1"
 futures-core = "0.3"
 futures-util = "0.3"
 itertools = "0.9"

@@ -5,11 +5,10 @@ authors = ["Arnavion <arnavion@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+backtrace = "0.3"
 derive-struct = { path = "../derive-struct" }
 dirs = "2"
 factorio-mods-common = { path = "../factorio-mods-common" }
-failure = "0.1"
-failure_derive = "0.1"
 globset = "0.4"
 lazy_static = "1"
 package = { path = "../package" }

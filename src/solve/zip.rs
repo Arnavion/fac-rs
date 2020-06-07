@@ -3,49 +3,71 @@
 	clippy::naive_bytecount,
 )]
 
-use futures_util::io::{ AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt };
-
-#[derive(Debug, failure::Fail)]
+#[derive(Debug)]
 pub(super) enum Error {
-	#[fail(display = "central-directory record #{} is corrupt", _0)]
-	CentralDirectoryEntryCorrupt(usize, #[cause] FileMetaCorruptReason),
-
-	#[fail(display = "end-of-central-directory record is corrupt")]
+	CentralDirectoryEntryCorrupt(usize, FileMetaCorruptReason),
 	EndOfCentralDirectorRecordCorrupt,
-
-	#[fail(display = "could not find end-of-central-directory record")]
 	EndOfCentralDirectorRecordNotFound,
-
-	#[fail(display = "info.json is corrupt")]
 	FileCorrupt,
-
-	#[fail(display = "info.json could not be parsed")]
-	FileInvalidJson(#[cause] serde_json::Error),
-
-	#[fail(display = "info.json local-header record is corrupt")]
-	FileLocalHeaderCorrupt(#[cause] FileMetaCorruptReason),
-
-	#[fail(display = "info.json file-local-header record has different metadata than its central-directory-entry record")]
+	FileInvalidJson(serde_json::Error),
+	FileLocalHeaderCorrupt(FileMetaCorruptReason),
 	FileMetadataCorrupt,
-
-	#[fail(display = "info.json not found")]
 	FileNotFound,
-
-	#[fail(display = "i/o error")]
-	Io(#[cause] std::io::Error),
-
-	#[fail(display = "info.json is compressed with method {} but only Deflated and Stored are supported", _0)]
+	Io(std::io::Error),
 	UnsupportedCompressionMethod(zip::CompressionMethod),
 }
 
-#[derive(Debug, failure::Fail)]
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Error::CentralDirectoryEntryCorrupt(record_number, reason) => write!(f, "central-directory record #{} is corrupt: {}", record_number, reason),
+			Error::EndOfCentralDirectorRecordCorrupt => f.write_str("end-of-central-directory record is corrupt"),
+			Error::EndOfCentralDirectorRecordNotFound => f.write_str("could not find end-of-central-directory record"),
+			Error::FileCorrupt => f.write_str("info.json is corrupt"),
+			Error::FileInvalidJson(_) => f.write_str("info.json could not be parsed"),
+			Error::FileLocalHeaderCorrupt(reason) => write!(f, "info.json local-header record is corrupt: {}", reason),
+			Error::FileMetadataCorrupt => f.write_str("info.json file-local-header record has different metadata than its central-directory-entry record"),
+			Error::FileNotFound => f.write_str("info.json not found"),
+			Error::Io(_) => f.write_str("I/O error"),
+			Error::UnsupportedCompressionMethod(compression_method) =>
+				write!(f, "info.json is compressed with method {} but only Deflated and Stored are supported", compression_method),
+		}
+	}
+}
+
+impl std::error::Error for Error {
+	#[allow(clippy::match_same_arms)]
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			Error::CentralDirectoryEntryCorrupt(_, _) => None,
+			Error::EndOfCentralDirectorRecordCorrupt => None,
+			Error::EndOfCentralDirectorRecordNotFound => None,
+			Error::FileCorrupt => None,
+			Error::FileInvalidJson(err) => Some(err),
+			Error::FileLocalHeaderCorrupt(_) => None,
+			Error::FileMetadataCorrupt => None,
+			Error::FileNotFound => None,
+			Error::Io(err) => Some(err),
+			Error::UnsupportedCompressionMethod(_) => None,
+		}
+	}
+}
+
+#[derive(Debug)]
 pub(super) enum FileMetaCorruptReason {
-	#[fail(display = "missing magic")]
 	MissingMagic,
 }
 
+impl std::fmt::Display for FileMetaCorruptReason {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			FileMetaCorruptReason::MissingMagic => f.write_str("missing magic"),
+		}
+	}
+}
+
 pub(super) async fn find_info_json(
-	reader: &mut (impl AsyncRead + AsyncSeek + Unpin),
+	reader: &mut (impl futures_util::io::AsyncRead + futures_util::io::AsyncSeek + Unpin),
 ) -> Result<factorio_mods_local::ModInfo, Error> {
 	// PKZIP spec: https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
 
@@ -58,16 +80,16 @@ pub(super) async fn find_info_json(
 
 	const EOCD_MIN_LEN: u64 = 22;
 
-	let file_len = reader.seek(std::io::SeekFrom::End(0)).await.map_err(Error::Io)?;
+	let file_len = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::End(0)).await.map_err(Error::Io)?;
 	let eocd_start_pos_min = file_len.saturating_sub(EOCD_MIN_LEN + u64::from(u16::max_value()));
 
 	let mut eocd_start_pos = file_len.checked_sub(EOCD_MIN_LEN).ok_or_else(|| Error::EndOfCentralDirectorRecordNotFound)?;
 
 	let (central_directory_pos, num_central_directory_entries) = loop {
-		reader.seek(std::io::SeekFrom::Start(eocd_start_pos)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Start(eocd_start_pos)).await.map_err(Error::Io)?;
 		if read_u32_le(reader).await? == 0x0605_4b50 {
 			// Seek to comment length and parse it
-			reader.seek(std::io::SeekFrom::Current(16)).await.map_err(Error::Io)?;
+			let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(16)).await.map_err(Error::Io)?;
 			let comment_len = u64::from(read_u16_le(reader).await?);
 
 			// Ensure that the comment corresponding to this length would extend to the end of the file
@@ -76,9 +98,9 @@ pub(super) async fn find_info_json(
 			}
 
 			// This looks valid
-			reader.seek(std::io::SeekFrom::Start(eocd_start_pos + 8)).await.map_err(Error::Io)?;
+			let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Start(eocd_start_pos + 8)).await.map_err(Error::Io)?;
 			let num_central_directory_entries = usize::from(read_u16_le(reader).await?);
-			reader.seek(std::io::SeekFrom::Current(6)).await.map_err(Error::Io)?;
+			let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(6)).await.map_err(Error::Io)?;
 			let central_directory_pos = u64::from(read_u32_le(reader).await?);
 			break (central_directory_pos, num_central_directory_entries);
 		}
@@ -94,7 +116,7 @@ pub(super) async fn find_info_json(
 		return Err(Error::EndOfCentralDirectorRecordCorrupt);
 	}
 
-	reader.seek(std::io::SeekFrom::Start(central_directory_pos)).await.map_err(Error::Io)?;
+	let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Start(central_directory_pos)).await.map_err(Error::Io)?;
 
 	if num_central_directory_entries == 0 {
 		return Err(Error::FileNotFound);
@@ -110,7 +132,7 @@ pub(super) async fn find_info_json(
 	}
 	let info_json_entry = info_json_entry.ok_or_else(|| Error::FileNotFound)?;
 
-	reader.seek(std::io::SeekFrom::Start(info_json_entry.local_header_pos)).await.map_err(Error::Io)?;
+	let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Start(info_json_entry.local_header_pos)).await.map_err(Error::Io)?;
 
 	let info_json_file_local_header = FileLocalHeader::parse(reader).await?;
 
@@ -119,7 +141,7 @@ pub(super) async fn find_info_json(
 	}
 
 	let mut buf = vec![0_u8; info_json_file_local_header.0.compressed_size as usize];
-	reader.read_exact(&mut buf).await.map_err(Error::Io)?;
+	futures_util::io::AsyncReadExt::read_exact(reader, &mut buf).await.map_err(Error::Io)?;
 
 	let reader = Reader::new(info_json_entry.file_meta.compression_method, buf, info_json_file_local_header.0.crc32)?;
 	let info_json = serde_json::from_reader(reader).map_err(Error::FileInvalidJson)?;
@@ -142,16 +164,16 @@ struct CentralDirectoryEntry {
 }
 
 impl CentralDirectoryEntry {
-	async fn parse(reader: &mut (impl AsyncRead + AsyncSeek + Unpin), i: usize) -> Result<Self, Error> {
+	async fn parse(reader: &mut (impl futures_util::io::AsyncRead + futures_util::io::AsyncSeek + Unpin), i: usize) -> Result<Self, Error> {
 		if read_u32_le(reader).await? != 0x0201_4b50 {
 			return Err(Error::CentralDirectoryEntryCorrupt(i + 1, FileMetaCorruptReason::MissingMagic));
 		}
 
-		reader.seek(std::io::SeekFrom::Current(6)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(6)).await.map_err(Error::Io)?;
 
 		let compression_method = zip::CompressionMethod::from_u16(read_u16_le(reader).await?);
 
-		reader.seek(std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
 
 		let crc32 = read_u32_le(reader).await?;
 		let compressed_size = u64::from(read_u32_le(reader).await?);
@@ -160,12 +182,12 @@ impl CentralDirectoryEntry {
 		let extra_field_len = i64::from(read_u16_le(reader).await?);
 		let file_comment_len = i64::from(read_u16_le(reader).await?);
 
-		reader.seek(std::io::SeekFrom::Current(8)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(8)).await.map_err(Error::Io)?;
 
 		let local_header_pos = u64::from(read_u32_le(reader).await?);
 
 		let mut filename = vec![0_u8; filename_len];
-		reader.read_exact(&mut filename).await.map_err(Error::Io)?;
+		futures_util::io::AsyncReadExt::read_exact(reader, &mut filename).await.map_err(Error::Io)?;
 
 		let result = CentralDirectoryEntry {
 			file_meta: FileMeta {
@@ -178,7 +200,7 @@ impl CentralDirectoryEntry {
 			local_header_pos,
 		};
 
-		reader.seek(std::io::SeekFrom::Current(extra_field_len + file_comment_len)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(extra_field_len + file_comment_len)).await.map_err(Error::Io)?;
 
 		Ok(result)
 	}
@@ -188,16 +210,16 @@ impl CentralDirectoryEntry {
 struct FileLocalHeader(FileMeta);
 
 impl FileLocalHeader {
-	async fn parse(reader: &mut (impl AsyncRead + AsyncSeek + Unpin)) -> Result<Self, Error> {
+	async fn parse(reader: &mut (impl futures_util::io::AsyncRead + futures_util::io::AsyncSeek + Unpin)) -> Result<Self, Error> {
 		if read_u32_le(reader).await? != 0x0403_4b50 {
 			return Err(Error::FileLocalHeaderCorrupt(FileMetaCorruptReason::MissingMagic));
 		}
 
-		reader.seek(std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
 
 		let compression_method = zip::CompressionMethod::from_u16(read_u16_le(reader).await?);
 
-		reader.seek(std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
 
 		let crc32 = read_u32_le(reader).await?;
 		let compressed_size = u64::from(read_u32_le(reader).await?);
@@ -206,7 +228,7 @@ impl FileLocalHeader {
 		let extra_field_len = i64::from(read_u16_le(reader).await?);
 
 		let mut filename = vec![0_u8; filename_len];
-		reader.read_exact(&mut filename).await.map_err(Error::Io)?;
+		futures_util::io::AsyncReadExt::read_exact(reader, &mut filename).await.map_err(Error::Io)?;
 
 		let result = FileLocalHeader(FileMeta {
 			filename,
@@ -216,21 +238,21 @@ impl FileLocalHeader {
 			crc32,
 		});
 
-		reader.seek(std::io::SeekFrom::Current(extra_field_len)).await.map_err(Error::Io)?;
+		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(extra_field_len)).await.map_err(Error::Io)?;
 
 		Ok(result)
 	}
 }
 
-async fn read_u16_le(reader: &mut (impl AsyncRead + Unpin)) -> Result<u16, Error> {
+async fn read_u16_le(reader: &mut (impl futures_util::io::AsyncRead + Unpin)) -> Result<u16, Error> {
 	let mut buf = [0_u8; 2];
-	reader.read_exact(&mut buf).await.map_err(Error::Io)?;
+	futures_util::io::AsyncReadExt::read_exact(reader, &mut buf).await.map_err(Error::Io)?;
 	Ok(u16::from_le_bytes(buf))
 }
 
-async fn read_u32_le(reader: &mut (impl AsyncRead + Unpin)) -> Result<u32, Error> {
+async fn read_u32_le(reader: &mut (impl futures_util::io::AsyncRead + Unpin)) -> Result<u32, Error> {
 	let mut buf = [0_u8; 4];
-	reader.read_exact(&mut buf).await.map_err(Error::Io)?;
+	futures_util::io::AsyncReadExt::read_exact(reader, &mut buf).await.map_err(Error::Io)?;
 	Ok(u32::from_le_bytes(buf))
 }
 
@@ -279,7 +301,7 @@ impl std::io::Read for Reader {
 		if result == 0 {
 			let crc32 = self.hasher.clone().finalize();
 			if crc32 != self.expected_crc32 {
-				return Err(super::io_error_from_fail(&Error::FileCorrupt));
+				return Err(std::io::Error::new(std::io::ErrorKind::Other, Error::FileCorrupt));
 			}
 		}
 

@@ -13,7 +13,6 @@
 	clippy::missing_errors_doc,
 	clippy::module_name_repetitions,
 	clippy::must_use_candidate,
-	clippy::used_underscore_binding, // TODO: Workaround for https://github.com/rust-lang/rust-clippy/issues/5360
 	clippy::use_self,
 )]
 

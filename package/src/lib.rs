@@ -53,31 +53,8 @@ pub struct Error<Name, Version> where
 	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static
 {
-	kind: ErrorKind<Name, Version>,
-	backtrace: failure::Backtrace,
-}
-
-impl<Name, Version> Error<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-{
-	/// Gets the kind of error
-	pub fn kind(&self) -> &ErrorKind<Name, Version> {
-		&self.kind
-	}
-}
-
-impl<Name, Version> failure::Fail for Error<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-{
-	fn cause(&self) -> Option<&dyn failure::Fail> {
-		self.kind.cause()
-	}
-
-	fn backtrace(&self) -> Option<&failure::Backtrace> {
-		Some(&self.backtrace)
-	}
+	pub kind: ErrorKind<Name, Version>,
+	pub backtrace: backtrace::Backtrace,
 }
 
 impl<Name, Version> std::fmt::Display for Error<Name, Version> where
@@ -85,7 +62,19 @@ impl<Name, Version> std::fmt::Display for Error<Name, Version> where
 	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		self.kind.fmt(f)
+		writeln!(f, "{}", self.kind)?;
+		writeln!(f)?;
+		writeln!(f, "{:?}", self.backtrace)?;
+		Ok(())
+	}
+}
+
+impl<Name, Version> std::error::Error for Error<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		self.kind.source()
 	}
 }
 
@@ -101,12 +90,12 @@ impl<Name, Version> From<ErrorKind<Name, Version>> for Error<Name, Version> wher
 	}
 }
 
-#[derive(Debug, failure_derive::Fail)]
+#[derive(Debug)]
 pub enum ErrorKind<Name, Version> where
 	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 {
-	#[fail(display = "{} {} both requires and conflicts with {} {}", package_name, package_version, dep_name, dep_version)]
+	/// Package A both requires and conflicts with package B.
 	BothRequiresAndConflicts {
 		package_name: Name,
 		package_version: Version,
@@ -114,8 +103,27 @@ pub enum ErrorKind<Name, Version> where
 		dep_version: Version,
 	},
 
-	#[fail(display = "No packages found for {} that meet the specified requirements", _0)]
+	/// No packages found for name A that meet the specified requirements.
 	NoPackagesMeetRequirements(Name),
+}
+
+impl<Name, Version> std::fmt::Display for ErrorKind<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			ErrorKind::BothRequiresAndConflicts { package_name, package_version, dep_name, dep_version } =>
+				write!(f, "{} {} both requires and conflicts with {} {}", package_name, package_version, dep_name, dep_version),
+			ErrorKind::NoPackagesMeetRequirements(name) => write!(f, "No packages found for {} that meet the specified requirements", name),
+		}
+	}
+}
+
+impl<Name, Version> std::error::Error for ErrorKind<Name, Version> where
+	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+{
 }
 
 /// A type alias for [`std::result::Result`]

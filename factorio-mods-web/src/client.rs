@@ -178,7 +178,7 @@ async fn send(
 						if let Some(err) = err.downcast_ref::<std::io::Error>() {
 							if let Some(err) = err.get_ref() {
 								if let Some(err) = err.downcast_ref::<native_tls::Error>() {
-									// native_tls::Error doesn't impl Error::source, and its Error::cause impl forwards to the inner std::io::Error's cause
+									// native_tls::Error's Error::source impl forwards to the inner std::io::Error's source
 									// rather than the std::io::Error itself. Since it's an OS error and not a Custom error, the cause is always None.
 									//
 									// So check its stringified value instead.
@@ -195,7 +195,7 @@ async fn send(
 					}
 				}
 
-				return Err(crate::ErrorKind::HTTP(url, err).into())
+				return Err(crate::ErrorKind::Http(url, err).into())
 			},
 		}
 	};
@@ -221,7 +221,7 @@ async fn json<T>(response: reqwest::Response, url: reqwest::Url) -> crate::Resul
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
 	match response.json().await {
 		Ok(object) => Ok((object, url)),
-		Err(err) => Err(crate::ErrorKind::HTTP(url, err).into()),
+		Err(err) => Err(crate::ErrorKind::Http(url, err).into()),
 	}
 }
 

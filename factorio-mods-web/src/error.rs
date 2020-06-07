@@ -1,30 +1,25 @@
 /// Errors returned by this crate.
 #[derive(Debug)]
 pub struct Error {
-	kind: ErrorKind,
-	backtrace: failure::Backtrace,
-}
+	/// The kind of the error.
+	pub kind: ErrorKind,
 
-impl Error {
-	/// Gets the kind of error
-	pub fn kind(&self) -> &ErrorKind {
-		&self.kind
-	}
-}
-
-impl failure::Fail for Error {
-	fn cause(&self) -> Option<&dyn failure::Fail> {
-		self.kind.cause()
-	}
-
-	fn backtrace(&self) -> Option<&failure::Backtrace> {
-		Some(&self.backtrace)
-	}
+	/// The backtrace of the error.
+	pub backtrace: backtrace::Backtrace,
 }
 
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		self.kind.fmt(f)
+		writeln!(f, "{}", self.kind)?;
+		writeln!(f)?;
+		writeln!(f, "{:?}", self.backtrace)?;
+		Ok(())
+	}
+}
+
+impl std::error::Error for Error {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		self.kind.source()
 	}
 }
 
@@ -38,37 +33,60 @@ impl From<ErrorKind> for Error {
 }
 
 /// Error kinds for errors returned by this crate.
-#[derive(Debug, failure_derive::Fail)]
+#[derive(Debug)]
 pub enum ErrorKind {
-	/// Could not create HTTP client
-	#[fail(display = "Could not create HTTP client")]
-	CreateClient(#[cause] reqwest::Error),
+	/// Could not create HTTP client.
+	CreateClient(reqwest::Error),
 
-	/// Could not perform HTTP request
-	#[fail(display = "Could not fetch URL {}", _0)]
-	HTTP(reqwest::Url, #[cause] reqwest::Error),
+	/// Could not perform HTTP request.
+	Http(reqwest::Url, reqwest::Error),
 
-	/// Parsing a URL failed
-	#[fail(display = "Could not parse URL {}", _0)]
-	Parse(String, #[cause] url::ParseError),
-
-	/// An HTTP request did not have a successful status code
-	#[fail(display = "Request to URL {} returned {}", _0, _1)]
-	StatusCode(reqwest::Url, reqwest::StatusCode),
-
-	/// A request to the web API resulted in a login failure response
-	#[fail(display = "Login failed: {}", _0)]
+	/// A request to the web API resulted in a login failure response.
 	LoginFailure(String),
 
-	/// Got a malformed HTTP response
-	#[fail(display = "Request to URL {} got malformed response: {}", _0, _1)]
+	/// Got a malformed HTTP response.
 	MalformedResponse(reqwest::Url, String),
 
-	/// Tried to request a host that isn't whitelisted
-	#[fail(display = "Host {} is not whitelisted", _0)]
+	/// Tried to request a host that isn't whitelisted.
 	NotWhitelistedHost(reqwest::Url),
 
-	/// Could not serialize HTTP POST request body
-	#[fail(display = "Could not serialize request body for URL {}", _0)]
-	Serialize(reqwest::Url, #[cause] serde_urlencoded::ser::Error),
+	/// Parsing a URL failed.
+	Parse(String, url::ParseError),
+
+	/// Could not serialize HTTP POST request body.
+	Serialize(reqwest::Url, serde_urlencoded::ser::Error),
+
+	/// An HTTP request did not have a successful status code.
+	StatusCode(reqwest::Url, reqwest::StatusCode),
+}
+
+impl std::fmt::Display for ErrorKind {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			ErrorKind::CreateClient(_) => f.write_str("could not create HTTP client"),
+			ErrorKind::Http(url, _) => write!(f, "could not fetch URL {}", url),
+			ErrorKind::LoginFailure(message) => write!(f, "login failed: {}", message),
+			ErrorKind::MalformedResponse(url, message) => write!(f, "request to URL {} got malformed response: {}", url, message),
+			ErrorKind::NotWhitelistedHost(url) => write!(f, "host {} is not whitelisted", url),
+			ErrorKind::Parse(url, _) => write!(f, "could not parse URL {}", url),
+			ErrorKind::Serialize(url, _) => write!(f, "could not serialize request body for URL {}", url),
+			ErrorKind::StatusCode(url, status_code) => write!(f, "request to URL {} returned {}", url, status_code),
+		}
+	}
+}
+
+impl std::error::Error for ErrorKind {
+	#[allow(clippy::match_same_arms)]
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			ErrorKind::CreateClient(err) => Some(err),
+			ErrorKind::Http(_, err) => Some(err),
+			ErrorKind::LoginFailure(_) => None,
+			ErrorKind::MalformedResponse(_, _) => None,
+			ErrorKind::NotWhitelistedHost(_) => None,
+			ErrorKind::Parse(_, err) => Some(err),
+			ErrorKind::Serialize(_, err) => Some(err),
+			ErrorKind::StatusCode(_, _) => None,
+		}
+	}
 }

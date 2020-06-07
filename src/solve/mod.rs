@@ -1,7 +1,7 @@
 mod web_reader;
 mod zip;
 
-use failure::{ Fail, ResultExt };
+use crate::{ ErrorExt, ResultExt };
 
 /// Computes which old mods to uninstall and which new mods to install based on the given reqs.
 /// Asks the user for confirmation, then applies the diff.
@@ -12,7 +12,7 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 	web_api: &'a factorio_mods_web::API,
 	mut config: crate::config::Config,
 	prompt_override: Option<bool>,
-) -> Result<(), failure::Error> {
+) -> Result<(), crate::Error> {
 	let user_credentials = std::rc::Rc::new(crate::util::ensure_user_credentials(local_api, web_api, prompt_override).await?);
 
 	let game_version = local_api.game_version();
@@ -28,7 +28,7 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 
 	let solution =
 		solution
-		.ok_or_else(|| failure::err_msg("No solution found."))?
+		.ok_or_else(|| "no solution found.")?
 		.into_iter()
 		.filter_map(|(name, installable)|
 			if let Installable::Mod(_, release, _) = installable {
@@ -46,11 +46,11 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 
 	let mods_directory = local_api.mods_directory();
 	std::fs::create_dir_all(&mods_directory)
-		.with_context(|_| format!("Could not create mods directory {}", mods_directory.display()))?;
+		.with_context(|| format!("could not create mods directory {}", mods_directory.display()))?;
 
 	let mods_directory_canonicalized =
 		mods_directory.canonicalize()
-		.with_context(|_| format!("Could not canonicalize {}", mods_directory.display()))?;
+		.with_context(|| format!("could not canonicalize {}", mods_directory.display()))?;
 
 	for installed_mod in to_uninstall {
 		let path = installed_mod.path;
@@ -62,7 +62,7 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 					installed_mod.info.name, installed_mod.info.version,
 					path.display());
 				std::fs::remove_file(&path)
-				.with_context(|_| format!("Could not remove file {}", path.display()))?;
+				.with_context(|| format!("could not remove file {}", path.display()))?;
 			},
 
 			factorio_mods_local::InstalledModType::Unpacked => {
@@ -71,7 +71,7 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 					installed_mod.info.name, installed_mod.info.version,
 					path.display());
 				std::fs::remove_dir_all(&path)
-				.with_context(|_| format!("Could not remove directory {}", path.display()))?;
+				.with_context(|| format!("could not remove directory {}", path.display()))?;
 			},
 		}
 
@@ -105,7 +105,7 @@ fn download_mod(
 	mods_directory: &std::path::Path,
 	mods_directory_canonicalized: &std::path::Path,
 	user_credentials: &factorio_mods_common::UserCredentials,
-) -> impl std::future::Future<Output = Result<(), failure::Error>> + 'static {
+) -> impl std::future::Future<Output = Result<(), crate::Error>> + 'static {
 	let target = mods_directory.join(&release.filename.0);
 	let displayable_target = target.display().to_string();
 
@@ -113,7 +113,7 @@ fn download_mod(
 		Some(download_filename) => download_filename.to_owned(),
 		None =>
 			return futures_util::future::Either::Left(futures_util::future::err(
-				failure::err_msg(format!("Filename {} is malformed", displayable_target)))),
+				format!("Filename {} is malformed", displayable_target).into())),
 	};
 	download_filename.push(".new");
 	let download_target = target.with_file_name(download_filename);
@@ -130,7 +130,7 @@ fn download_mod(
 			Some(true) => (),
 			_ =>
 				return futures_util::future::Either::Left(futures_util::future::err(
-					failure::err_msg(format!("Filename {} is malformed", download_displayable_target)))),
+					format!("Filename {} is malformed", download_displayable_target).into())),
 		}
 	}
 
@@ -144,25 +144,25 @@ fn download_mod(
 		.open(&download_target);
 
 	futures_util::future::Either::Right(async move {
-		let download_file = download_file.with_context(|_| format!("Could not open {} for writing", download_displayable_target))?;
+		let download_file = download_file.with_context(|| format!("could not open {} for writing", download_displayable_target))?;
 		let mut download_file = std::io::BufWriter::new(download_file);
 
 		while let Some(chunk) = futures_util::stream::StreamExt::next(&mut chunk_stream).await {
-			let chunk = chunk?;
+			let chunk = chunk.context("could not download file")?;
 
 			std::io::Write::write_all(&mut download_file, &chunk)
-				.with_context(|_| format!("Could not write to file {}", download_displayable_target))?;
+				.with_context(|| format!("could not write to file {}", download_displayable_target))?;
 		}
 
 		std::io::Write::flush(&mut download_file)
-			.with_context(|_| format!("Could not write to file {}", download_displayable_target))?;
+			.with_context(|| format!("could not write to file {}", download_displayable_target))?;
 
 		drop(download_file);
 
 		println!("    Installing {} {} ... renaming {} to {}", mod_name, release.version, download_displayable_target, displayable_target);
 
 		std::fs::rename(&download_target, &target)
-			.with_context(|_| format!("Could not rename {} to {}", download_displayable_target, displayable_target))?;
+			.with_context(|| format!("could not rename {} to {}", download_displayable_target, displayable_target))?;
 
 		println!("    Installing {} {} ... done", mod_name, release.version);
 
@@ -174,10 +174,10 @@ fn compute_diff(
 	mut solution: std::collections::HashMap<factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>>,
 	local_api: &factorio_mods_local::API,
 	prompt_override: Option<bool>,
-) -> Result<Option<(Vec<factorio_mods_local::InstalledMod>, Vec<(factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>)>)>, failure::Error> {
+) -> Result<Option<(Vec<factorio_mods_local::InstalledMod>, Vec<(factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>)>)>, crate::Error> {
 	let mut all_installed_mods: std::collections::HashMap<_, Vec<_>> = Default::default();
-	for mod_ in local_api.installed_mods().context("Could not enumerate installed mods")? {
-		let mod_ = mod_.context("Could not process an installed mod")?;
+	for mod_ in local_api.installed_mods().context("could not enumerate installed mods")? {
+		let mod_ = mod_.context("could not process an installed mod")?;
 		all_installed_mods.entry(mod_.info.name.clone()).or_default().push(mod_);
 	}
 
@@ -314,7 +314,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 	type Output = Result<(
 		Option<std::collections::HashMap<factorio_mods_common::ModName, Installable>>,
 		std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
-	), failure::Error>;
+	), crate::Error>;
 
 	fn poll(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
 		let this = &mut *self;
@@ -351,24 +351,26 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 									Box::pin(async move {
 										let mut web_reader =
 											web_reader::WebReader::new(web_api, release, user_credentials).await
-											.context("Could not create web reader")?;
+											.context("could not create web reader")?;
 										let mod_info =
 											zip::find_info_json(&mut web_reader).await
-											.context("Could not get info.json")?;
+											.context("could not get info.json")?;
 										Ok(mod_info)
 									}),
 								))));
 							}
 						},
 
-						std::task::Poll::Ready(Err(err)) => match *err.kind() {
-							// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
-							factorio_mods_web::ErrorKind::StatusCode(_, crate::reqwest::StatusCode::NOT_FOUND) => {
-								let _ = get_mod.take();
-							},
-
-							_ => return std::task::Poll::Ready(Err(err.context(format!("Could not get mod info for {}", mod_name)).into())),
+						// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
+						std::task::Poll::Ready(Err(factorio_mods_web::Error {
+							kind: factorio_mods_web::ErrorKind::StatusCode(_, crate::reqwest::StatusCode::NOT_FOUND),
+							..
+						})) => {
+							let _ = get_mod.take();
 						},
+
+						std::task::Poll::Ready(Err(err)) =>
+							return std::task::Poll::Ready(Err(err.context(format!("could not get mod info for {}", mod_name)))),
 					},
 
 					None => unreachable!(),
@@ -389,9 +391,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 						},
 
 						std::task::Poll::Ready(Err(err)) =>
-							return std::task::Poll::Ready(
-								Err(err.context(format!("Could not download release {} {}", mod_name, release.version))
-								.into())),
+							return std::task::Poll::Ready(Err(err.context(format!("could not download release {} {}", mod_name, release.version)))),
 
 						std::task::Poll::Pending => (),
 					},
@@ -424,7 +424,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 
 		let solution =
 			package::compute_solution(packages, &reqs)
-			.context("Could not compute solution.")?;
+			.context("could not compute solution.")?;
 
 		std::task::Poll::Ready(Ok((solution, reqs)))
 	}
@@ -449,7 +449,7 @@ enum CacheFuture<'a> {
 	GetInfoJson(Option<(
 		std::rc::Rc<factorio_mods_common::ModName>,
 		std::rc::Rc<factorio_mods_web::ModRelease>,
-		std::pin::Pin<Box<dyn std::future::Future<Output = Result<factorio_mods_local::ModInfo, failure::Error>> + 'a>>,
+		std::pin::Pin<Box<dyn std::future::Future<Output = Result<factorio_mods_local::ModInfo, crate::Error>> + 'a>>,
 	)>),
 }
 
@@ -484,24 +484,4 @@ impl package::Package for Installable {
 			Installable::Mod(_, _, dependencies) => dependencies,
 		}
 	}
-}
-
-fn io_error_from_fail(f: &dyn Fail) -> std::io::Error {
-	use std::fmt::Write;
-
-	let mut s = String::new();
-
-	writeln!(s, "{}", f).unwrap();
-
-	for fail in f.iter_causes() {
-		writeln!(s).unwrap();
-		writeln!(s, "Caused by: {}", fail).unwrap();
-	}
-
-	if let Some(backtrace) = f.backtrace() {
-		writeln!(s).unwrap();
-		writeln!(s, "{}", backtrace).unwrap();
-	}
-
-	std::io::Error::new(std::io::ErrorKind::Other, s)
 }

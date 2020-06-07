@@ -53,13 +53,11 @@ impl API {
 						}
 					},
 
-					Err(err) => match err.kind() {
-						crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND) => return,
+					Err(crate::Error { kind: crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND), .. }) => return,
 
-						_ => {
-							Err(err)?;
-							return;
-						},
+					Err(err) => {
+						Err(err)?;
+						return;
 					},
 				}
 			}
@@ -167,7 +165,7 @@ impl API {
 
 					Some(Err(err)) => {
 						if let Some(download_url) = download_url.take() {
-							Err(crate::ErrorKind::HTTP(download_url, err))?;
+							Err(crate::ErrorKind::Http(download_url, err))?;
 						}
 
 						return;
@@ -228,12 +226,10 @@ mod tests {
 
 	#[tokio::test]
 	async fn search_by_title() {
-		use futures_util::StreamExt;
-
 		let api = super::API::new(None).unwrap();
 
 		let mut search_results = api.search("bob's functions library mod");
-		while let Some(mod_) = search_results.next().await {
+		while let Some(mod_) = futures_util::StreamExt::next(&mut search_results).await {
 			println!("{:?}", mod_);
 			let mod_ = mod_.unwrap();
 			if mod_.title.0 == "Bob's Functions Library mod" {
@@ -246,11 +242,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn search_non_existing() {
-		use futures_util::StreamExt;
-
 		let api = super::API::new(None).unwrap();
 		let mut search_results = api.search("arnavion's awesome mod");
-		assert!(search_results.next().await.is_none());
+		assert!(futures_util::StreamExt::next(&mut search_results).await.is_none());
 	}
 
 	#[tokio::test]

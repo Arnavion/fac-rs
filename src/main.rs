@@ -9,7 +9,6 @@
 	clippy::large_enum_variant,
 	clippy::similar_names,
 	clippy::type_complexity,
-	clippy::used_underscore_binding, // TODO: Workaround for https://github.com/rust-lang/rust-clippy/issues/5360
 	clippy::use_self,
 )]
 
@@ -24,8 +23,6 @@ mod update;
 mod config;
 mod solve;
 mod util;
-
-use failure::Fail;
 
 use factorio_mods_web::reqwest;
 
@@ -77,16 +74,14 @@ pub(crate) enum SubCommand {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), DisplayableError> {
-	use failure::ResultExt;
-
+async fn main() -> Result<(), Error> {
 	std::env::set_var("RUST_BACKTRACE", "1");
 
 	let options: Options = structopt::StructOpt::from_args();
 
 	let client = if let Some(proxy_url) = options.proxy {
 		let builder = crate::reqwest::ClientBuilder::new();
-		let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("Couldn't parse proxy URL")?);
+		let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("couldn't parse proxy URL")?);
 		Some(builder)
 	}
 	else {
@@ -102,36 +97,36 @@ async fn main() -> Result<(), DisplayableError> {
 
 	let mut config = crate::config::Config::load(options.config)?;
 
-	let local_api: Result<_, failure::Error> = match (&config.install_directory, &config.user_directory) {
+	let local_api: Result<_, crate::Error> = match (&config.install_directory, &config.user_directory) {
 		(Some(install_directory), Some(user_directory)) =>
 			factorio_mods_local::API::new(install_directory, user_directory)
-			.context("Could not initialize local API").map_err(Into::into),
+			.context("could not initialize local API").map_err(Into::into),
 
 		(None, _) => Err(
 			factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::InstallDirectoryNotFound)
-			.context(r#"Could not initialize local API. Consider setting "install_directory" to the path in the config file."#).into()),
+			.context(r#"could not initialize local API. Consider setting "install_directory" to the path in the config file."#)),
 
 		(_, None) => Err(
 			factorio_mods_local::Error::from(factorio_mods_local::ErrorKind::UserDirectoryNotFound)
-			.context(r#"Could not initialize local API. Consider setting "user_directory" to the path in the config file."#).into()),
+			.context(r#"could not initialize local API. Consider setting "user_directory" to the path in the config file."#)),
 	};
 
 	if config.mods.is_none() {
 		if let Ok(local_api) = &local_api {
 			// Default mods list is the list of all currently installed mods with a * requirement
 			let installed_mods =
-				itertools::Itertools::try_collect::<_, _, failure::Error>(
-					local_api.installed_mods().context("Could not enumerate installed mods")?
-					.map(|mod_| Ok(
+				itertools::Itertools::try_collect::<_, _, _>(
+					local_api.installed_mods().context("could not enumerate installed mods")?
+					.map(|mod_|
 						mod_
 						.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
-						.context("Could not process an installed mod")?)))
-				.context("Could not enumerate installed mods")?;
+						.context("could not process an installed mod")))
+				.context("could not enumerate installed mods")?;
 			config.mods = Some(installed_mods);
 		}
 	}
 
-	let web_api = factorio_mods_web::API::new(client).context("Could not initialize web API").map_err(Into::into);
+	let web_api = factorio_mods_web::API::new(client).context("could not initialize web API").map_err(Into::into);
 
 
 	match options.subcommand {
@@ -182,26 +177,85 @@ async fn main() -> Result<(), DisplayableError> {
 	Ok(())
 }
 
-struct DisplayableError(failure::Error);
+struct Error(Box<dyn std::error::Error>, backtrace::Backtrace);
 
-impl std::fmt::Debug for DisplayableError {
+impl std::fmt::Debug for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		writeln!(f, "{}", self.0.as_fail())?;
+		writeln!(f, "{}", self.0)?;
 
-		for fail in self.0.iter_causes() {
-			writeln!(f)?;
-			writeln!(f, "Caused by: {}", fail)?;
+		let mut source = self.0.source();
+		while let Some(err) = source {
+			writeln!(f, "caused by: {}", err)?;
+			source = err.source();
 		}
 
 		writeln!(f)?;
-		writeln!(f, "{}", self.0.backtrace())?;
+		writeln!(f, "{:?}", self.1)?;
 
 		Ok(())
 	}
 }
 
-impl<T> From<T> for DisplayableError where T: Into<failure::Error> {
-	fn from(err: T) -> Self {
-		DisplayableError(err.into())
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		std::fmt::Debug::fmt(self, f)
+	}
+}
+
+impl std::error::Error for Error {
+}
+
+impl From<&'_ str> for Error {
+	fn from(err: &'_ str) -> Self {
+		Error(err.into(), Default::default())
+	}
+}
+
+impl From<String> for Error {
+	fn from(err: String) -> Self {
+		Error(err.into(), Default::default())
+	}
+}
+
+trait ErrorExt: std::error::Error + Sized + 'static {
+	fn context<D>(self, context: D) -> Error where D: std::fmt::Display + std::fmt::Debug + 'static {
+		#[derive(Debug)]
+		struct ErrorWithContext<D, E> {
+			context: D,
+			err: E,
+		}
+
+		impl<D, E> std::fmt::Display for ErrorWithContext<D, E> where D: std::fmt::Display, E: std::error::Error {
+			fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+				self.context.fmt(f)
+			}
+		}
+
+		impl<D, E> std::error::Error for ErrorWithContext<D, E> where D: std::fmt::Display + std::fmt::Debug, E: std::error::Error + 'static {
+			fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+				Some(&self.err)
+			}
+		}
+
+		Error(Box::new(ErrorWithContext { context, err: self }), Default::default())
+	}
+}
+
+impl<E> ErrorExt for E where E: std::error::Error + 'static {
+}
+
+trait ResultExt<T> {
+	fn context<D>(self, context: D) -> Result<T, Error> where D: std::fmt::Display + std::fmt::Debug + 'static;
+
+	fn with_context<F, D>(self, context: F) -> Result<T, Error> where F: FnOnce() -> D, D: std::fmt::Display + std::fmt::Debug + 'static;
+}
+
+impl<T, E> ResultExt<T> for Result<T, E> where E: ErrorExt {
+	fn context<D>(self, context: D) -> Result<T, Error> where D: std::fmt::Display + std::fmt::Debug + 'static {
+		self.map_err(|err| err.context(context))
+	}
+
+	fn with_context<F, D>(self, context: F) -> Result<T, Error> where F: FnOnce() -> D, D: std::fmt::Display + std::fmt::Debug + 'static {
+		self.map_err(|err| err.context(context()))
 	}
 }

@@ -1,30 +1,25 @@
 /// Errors returned by this crate.
 #[derive(Debug)]
 pub struct Error {
-	kind: ErrorKind,
-	backtrace: failure::Backtrace,
-}
+	/// The kind of the error.
+	pub kind: ErrorKind,
 
-impl Error {
-	/// Gets the kind of error
-	pub fn kind(&self) -> &ErrorKind {
-		&self.kind
-	}
-}
-
-impl failure::Fail for Error {
-	fn cause(&self) -> Option<&dyn failure::Fail> {
-		self.kind.cause()
-	}
-
-	fn backtrace(&self) -> Option<&failure::Backtrace> {
-		Some(&self.backtrace)
-	}
+	/// The backtrace of the error.
+	pub backtrace: backtrace::Backtrace,
 }
 
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		self.kind.fmt(f)
+		writeln!(f, "{}", self.kind)?;
+		writeln!(f)?;
+		writeln!(f, "{:?}", self.backtrace)?;
+		Ok(())
+	}
+}
+
+impl std::error::Error for Error {
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		self.kind.source()
 	}
 }
 
@@ -37,71 +32,71 @@ impl From<ErrorKind> for Error {
 	}
 }
 
-impl From<std::io::Error> for Error {
-	fn from(err: std::io::Error) -> Self {
-		ErrorKind::IO(err).into()
-	}
-}
-
 /// Error kinds for errors returned by this crate.
-#[derive(Debug, failure_derive::Fail)]
+#[derive(Debug)]
 pub enum ErrorKind {
-	/// An IO error
-	#[fail(display = "IO error")]
-	IO(#[cause] std::io::Error),
-
-	/// An IO error
-	#[fail(display = "IO error on file {}", _0)]
-	FileIO(DisplayablePathBuf, #[cause] std::io::Error),
-
-	/// Reading a JSON file failed
-	#[fail(display = "Could not parse the JSON file {}", _0)]
-	ReadJSONFile(DisplayablePathBuf, #[cause] serde_json::Error),
-
-	/// Writing a JSON file failed
-	#[fail(display = "Could not save {}", _0)]
-	WriteJSONFile(DisplayablePathBuf, #[cause] serde_json::Error),
-
-	/// An error encountered while working with a .zip file
-	#[fail(display = "Could not parse the ZIP file {}", _0)]
-	Zip(DisplayablePathBuf, #[cause] zip::result::ZipError),
-
-	/// A zipped mod has no files and is thus malformed
-	#[fail(display = "The zipped mod file {} is empty", _0)]
-	EmptyZippedMod(DisplayablePathBuf),
-
-	/// The file or directory is not recognized as a valid mod format
-	#[fail(display = "The mod at {} could not be recognized as a valid mod", _0)]
-	UnknownModFormat(DisplayablePathBuf),
-
-	/// Generating a glob from a pattern failed
-	#[fail(display = "The pattern {} is invalid", _0)]
-	Pattern(String, #[cause] globset::Error),
-
-	/// The local Factorio installation could not be found.
-	#[fail(display = "The local Factorio installation could not be found")]
-	InstallDirectoryNotFound,
-
-	/// The Factorio user directory could not be found.
-	#[fail(display = "The Factorio user directory could not be found")]
-	UserDirectoryNotFound,
+	/// A zipped mod has no files and is thus malformed.
+	EmptyZippedMod(std::path::PathBuf),
 
 	/// The credentials stored in `player-data.json` do not have both username and service token.
-	#[fail(display = "Valid API credentials were not found in player-data.json")]
 	IncompleteUserCredentials(Option<factorio_mods_common::ServiceUsername>),
+
+	/// The local Factorio installation could not be found.
+	InstallDirectoryNotFound,
+
+	/// An I/O error.
+	Io(std::path::PathBuf, std::io::Error),
+
+	/// Generating a glob from a pattern failed.
+	Pattern(String, globset::Error),
+
+	/// Reading a JSON file failed.
+	ReadJSONFile(std::path::PathBuf, serde_json::Error),
+
+	/// The file or directory is not recognized as a valid mod format.
+	UnknownModFormat(std::path::PathBuf),
+
+	/// The Factorio user directory could not be found.
+	UserDirectoryNotFound,
+
+	/// Writing a JSON file failed.
+	WriteJSONFile(std::path::PathBuf, serde_json::Error),
+
+	/// An error encountered while working with a .zip file.
+	Zip(std::path::PathBuf, zip::result::ZipError),
 }
 
-#[derive(Debug)]
-pub struct DisplayablePathBuf(pub std::path::PathBuf);
-
-impl std::fmt::Display for DisplayablePathBuf {
+impl std::fmt::Display for ErrorKind {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self.0.display())
+		match self {
+			ErrorKind::EmptyZippedMod(path) => write!(f, "the zipped mod file {} is empty", path.display()),
+			ErrorKind::IncompleteUserCredentials(_) => f.write_str("valid API credentials were not found in player-data.json"),
+			ErrorKind::InstallDirectoryNotFound => f.write_str("the local Factorio installation could not be found"),
+			ErrorKind::Io(path, _) => write!(f, "I/O error on {}", path.display()),
+			ErrorKind::Pattern(pattern, _) => write!(f, "the pattern {} is invalid", pattern),
+			ErrorKind::ReadJSONFile(path, _) => write!(f, "could not parse the JSON file {}", path.display()),
+			ErrorKind::UnknownModFormat(path) => write!(f, "the mod at {} could not be recognized as a valid mod", path.display()),
+			ErrorKind::UserDirectoryNotFound => f.write_str("the Factorio user directory could not be found"),
+			ErrorKind::WriteJSONFile(path, _) => write!(f, "could not save {}", path.display()),
+			ErrorKind::Zip(path, _) => write!(f, "could not parse the ZIP file {}", path.display()),
+		}
 	}
 }
 
-impl<P> From<P> for DisplayablePathBuf where P: Into<std::path::PathBuf> {
-	fn from(path: P) -> Self {
-		DisplayablePathBuf(path.into())
+impl std::error::Error for ErrorKind {
+	#[allow(clippy::match_same_arms)]
+	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		match self {
+			ErrorKind::EmptyZippedMod(_) => None,
+			ErrorKind::IncompleteUserCredentials(_) => None,
+			ErrorKind::InstallDirectoryNotFound => None,
+			ErrorKind::Io(_, err) => Some(err),
+			ErrorKind::Pattern(_, err) => Some(err),
+			ErrorKind::ReadJSONFile(_, err) => Some(err),
+			ErrorKind::UnknownModFormat(_) => None,
+			ErrorKind::UserDirectoryNotFound => None,
+			ErrorKind::WriteJSONFile(_, err) => Some(err),
+			ErrorKind::Zip(_, err) => Some(err),
+		}
 	}
 }

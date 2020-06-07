@@ -1,4 +1,4 @@
-use failure::{ Fail, ResultExt };
+use crate::{ ErrorExt, ResultExt };
 
 pub(crate) fn wrapping_println(s: &str, indent: &str) {
 	#[allow(clippy::single_match_else)] // Bad clippy lint - false positive
@@ -28,17 +28,16 @@ pub(crate) async fn ensure_user_credentials<'a>(
 	local_api: &'a factorio_mods_local::API,
 	web_api: &'a factorio_mods_web::API,
 	prompt_override: Option<bool>,
-) -> Result<factorio_mods_common::UserCredentials, failure::Error> {
+) -> Result<factorio_mods_common::UserCredentials, crate::Error> {
 	let mut existing_username = match local_api.user_credentials() {
 		Ok(user_credentials) =>
 			return Ok(user_credentials),
 
-		Err(err) => if let factorio_mods_local::ErrorKind::IncompleteUserCredentials(existing_username) = err.kind() {
-			existing_username.clone()
-		}
-		else {
-			return Err(err.context("Could not read user credentials").into());
-		},
+		Err(factorio_mods_local::Error { kind: factorio_mods_local::ErrorKind::IncompleteUserCredentials(existing_username), .. }) =>
+			existing_username.clone(),
+
+		Err(err) =>
+			return Err(err.context("could not read user credentials")),
 	};
 
 	loop {
@@ -46,14 +45,14 @@ pub(crate) async fn ensure_user_credentials<'a>(
 		println!("Please provide your username and password to authenticate yourself.");
 
 		match prompt_override {
-			Some(true) => failure::bail!("Exiting because --yes was specified ..."),
-			Some(false) => failure::bail!("Exiting because --no was specified ..."),
+			Some(true) => return Err("Exiting because --yes was specified ...".into()),
+			Some(false) => return Err("Exiting because --no was specified ...".into()),
 			None => (),
 		}
 
 		let username = {
 			let prompt: std::borrow::Cow<'_, _> = existing_username.as_ref().map_or("Username: ".into(), |username| format!("Username [{}]: ", username).into());
-			rprompt::prompt_reply_stdout(&prompt).context("Could not read username")?
+			rprompt::prompt_reply_stdout(&prompt).context("could not read username")?
 		};
 
 		let username = match(username.is_empty(), existing_username) {
@@ -65,29 +64,26 @@ pub(crate) async fn ensure_user_credentials<'a>(
 			},
 		};
 
-		let password = rpassword::prompt_password_stdout("Password (not shown): ").context("Could not read password")?;
+		let password = rpassword::prompt_password_stdout("Password (not shown): ").context("could not read password")?;
 
 		match web_api.login(username.clone(), &password).await {
 			Ok(user_credentials) => {
 				println!("Logged in successfully.");
-				local_api.save_user_credentials(user_credentials.clone()).context("Could not save player-data.json")?;
+				local_api.save_user_credentials(user_credentials.clone()).context("could not save player-data.json")?;
 				return Ok(user_credentials);
 			},
 
-			Err(err) => match err.kind() {
-				factorio_mods_web::ErrorKind::LoginFailure(message) => {
-					println!("Authentication error: {}", message);
-					existing_username = Some(username);
-				},
-
-				_ =>
-					return Err(err.context("Authentication error").into()),
+			Err(factorio_mods_web::Error { kind: factorio_mods_web::ErrorKind::LoginFailure(message), .. }) => {
+				println!("Authentication error: {}", message);
+				existing_username = Some(username);
 			},
+
+			Err(err) => return Err(err.context("authentication error")),
 		}
 	}
 }
 
-pub(crate) fn prompt_continue(prompt_override: Option<bool>) -> Result<bool, failure::Error> {
+pub(crate) fn prompt_continue(prompt_override: Option<bool>) -> Result<bool, crate::Error> {
 	match prompt_override {
 		Some(true) => {
 			println!("Continue? [y/n]: y");
@@ -100,7 +96,7 @@ pub(crate) fn prompt_continue(prompt_override: Option<bool>) -> Result<bool, fai
 		},
 
 		None => loop {
-			let choice = rprompt::prompt_reply_stdout("Continue? [y/n]: ").context("Could not read continue response")?;
+			let choice = rprompt::prompt_reply_stdout("Continue? [y/n]: ").context("could not read continue response")?;
 			match &*choice {
 				"y" | "Y" => return Ok(true),
 				"n" | "N" => return Ok(false),

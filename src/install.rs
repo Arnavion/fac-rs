@@ -15,20 +15,20 @@ struct Requirement {
 }
 
 impl std::str::FromStr for Requirement {
-	type Err = failure::Error;
+	type Err = crate::Error;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		use failure::ResultExt;
+		use crate::ResultExt;
 
 		let captures = match REQUIREMENT_REGEX.captures(s) {
 			Some(captures) => captures,
-			None => failure::bail!(r#"Could not parse requirement "{}""#, s),
+			None => return Err(format!(r#"Could not parse requirement "{}""#, s).into()),
 		};
 		let name = factorio_mods_common::ModName(captures[1].to_string());
 		let version_string = captures.get(2).map_or("*", |m| m.as_str());
 		let version =
 			version_string.parse::<semver::VersionReq>()
-			.with_context(|_| format!(r#"Could not parse "{}" as a valid version requirement"#, version_string))?;
+			.with_context(|| format!(r#"could not parse "{}" as a valid version requirement"#, version_string))?;
 		let version = factorio_mods_common::ModVersionReq(version);
 
 		Ok(Requirement {
@@ -41,11 +41,11 @@ impl std::str::FromStr for Requirement {
 impl SubCommand {
 	pub(crate) async fn run<'a>(
 		self,
-		local_api: Result<&'a factorio_mods_local::API, failure::Error>,
-		web_api: Result<&'a factorio_mods_web::API, failure::Error>,
+		local_api: Result<&'a factorio_mods_local::API, crate::Error>,
+		web_api: Result<&'a factorio_mods_web::API, crate::Error>,
 		mut config: crate::config::Config,
 		prompt_override: Option<bool>,
-	) -> Result<(), failure::Error> {
+	) -> Result<(), crate::Error> {
 		let local_api = local_api?;
 		let web_api = web_api?;
 

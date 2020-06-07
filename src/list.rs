@@ -5,23 +5,23 @@ pub(crate) struct SubCommand {
 impl SubCommand {
 	pub(crate) async fn run(
 		self,
-		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
-	) -> Result<(), failure::Error> {
-		use failure::ResultExt;
+		local_api: Result<&'_ factorio_mods_local::API, crate::Error>,
+	) -> Result<(), crate::Error> {
+		use crate::ResultExt;
 
 		let local_api = local_api?;
 
-		let mods_status = local_api.mods_status().context("Could not parse installed mods status")?;
+		let mods_status = local_api.mods_status().context("could not parse installed mods status")?;
 
 		let mut installed_mods: Vec<_> =
 			itertools::Itertools::try_collect(
 				local_api.installed_mods()
-				.context("Could not enumerate installed mods")?
+				.context("could not enumerate installed mods")?
 				.map(|installed_mod| installed_mod.map(|installed_mod| {
 					let enabled = mods_status.get(&installed_mod.info.name).cloned().unwrap_or(true);
 					(installed_mod, enabled)
 				})))
-			.context("Could not enumerate installed mods")?;
+			.context("could not enumerate installed mods")?;
 		if installed_mods.is_empty() {
 			println!("No installed mods.");
 		}

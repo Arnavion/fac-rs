@@ -3,7 +3,7 @@
 	clippy::single_match_else,
 )]
 
-use failure::{ Fail, ResultExt };
+use crate::{ ErrorExt, ResultExt };
 
 #[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize)]
 #[serde(tag = "version")]
@@ -26,11 +26,11 @@ pub(crate) struct Config {
 }
 
 impl Config {
-	pub fn load(path: Option<std::path::PathBuf>) -> Result<Self, failure::Error>{
+	pub fn load(path: Option<std::path::PathBuf>) -> Result<Self, crate::Error>{
 		let config_file_path = match path {
 			Some(path) =>
 				if path.iter().count() == 1 {
-					let mut user_config_dir = dirs::config_dir().ok_or_else(|| failure::err_msg("Could not derive path to config directory"))?;
+					let mut user_config_dir = dirs::config_dir().ok_or_else(|| "could not derive path to config directory")?;
 					user_config_dir.push("fac");
 					user_config_dir.push(path);
 					user_config_dir
@@ -40,9 +40,9 @@ impl Config {
 				},
 
 			None => {
-				let mut user_config_dir = dirs::config_dir().ok_or_else(|| failure::err_msg("Could not derive path to config directory"))?;
+				let mut user_config_dir = dirs::config_dir().ok_or_else(|| "could not derive path to config directory")?;
 				user_config_dir.push("fac");
-				std::fs::create_dir_all(&user_config_dir).with_context(|_| format!("Could not create config directory {}", user_config_dir.display()))?;
+				std::fs::create_dir_all(&user_config_dir).with_context(|| format!("could not create config directory {}", user_config_dir.display()))?;
 				user_config_dir.push("config.json");
 				user_config_dir
 			},
@@ -54,7 +54,7 @@ impl Config {
 			Ok(mut file) => {
 				let config: StoredConfig<'_> =
 					serde_json::from_reader(&mut file)
-					.with_context(|_| format!("Could not parse JSON file {}", config_file_path_displayable))?;
+					.with_context(|| format!("could not parse JSON file {}", config_file_path_displayable))?;
 
 				let StoredConfig::V1 { install_directory, user_directory, mods } = config;
 
@@ -67,7 +67,7 @@ impl Config {
 
 			Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => (None, None, None),
 
-			Err(err) => return Err(err.context(format!("Could not read config file {}", config_file_path_displayable)).into()),
+			Err(err) => return Err(err.context(format!("could not read config file {}", config_file_path_displayable))),
 		};
 
 		let install_directory =
@@ -116,11 +116,11 @@ impl Config {
 		})
 	}
 
-	pub fn save(&self) -> Result<(), failure::Error> {
+	pub fn save(&self) -> Result<(), crate::Error> {
 		let config_file_path_displayable = self.path.display();
 		let mut config_file =
 			std::fs::File::create(&self.path)
-			.with_context(|_| format!("Could not create config file {}", config_file_path_displayable))?;
+			.with_context(|| format!("could not create config file {}", config_file_path_displayable))?;
 
 		let stored_config = StoredConfig::V1 {
 			install_directory: self.install_directory.as_ref().map(AsRef::as_ref).map(std::borrow::Cow::Borrowed),
@@ -128,7 +128,7 @@ impl Config {
 			mods: self.mods.as_ref().map(std::borrow::Cow::Borrowed),
 		};
 		serde_json::to_writer_pretty(&mut config_file, &stored_config)
-		.with_context(|_| format!("Could not write to config file {}", config_file_path_displayable))?;
+		.with_context(|| format!("could not write to config file {}", config_file_path_displayable))?;
 
 		Ok(())
 	}

@@ -4,12 +4,6 @@
 	clippy::integer_division,
 )]
 
-use std::future::Future;
-use std::io::Read;
-
-use futures_core::Stream;
-use futures_util::future::TryFutureExt;
-
 pub(super) struct WebReader<'a> {
 	api: &'a factorio_mods_web::API,
 	release: std::rc::Rc<factorio_mods_web::ModRelease>,
@@ -27,23 +21,23 @@ pub(super) struct WebReader<'a> {
 }
 
 enum DataRegion<'a> {
-	Download(std::pin::Pin<Box<dyn Future<Output = std::io::Result<(ReqwestResponseReader<'a>, Vec<u8>)>> + 'a>>),
+	Download(std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<(ReqwestResponseReader<'a>, Vec<u8>)>> + 'a>>),
 	Downloaded(Vec<u8>),
 }
 
-type ReqwestResponseReader<'a> = futures_util::stream::IntoAsyncRead<std::pin::Pin<Box<dyn Stream<Item = std::io::Result<bytes::Bytes>> + 'a>>>;
+type ReqwestResponseReader<'a> = futures_util::stream::IntoAsyncRead<std::pin::Pin<Box<dyn futures_core::Stream<Item = std::io::Result<bytes::Bytes>> + 'a>>>;
 
 const REGION_LEN_MAX: usize = 1024 * 8;
 
 impl<'a> WebReader<'a> {
 	// TODO: Can't return Self because of https://github.com/rust-lang/rust/issues/61949
-	pub(super) fn new(
+	pub(super) async fn new(
 		api: &'a factorio_mods_web::API,
 		release: std::rc::Rc<factorio_mods_web::ModRelease>,
 		user_credentials: std::rc::Rc<factorio_mods_common::UserCredentials>,
-	) -> impl Future<Output = Result<WebReader<'a>, factorio_mods_web::Error>> + 'a {
-		api.get_filesize(&release, &user_credentials)
-		.map_ok(move|len| WebReader {
+	) -> Result<WebReader<'a>, factorio_mods_web::Error> {
+		let len = api.get_filesize(&release, &user_credentials).await?;
+		Ok(WebReader {
 			api,
 			release,
 			user_credentials,
@@ -72,7 +66,7 @@ impl futures_util::io::AsyncRead for WebReader<'_> {
 					DataRegion::Download(download) => match download.as_mut().poll(cx) {
 						std::task::Poll::Ready(download) => {
 							let (reader, content) =
-								download.map_err(|err| super::io_error_from_fail(&err))?;
+								download.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))?;
 
 							*region = DataRegion::Downloaded(content);
 
@@ -96,13 +90,13 @@ impl futures_util::io::AsyncRead for WebReader<'_> {
 						Box::pin(
 							futures_util::stream::TryStreamExt::map_err(
 								response,
-								|err| super::io_error_from_fail(&err))) as _);
+								|err| std::io::Error::new(std::io::ErrorKind::Other, err))) as _);
 				let download = download_region(reader, key, this.len);
 				this.content_cache.insert((key, DataRegion::Download(Box::pin(download))));
 			}
 		};
 
-		let read = (&content[offset..]).read(buf)?;
+		let read = std::io::Read::read(&mut &content[offset..], buf)?;
 		self.pos += read as u64;
 		std::task::Poll::Ready(Ok(read))
 	}

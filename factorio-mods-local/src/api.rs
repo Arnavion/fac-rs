@@ -25,9 +25,9 @@ impl API {
 
 			let base_info_file = match std::fs::File::open(&base_info_file_path) {
 				Ok(base_info_file) => base_info_file,
-				Err(err) => return Err(crate::ErrorKind::FileIO(base_info_file_path.into(), err).into()),
+				Err(err) => return Err(crate::ErrorKind::Io(base_info_file_path, err).into()),
 			};
-			let base_info: BaseInfo = serde_json::from_reader(base_info_file).map_err(|err| crate::ErrorKind::ReadJSONFile(base_info_file_path.into(), err))?;
+			let base_info: BaseInfo = serde_json::from_reader(base_info_file).map_err(|err| crate::ErrorKind::ReadJSONFile(base_info_file_path, err))?;
 			base_info.version
 		};
 
@@ -72,7 +72,7 @@ impl API {
 
 		let player_data_json_file = match std::fs::File::open(player_data_json_file_path) {
 			Ok(player_data_json_file) => player_data_json_file,
-			Err(err) => return Err(crate::ErrorKind::FileIO(player_data_json_file_path.into(), err).into()),
+			Err(err) => return Err(crate::ErrorKind::Io(player_data_json_file_path.into(), err).into()),
 		};
 
 		let PlayerData { service_username, service_token } =
@@ -96,7 +96,7 @@ impl API {
 		let mut player_data: serde_json::Map<_, _> = {
 			let player_data_json_file = match std::fs::File::open(player_data_json_file_path) {
 				Ok(player_data_json_file) => player_data_json_file,
-				Err(err) => return Err(crate::ErrorKind::FileIO(player_data_json_file_path.into(), err).into()),
+				Err(err) => return Err(crate::ErrorKind::Io(player_data_json_file_path.into(), err).into()),
 			};
 
 			serde_json::from_reader(player_data_json_file).map_err(|err| crate::ErrorKind::ReadJSONFile(player_data_json_file_path.into(), err))?
@@ -109,7 +109,7 @@ impl API {
 
 		let mut player_data_json_file = match std::fs::File::create(player_data_json_file_path) {
 			Ok(player_data_json_file) => player_data_json_file,
-			Err(err) => return Err(crate::ErrorKind::FileIO(player_data_json_file_path.into(), err).into()),
+			Err(err) => return Err(crate::ErrorKind::Io(player_data_json_file_path.into(), err).into()),
 		};
 
 		serde_json::to_writer_pretty(&mut player_data_json_file, &player_data).map_err(|err| crate::ErrorKind::WriteJSONFile(player_data_json_file_path.into(), err).into())
@@ -133,7 +133,7 @@ impl API {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mut mod_list_file = match std::fs::File::create(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
-			Err(err) => return Err(crate::ErrorKind::FileIO(mod_list_file_path.into(), err).into()),
+			Err(err) => return Err(crate::ErrorKind::Io(mod_list_file_path.into(), err).into()),
 		};
 
 		let mut mods: Vec<_> =
@@ -150,7 +150,7 @@ impl API {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mod_list_file = match std::fs::File::open(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,
-			Err(err) => return Err(crate::ErrorKind::FileIO(mod_list_file_path.into(), err).into()),
+			Err(err) => return Err(crate::ErrorKind::Io(mod_list_file_path.into(), err).into()),
 		};
 		Ok(serde_json::from_reader(mod_list_file).map_err(|err| crate::ErrorKind::ReadJSONFile(mod_list_file_path.into(), err))?)
 	}

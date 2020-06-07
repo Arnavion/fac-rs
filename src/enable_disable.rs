@@ -7,9 +7,9 @@ pub(crate) struct EnableSubCommand {
 impl EnableSubCommand {
 	pub(crate) async fn run(
 		self,
-		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
+		local_api: Result<&'_ factorio_mods_local::API, crate::Error>,
 		prompt_override: Option<bool>,
-	) -> Result<(), failure::Error> {
+	) -> Result<(), crate::Error> {
 		enable_disable(self.names, local_api, prompt_override, true).await?;
 		Ok(())
 	}
@@ -24,9 +24,9 @@ pub(crate) struct DisableSubCommand {
 impl DisableSubCommand {
 	pub(crate) async fn run(
 		self,
-		local_api: Result<&'_ factorio_mods_local::API, failure::Error>,
+		local_api: Result<&'_ factorio_mods_local::API, crate::Error>,
 		prompt_override: Option<bool>,
-	) -> Result<(), failure::Error> {
+	) -> Result<(), crate::Error> {
 		enable_disable(self.names, local_api, prompt_override, false).await?;
 		Ok(())
 	}
@@ -34,17 +34,17 @@ impl DisableSubCommand {
 
 pub(crate) async fn enable_disable<'a>(
 	mods: Vec<factorio_mods_common::ModName>,
-	local_api: Result<&'a factorio_mods_local::API, failure::Error>,
+	local_api: Result<&'a factorio_mods_local::API, crate::Error>,
 	prompt_override: Option<bool>,
 	enable: bool,
-) -> Result<(), failure::Error> {
-	use failure::ResultExt;
+) -> Result<(), crate::Error> {
+	use crate::ResultExt;
 
 	let local_api = local_api?;
 
 	let mut all_installed_mods: std::collections::HashMap<_, Vec<_>> = Default::default();
-	for mod_ in local_api.installed_mods().context("Could not enumerate installed mods")? {
-		let mod_ = mod_.context("Could not process an installed mod")?;
+	for mod_ in local_api.installed_mods().context("could not enumerate installed mods")? {
+		let mod_ = mod_.context("could not process an installed mod")?;
 		all_installed_mods.entry(mod_.info.name.clone()).or_default().push(mod_);
 	}
 
@@ -111,7 +111,7 @@ pub(crate) async fn enable_disable<'a>(
 	}
 
 	local_api.set_enabled(to_change, enable)
-	.with_context(|_| format!("Could not {} mods", if enable { "enable" } else { "disable" }))?;
+	.with_context(|| format!("could not {} mods", if enable { "enable" } else { "disable" }))?;
 
 	Ok(())
 }
