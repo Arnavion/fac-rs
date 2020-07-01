@@ -174,10 +174,19 @@ impl API {
 	}
 }
 
+/// A [`futures_core::Stream`] of a downloaded mod's bytes.
 pub type DownloadResponse = impl futures_core::Stream<Item = crate::Result<bytes::Bytes>> + 'static;
+
+/// A [`std::future::Future`] of a mod's information.
 pub type GetResponse = impl std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
+
+/// A [`std::future::Future`] of a mod release's file size.
 pub type GetFilesizeResponse = impl std::future::Future<Output = crate::Result<u64>> + 'static;
+
+/// A [`std::future::Future`] of an attempt to login to the web API.
 pub type LoginResponse = impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
+
+/// A [`futures_core::Stream`] of search results.
 pub type SearchResponse = impl futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
 
 /// A single page of a paged response.
