@@ -32,7 +32,7 @@ structopt = "0.3"
 term_size = "0.3"
 textwrap = "0.12"
 tokio = { version = "0.2", features = ["macros"] }
-uluru = "0.4"
+uluru = "1"
 zip = "0.5"
 
 [workspace]
