@@ -12,7 +12,7 @@ factorio-mods-common = { path = "../factorio-mods-common" }
 globset = "0.4"
 lazy_static = "1"
 package = { path = "../package" }
-semver = "0.9"
+semver = "0.10"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"

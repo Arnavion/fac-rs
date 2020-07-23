@@ -10,7 +10,7 @@ itertools = "0.9"
 lazy_static = "1"
 package = { path = "../package" }
 regex = "1.2"
-semver = "0.9"
+semver = "0.10"
 serde = "1"
 serde_derive = "1"
 
