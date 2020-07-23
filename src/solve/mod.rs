@@ -405,10 +405,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 			this.pending.extend(new);
 		}
 
-		this.pending.retain(|f| match f {
-			CacheFuture::GetMod(None) | CacheFuture::GetInfoJson(None) => false,
-			_ => true,
-		});
+		this.pending.retain(|f| !matches!(f, CacheFuture::GetMod(None) | CacheFuture::GetInfoJson(None)));
 
 		if !this.pending.is_empty() {
 			return std::task::Poll::Pending;

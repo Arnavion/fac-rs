@@ -22,10 +22,7 @@ impl Client {
 		let inner =
 			builder
 			.redirect(reqwest::redirect::Policy::custom(|attempt| {
-				if match attempt.url().host_str() {
-					Some(host) if WHITELISTED_HOSTS.contains(host) => true,
-					_ => false,
-				} {
+				if matches!(attempt.url().host_str(), Some(host) if WHITELISTED_HOSTS.contains(host)) {
 					attempt.follow()
 				}
 				else {
@@ -59,6 +56,8 @@ impl Client {
 		let (builder, is_range_request) = {
 			let builder = inner.get(url.clone());
 
+			// TODO: Suppress bad clippy lint. Ref: https://github.com/rust-lang/rust-clippy/issues/5822
+			#[allow(clippy::option_if_let_else)]
 			let (builder, is_range_request) =
 				if let Some(range) = range {
 					(builder.header(reqwest::header::RANGE, range), true)

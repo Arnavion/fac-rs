@@ -222,13 +222,7 @@ pub fn compute_solution<I>(
 					Some(req) => req.as_ref().matches(package.version().as_ref()),
 
 					// Required by another package
-					None => graph.edges_directed(node_index, petgraph::Direction::Incoming).any(|edge|
-						if let Relation::Requires = *edge.weight() {
-							true
-						}
-						else {
-							false
-						}),
+					None => graph.edges_directed(node_index, petgraph::Direction::Incoming).any(|edge| matches!(*edge.weight(), Relation::Requires)),
 				};
 
 				// All required dependencies satisfied
@@ -304,12 +298,17 @@ pub fn compute_solution<I>(
 								})
 							.collect();
 
-						common_conflicts = if let Some(existing) = common_conflicts {
-							Some(&existing & &conflicts)
+						// TODO: Suppress bad clippy lint. Ref: https://github.com/rust-lang/rust-clippy/issues/5822
+						#[allow(clippy::option_if_let_else)]
+						{
+							common_conflicts =
+								if let Some(existing) = common_conflicts {
+									Some(&existing & &conflicts)
+								}
+								else {
+									Some(conflicts)
+								};
 						}
-						else {
-							Some(conflicts)
-						};
 					}
 
 					if let Some(common_conflicts) = common_conflicts {

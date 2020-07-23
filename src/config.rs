@@ -65,42 +65,32 @@ impl Config {
 		};
 
 		let install_directory =
-			if let Some(install_directory) = install_directory {
-				Some(install_directory)
-			}
-			else {
-				FACTORIO_INSTALL_SEARCH_PATHS.iter().find_map(|search_path| {
-					let search_path = std::path::Path::new(search_path);
-					let base_info_file_path = search_path.join("data").join("base").join("info.json");
-					if base_info_file_path.is_file() {
-						Some(search_path.to_owned())
-					}
-					else {
-						None
-					}
-				})
-			};
+			install_directory.or_else(|| FACTORIO_INSTALL_SEARCH_PATHS.iter().find_map(|search_path| {
+				let search_path = std::path::Path::new(search_path);
+				let base_info_file_path = search_path.join("data").join("base").join("info.json");
+				if base_info_file_path.is_file() {
+					Some(search_path.to_owned())
+				}
+				else {
+					None
+				}
+			}));
 
 		let user_directory =
-			if let Some(user_directory) = user_directory {
-				Some(user_directory)
-			}
-			else {
-				FACTORIO_USER_SEARCH_PATHS.iter().find_map(|search_path| {
-					let search_path = std::path::Path::new(search_path);
+			user_directory.or_else(|| FACTORIO_USER_SEARCH_PATHS.iter().find_map(|search_path| {
+				let search_path = std::path::Path::new(search_path);
 
-					let mods_directory = search_path.join("mods");
-					let mod_list_file_path = mods_directory.join("mod-list.json");
-					let player_data_json_file_path = search_path.join("player-data.json");
+				let mods_directory = search_path.join("mods");
+				let mod_list_file_path = mods_directory.join("mod-list.json");
+				let player_data_json_file_path = search_path.join("player-data.json");
 
-					if mod_list_file_path.is_file() && player_data_json_file_path.is_file() {
-						Some(search_path.to_owned())
-					}
-					else {
-						None
-					}
-				})
-			};
+				if mod_list_file_path.is_file() && player_data_json_file_path.is_file() {
+					Some(search_path.to_owned())
+				}
+				else {
+					None
+				}
+			}));
 
 		Ok(Config {
 			path: config_file_path,
