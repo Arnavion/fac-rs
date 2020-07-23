@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 backtrace = "0.3"
 derive-struct = { path = "../derive-struct" }
-dirs = "2"
+dirs = "3"
 factorio-mods-common = { path = "../factorio-mods-common" }
 globset = "0.4"
 lazy_static = "1"
