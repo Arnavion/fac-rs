@@ -22,7 +22,7 @@ package = { path = "./package" }
 petgraph = "0.5"
 regex = "1.2"
 reqwest = "0.10"
-rpassword = "4"
+rpassword = "5"
 rprompt = "1"
 semver = "0.10"
 serde = "1"
