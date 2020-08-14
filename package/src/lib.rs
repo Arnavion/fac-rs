@@ -14,21 +14,25 @@
 
 pub trait Package {
 	type Name;
-	type Version;
-	type Dependency: Dependency<Name = Self::Name>;
+	type Version: std::cmp::Ord;
+	type Dependency: Dependency<Self::Version, Name = Self::Name>;
 
 	fn name(&self) -> &Self::Name;
 	fn version(&self) -> &Self::Version;
 	fn dependencies(&self) -> &[Self::Dependency];
 }
 
-pub trait Dependency {
+pub trait Dependency<TVersion> {
 	type Name;
-	type Version;
+	type VersionReq: VersionReq<TVersion>;
 
 	fn name(&self) -> &Self::Name;
-	fn version(&self) -> &Self::Version;
+	fn version_req(&self) -> Self::VersionReq;
 	fn kind(&self) -> DependencyKind;
+}
+
+pub trait VersionReq<TVersion> {
+	fn matches(&self, other: &TVersion) -> bool;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -127,7 +131,10 @@ pub type Result<Name, Version, T> = std::result::Result<T, Error<Name, Version>>
 
 pub fn compute_solution<I>(
 	packages: I,
-	reqs: &std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version>,
+	reqs: &std::collections::HashMap<
+		<<I as IntoIterator>::Item as Package>::Name,
+		<<<I as IntoIterator>::Item as Package>::Dependency as Dependency<<<I as IntoIterator>::Item as Package>::Version>>::VersionReq,
+	>,
 ) -> Result<
 	<<I as IntoIterator>::Item as Package>::Name,
 	<<I as IntoIterator>::Item as Package>::Version,
@@ -136,8 +143,7 @@ pub fn compute_solution<I>(
 	I: IntoIterator,
 	<I as IntoIterator>::Item: Package + Clone,
 	<<I as IntoIterator>::Item as Package>::Name: Clone + std::fmt::Debug + std::fmt::Display + Eq + std::hash::Hash + Send + Sync + 'static,
-	<<I as IntoIterator>::Item as Package>::Version: AsRef<semver::Version> + Clone + std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	<<<I as IntoIterator>::Item as Package>::Dependency as Dependency>::Version: AsRef<semver::VersionReq>,
+	<<I as IntoIterator>::Item as Package>::Version: Clone + std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 {
 	let mut graph: petgraph::Graph<_, Relation> =
 		petgraph::data::FromElements::from_elements(
@@ -168,7 +174,7 @@ pub fn compute_solution<I>(
 						continue;
 					}
 
-					match (dep.kind(), dep.version().as_ref().matches(package2.version().as_ref())) {
+					match (dep.kind(), dep.version_req().matches(package2.version())) {
 						(DependencyKind::Required, true) => requires = true,
 						(DependencyKind::Conflicts, true) |
 						(DependencyKind::Optional, false) => conflicts = true,
@@ -219,7 +225,7 @@ pub fn compute_solution<I>(
 
 				let keep = match reqs.get(package.name()) {
 					// Required package
-					Some(req) => req.as_ref().matches(package.version().as_ref()),
+					Some(req) => req.matches(package.version()),
 
 					// Required by another package
 					None => graph.edges_directed(node_index, petgraph::Direction::Incoming).any(|edge| matches!(*edge.weight(), Relation::Requires)),
@@ -233,7 +239,7 @@ pub fn compute_solution<I>(
 						name_to_node_indices.get(dep.name())
 						.map_or(false, |dep_node_indices|
 							dep_node_indices.iter()
-							.any(|&dep_node_index| dep.version().as_ref().matches(graph[dep_node_index].version().as_ref()))));
+							.any(|&dep_node_index| dep.version_req().matches(graph[dep_node_index].version()))));
 
 				!keep
 			}));
@@ -267,7 +273,7 @@ pub fn compute_solution<I>(
 
 								if neighbors1 == neighbors2 {
 									// Two packages with identical requirements and conflicts. Remove the one with the lower version.
-									if package1.version().as_ref() < package2.version().as_ref() {
+									if package1.version() < package2.version() {
 										node_indices_to_remove.insert(node_index1);
 									}
 									else {
@@ -368,13 +374,11 @@ pub fn compute_solution<I>(
 fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) -> bool where
 	P: Package,
 	<P as Package>::Name: Eq + std::hash::Hash,
-	<P as Package>::Version: AsRef<semver::Version>,
-	<<P as Package>::Dependency as Dependency>::Version: AsRef<semver::VersionReq>,
 {
 	for package in solution.values() {
 		for dep in package.dependencies() {
 			if let Some(package) = solution.get(dep.name()) {
-				if !dep.version().as_ref().matches(package.version().as_ref()) {
+				if !dep.version_req().matches(package.version()) {
 					return false;
 				}
 			}
@@ -395,12 +399,11 @@ struct Solution<'a, P>(std::collections::HashMap<&'a <P as Package>::Name, &'a P
 impl<P> Ord for Solution<'_, P> where
 	P: Package,
 	<P as Package>::Name: Eq + std::hash::Hash,
-	<P as Package>::Version: AsRef<semver::Version>,
 {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		for (n1, i1) in &self.0 {
 			if let Some(i2) = other.0.get(n1) {
-				match i1.version().as_ref().cmp(i2.version().as_ref()) {
+				match i1.version().cmp(i2.version()) {
 					std::cmp::Ordering::Equal => (),
 					o => return o,
 				}
@@ -414,7 +417,6 @@ impl<P> Ord for Solution<'_, P> where
 impl<P> PartialOrd for Solution<'_, P> where
 	P: Package,
 	<P as Package>::Name: Eq + std::hash::Hash,
-	<P as Package>::Version: AsRef<semver::Version>,
 {
 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
 		Some(self.cmp(other))
@@ -424,7 +426,6 @@ impl<P> PartialOrd for Solution<'_, P> where
 impl<P> PartialEq for Solution<'_, P> where
 	P: Package,
 	<P as Package>::Name: Eq + std::hash::Hash,
-	<P as Package>::Version: AsRef<semver::Version>,
 {
 	fn eq(&self, other: &Self) -> bool {
 		self.cmp(other) == std::cmp::Ordering::Equal
@@ -435,7 +436,6 @@ impl<P> Eq for Solution<'_, P>
  where
 	P: Package,
 	<P as Package>::Name: Eq + std::hash::Hash,
-	<P as Package>::Version: AsRef<semver::Version>,
 {
 }
 

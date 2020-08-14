@@ -335,7 +335,11 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 							println!("    Getting {} ... done", mod_name);
 
 							for release in mod_.releases {
-								if !release.info_json.factorio_version.0.matches(&this.game_version.0) {
+								let game_version_req = factorio_mods_common::VersionReqMatcher {
+									version_req: release.info_json.factorio_version.0.clone(),
+									is_base: true,
+								};
+								if !package::VersionReq::matches(&game_version_req, &this.game_version) {
 									continue;
 								}
 
@@ -377,7 +381,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 				},
 
 				CacheFuture::GetInfoJson(get_info_json) => match get_info_json {
-					Some((mod_name, release, f)) => match f.as_mut().poll(cx) {
+					Some((_, _, f)) => match f.as_mut().poll(cx) {
 						std::task::Poll::Ready(Ok(mod_info)) => {
 							let (mod_name, release, _) = get_info_json.take().unwrap();
 
@@ -390,8 +394,10 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 							println!("        Getting {} {} info.json ... done", mod_name, release.version);
 						},
 
-						std::task::Poll::Ready(Err(err)) =>
-							return std::task::Poll::Ready(Err(err.context(format!("could not download release {} {}", mod_name, release.version)))),
+						std::task::Poll::Ready(Err(err)) => {
+							let (mod_name, release, _) = get_info_json.take().unwrap();
+							eprintln!("        Getting {} {} info.json ... failed: {}", mod_name, release.version, err);
+						},
 
 						std::task::Poll::Pending => (),
 					},
@@ -419,8 +425,19 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 		println!();
 		println!("Computing solution...");
 
+		let solver_reqs =
+			reqs.clone().into_iter()
+			.map(|(name, version_req)| {
+				let is_base = name.0 == "base";
+				(name, factorio_mods_common::VersionReqMatcher {
+					version_req: version_req.0,
+					is_base,
+				})
+			})
+			.collect();
+
 		let solution =
-			package::compute_solution(packages, &reqs)
+			package::compute_solution(packages, &solver_reqs)
 			.context("could not compute solution.")?;
 
 		std::task::Poll::Ready(Ok((solution, reqs)))

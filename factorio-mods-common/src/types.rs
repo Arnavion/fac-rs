@@ -56,12 +56,6 @@ pub struct ModDescription(pub String);
 )]
 pub struct ReleaseVersion(pub semver::Version);
 
-impl AsRef<semver::Version> for ReleaseVersion {
-	fn as_ref(&self) -> &semver::Version {
-		&self.0
-	}
-}
-
 /// A username and token used with the parts of the web API that require authentication.
 #[derive(Clone, Debug, serde_derive::Deserialize)]
 pub struct UserCredentials {
@@ -123,16 +117,19 @@ impl<'de> serde::Deserialize<'de> for Dependency {
 	}
 }
 
-impl package::Dependency for Dependency {
+impl package::Dependency<ReleaseVersion> for Dependency {
 	type Name = ModName;
-	type Version = ModVersionReq;
+	type VersionReq = VersionReqMatcher;
 
 	fn name(&self) -> &Self::Name {
 		&self.name
 	}
 
-	fn version(&self) -> &Self::Version {
-		&self.version
+	fn version_req(&self) -> Self::VersionReq {
+		VersionReqMatcher {
+			version_req: self.version.0.clone(),
+			is_base: self.name.0 == "base",
+		}
 	}
 
 	fn kind(&self) -> package::DependencyKind {
@@ -144,9 +141,28 @@ impl package::Dependency for Dependency {
 #[derive(Clone, Debug, PartialEq, derive_struct::newtype_deserialize, derive_struct::newtype_display)]
 pub struct ModVersionReq(pub semver::VersionReq);
 
-impl AsRef<semver::VersionReq> for ModVersionReq {
-	fn as_ref(&self) -> &semver::VersionReq {
-		&self.0
+/// A version requirement matcher used by the package solver.
+#[derive(Debug)]
+pub struct VersionReqMatcher {
+	/// The version requirement.
+	pub version_req: semver::VersionReq,
+
+	/// Whether this version requirement is for the base mod or not.
+	pub is_base: bool,
+}
+
+impl package::VersionReq<ReleaseVersion> for VersionReqMatcher {
+	fn matches(&self, other: &ReleaseVersion) -> bool {
+		if self.version_req.matches(&other.0) {
+			return true;
+		}
+
+		if self.is_base && other.0.major == 1 && other.0.minor == 0 {
+			let other = semver::Version { major: 0, minor: 18, patch: 99, pre: vec![], build: vec![] };
+			return self.version_req.matches(&other);
+		}
+
+		false
 	}
 }
 

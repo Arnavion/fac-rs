@@ -136,14 +136,18 @@ pub(super) async fn find_info_json(
 
 	let info_json_file_local_header = FileLocalHeader::parse(reader).await?;
 
-	if info_json_file_local_header.0 != info_json_entry.file_meta {
+	// Ideally info_json_file_local_header.0 would be == to info_json_entry.file_meta, but some zips have malformed info_json_file_local_header.0
+	// where crc32, compressed_size and uncompressed_size are all set to 0. Known cases are miniloader 1.11.2 and miniloader 1.11.3
+	//
+	// So just check the filename matches and nothing else. And make sure to use compressed_size and crc32 from info_json_entry.file_meta
+	if info_json_file_local_header.0.filename != info_json_entry.file_meta.filename {
 		return Err(Error::FileMetadataCorrupt);
 	}
 
-	let mut buf = vec![0_u8; info_json_file_local_header.0.compressed_size as usize];
+	let mut buf = vec![0_u8; info_json_entry.file_meta.compressed_size as usize];
 	futures_util::io::AsyncReadExt::read_exact(reader, &mut buf).await.map_err(Error::Io)?;
 
-	let reader = Reader::new(info_json_entry.file_meta.compression_method, buf, info_json_file_local_header.0.crc32)?;
+	let reader = Reader::new(info_json_entry.file_meta.compression_method, buf, info_json_entry.file_meta.crc32)?;
 	let info_json = serde_json::from_reader(reader).map_err(Error::FileInvalidJson)?;
 	Ok(info_json)
 }
