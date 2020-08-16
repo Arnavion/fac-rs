@@ -210,9 +210,8 @@ pub fn compute_solution<I>(
 			}
 
 			for name in reqs.keys() {
-				match name_to_node_indices.get(name) {
-					Some(node_indices) if !node_indices.is_empty() => (),
-					_ => return Err(ErrorKind::NoPackagesMeetRequirements(name.clone()).into()),
+				if !matches!(name_to_node_indices.get(name), Some(node_indices) if !node_indices.is_empty()) {
+					return Err(ErrorKind::NoPackagesMeetRequirements(name.clone()).into());
 				}
 			}
 

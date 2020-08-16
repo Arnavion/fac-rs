@@ -87,7 +87,7 @@ pub(crate) async fn enable_disable<'a>(
 	let mut to_change = std::collections::HashSet::new();
 
 	for name in mods {
-		if let Some(&node_index) = name_to_node_index.get(&factorio_mods_common::ModName(name.to_string())) {
+		if let Some(&node_index) = name_to_node_index.get(&name) {
 			let bfs = petgraph::visit::Bfs::new(&graph, node_index);
 			to_change.extend(petgraph::visit::Walker::iter(bfs, &graph));
 		}

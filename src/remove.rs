@@ -18,8 +18,7 @@ impl SubCommand {
 		let mods = config.mods.as_mut().unwrap();
 
 		for mod_ in self.names {
-			let name = factorio_mods_common::ModName(mod_.to_string());
-			mods.remove(&name);
+			mods.remove(&mod_);
 		}
 
 		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;

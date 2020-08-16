@@ -155,10 +155,9 @@ async fn send(
 	url: reqwest::Url,
 	is_range_request: bool,
 ) -> Result<(reqwest::Response, reqwest::Url), crate::Error> {
-	match url.host_str() {
-		Some(host) if WHITELISTED_HOSTS.contains(host) => (),
-		_ => return Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
-	};
+	if !matches!(url.host_str(), Some(host) if WHITELISTED_HOSTS.contains(host)) {
+		return Err(crate::ErrorKind::NotWhitelistedHost(url).into());
+	}
 
 	let response = match builder.send().await {
 		Ok(response) => response,
@@ -197,7 +196,7 @@ fn expect_content_type(
 ) -> Result<reqwest::Url, crate::Error> {
 	let mime = match response.headers().get(reqwest::header::CONTENT_TYPE) {
 		Some(mime) => mime,
-		None => return Err(crate::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string()).into()),
+		None => return Err(crate::ErrorKind::MalformedResponse(url, "No Content-Type header".to_owned()).into()),
 	};
 
 	if mime != expected_mime {

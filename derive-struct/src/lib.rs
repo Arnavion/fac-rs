@@ -93,7 +93,7 @@ pub fn derive_newtype_fromstr(input: proc_macro::TokenStream) -> proc_macro::Tok
 						type Err = std::string::ParseError;
 
 						fn from_str(s: &str) -> Result<Self, Self::Err> {
-							Ok(#struct_name(s.to_string()))
+							Ok(#struct_name(s.to_owned()))
 						}
 					}
 				}

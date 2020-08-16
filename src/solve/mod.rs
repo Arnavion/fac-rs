@@ -23,7 +23,7 @@ pub(crate) async fn compute_and_apply_diff<'a>(
 	let solution_future = SolutionFuture::new(web_api, user_credentials.clone(), game_version, mods);
 	let (solution, mut reqs) = solution_future.await?;
 
-	let _ = reqs.remove(&factorio_mods_common::ModName("base".to_string()));
+	let _ = reqs.remove(&factorio_mods_common::ModName("base".to_owned()));
 	config.mods = Some(reqs);
 
 	let solution =
@@ -286,7 +286,7 @@ impl<'a> SolutionFuture<'a> {
 		game_version: &'a factorio_mods_common::ReleaseVersion,
 		mut reqs: std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	) -> Self {
-		let packages = vec![Installable::Base(factorio_mods_common::ModName("base".to_string()), game_version.clone())];
+		let packages = vec![Installable::Base(factorio_mods_common::ModName("base".to_owned()), game_version.clone())];
 
 		let mut result = SolutionFuture {
 			packages,
@@ -302,7 +302,7 @@ impl<'a> SolutionFuture<'a> {
 			get(mod_name.clone().into(), &mut result.already_fetching, &mut result.pending, web_api);
 		}
 
-		reqs.insert(factorio_mods_common::ModName("base".to_string()), factorio_mods_common::ModVersionReq(semver::VersionReq::exact(&game_version.0)));
+		reqs.insert(factorio_mods_common::ModName("base".to_owned()), factorio_mods_common::ModVersionReq(semver::VersionReq::exact(&game_version.0)));
 
 		result.reqs = reqs;
 

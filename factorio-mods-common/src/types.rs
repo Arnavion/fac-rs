@@ -214,13 +214,13 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Err
 		_ => unreachable!(),
 	};
 
-	let name = ModName(captures[2].to_string());
+	let name = ModName(captures[2].to_owned());
 
 	let version_req_string = captures.get(3).map_or("*", |m| m.as_str());
 	let version_req =
 		parse_version_req(version_req_string)
 		.or_else(|_| {
-			let fixed_version = captures[4].to_string() + &fixup_version(&captures[5]);
+			let fixed_version = format!("{}{}", &captures[4], fixup_version(&captures[5]));
 			fixed_version.parse()
 				.map_err(|err| serde::de::Error::custom(format!("invalid dependency specifier {:?}: {}", &fixed_version, err)))
 		})?;
@@ -246,7 +246,7 @@ mod tests {
 	}
 
 	fn test_deserialize_dependency_inner(s: &str, name: &str, version: &str, kind: package::DependencyKind) {
-		let expected = super::Dependency { name: super::ModName(name.to_string()), version: super::ModVersionReq(version.parse().unwrap()), kind };
+		let expected = super::Dependency { name: super::ModName(name.to_owned()), version: super::ModVersionReq(version.parse().unwrap()), kind };
 		let actual: super::Dependency = serde_json::from_str(s).unwrap();
 		assert_eq!(actual, expected);
 	}

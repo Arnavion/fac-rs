@@ -81,7 +81,7 @@ impl InstalledMod {
 					Err(err) => return Err(crate::ErrorKind::Zip(path, err).into()),
 				};
 
-				first_file.name().split('/').next().unwrap().to_string()
+				first_file.name().split('/').next().unwrap().to_owned()
 			};
 
 			let info_json_file_path = format!("{}/info.json", toplevel);
@@ -178,7 +178,7 @@ fn default_game_version() -> factorio_mods_common::ModVersionReq {
 fn default_dependencies() -> Vec<factorio_mods_common::Dependency> {
 	static DEFAULT_DEPENDENCIES: once_cell::sync::Lazy<Vec<factorio_mods_common::Dependency>> =
 		once_cell::sync::Lazy::new(|| vec![factorio_mods_common::Dependency {
-		name: factorio_mods_common::ModName("base".to_string()),
+		name: factorio_mods_common::ModName("base".to_owned()),
 		version: factorio_mods_common::ModVersionReq(semver::VersionReq::any()),
 		kind: package::DependencyKind::Required,
 	}]);
