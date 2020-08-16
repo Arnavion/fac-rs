@@ -1,4 +1,4 @@
-//! A helper crate for easily deriving structs.
+//! Custom derives used by the factorio-mods-* crates.
 
 #![recursion_limit = "200"]
 

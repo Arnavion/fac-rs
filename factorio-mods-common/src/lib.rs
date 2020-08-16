@@ -1,4 +1,4 @@
-//! Common types and functionality used by the other factorio-mods crates.
+//! Common types and functionality used by the factorio-mods-* crates.
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]
 

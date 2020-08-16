@@ -110,9 +110,40 @@ Releases:
 
 # API
 
+## Public API crates
+
 - `factorio-mods-local`: API to interface with the local Factorio installation.
 - `factorio-mods-web`: API to search mods / download mods / show mod info from https://mods.factorio.com/
-- `factorio-mods-common`: Common types and functionality used by the other crates.
-- `package`: Package solver.
+- `factorio-mods-common`: Common types and functionality used by the factorio-mods-* crates.
+
+## Internal crates
+
+- `derive-struct`: Custom derives used by the factorio-mods-* crates.
+- `package`: Package solver used by fac-rs.
 
 See their individual crate docs for details.
+
+
+# License
+
+```
+fac-rs
+
+https://github.com/Arnavion/fac-rs
+
+Copyright 2016 Arnav Singh
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+Factorio content and materials are trademarks and copyrights of [Wube software.](https://www.factorio.com/terms-of-service)

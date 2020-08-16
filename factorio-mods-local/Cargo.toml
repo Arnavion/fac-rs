@@ -1,7 +1,9 @@
 [package]
 name = "factorio-mods-local"
 version = "0.1.0"
+license = "Apache-2.0"
 authors = ["Arnavion <me@arnavion.dev>"]
+description = "API to interface with the local Factorio installation"
 edition = "2018"
 
 [dependencies]

@@ -1,4 +1,6 @@
-//! Solves the given set of packages and requirements to produce a solution of packages to be installed.
+//! Package solver used by `fac-rs`.
+//!
+//! Takes a set of packages and requirements and produces a solution of packages to be installed.
 
 #![deny(rust_2018_idioms, warnings)]
 

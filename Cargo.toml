@@ -1,8 +1,9 @@
 [package]
 name = "fac"
 version = "0.1.0"
+license = "Apache-2.0"
 authors = ["Arnavion <me@arnavion.dev>"]
-description = "Mod manager for Factorio"
+description = "A CLI tool to manage Factorio mods"
 edition = "2018"
 
 [dependencies]

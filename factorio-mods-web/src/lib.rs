@@ -1,4 +1,4 @@
-//! API to interface with <https://mods.factorio.com/>
+//! API to search mods / download mods / show mod info from <https://mods.factorio.com/>
 
 #![deny(missing_docs, rust_2018_idioms, warnings)]
 

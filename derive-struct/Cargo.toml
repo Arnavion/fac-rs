@@ -1,7 +1,9 @@
 [package]
 name = "derive-struct"
 version = "0.1.0"
+license = "Apache-2.0"
 authors = ["Arnavion <me@arnavion.dev>"]
+description = "Custom derives used by the factorio-mods-* crates"
 edition = "2018"
 
 [dependencies]
