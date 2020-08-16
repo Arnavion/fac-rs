@@ -1,7 +1,3 @@
-lazy_static::lazy_static! {
-	static ref REQUIREMENT_REGEX: regex::Regex = regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap();
-}
-
 #[derive(Debug, structopt::StructOpt)]
 pub(crate) struct SubCommand {
 	#[structopt(help = "requirements to install", required = true)]
@@ -19,6 +15,9 @@ impl std::str::FromStr for Requirement {
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		use crate::ResultExt;
+
+		static REQUIREMENT_REGEX: once_cell::sync::Lazy<regex::Regex> =
+			once_cell::sync::Lazy::new(|| regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap());
 
 		let captures = match REQUIREMENT_REGEX.captures(s) {
 			Some(captures) => captures,

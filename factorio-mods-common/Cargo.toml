@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 derive-struct = { path = "../derive-struct" }
 itertools = "0.9"
-lazy_static = "1"
+once_cell = "1.4"
 package = { path = "../package" }
 regex = "1.2"
 semver = "0.10"

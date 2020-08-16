@@ -162,19 +162,13 @@ pub fn find(
 		}))
 }
 
-lazy_static::lazy_static! {
-	static ref DEFAULT_GAME_VERSION: factorio_mods_common::ModVersionReq = factorio_mods_common::ModVersionReq("0.12".parse().unwrap());
-	static ref DEFAULT_DEPENDENCIES: Vec<factorio_mods_common::Dependency> = vec![factorio_mods_common::Dependency {
-		name: factorio_mods_common::ModName("base".to_string()),
-		version: factorio_mods_common::ModVersionReq(semver::VersionReq::any()),
-		kind: package::DependencyKind::Required,
-	}];
-}
-
 /// Generates a copy of the default game version.
 ///
 /// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
 fn default_game_version() -> factorio_mods_common::ModVersionReq {
+	static DEFAULT_GAME_VERSION: once_cell::sync::Lazy<factorio_mods_common::ModVersionReq> =
+		once_cell::sync::Lazy::new(|| factorio_mods_common::ModVersionReq("0.12".parse().unwrap()));
+
 	DEFAULT_GAME_VERSION.clone()
 }
 
@@ -182,5 +176,12 @@ fn default_game_version() -> factorio_mods_common::ModVersionReq {
 ///
 /// Used as the default value of the `dependencies` field in a mod's `info.json` if the field doesn't exist.
 fn default_dependencies() -> Vec<factorio_mods_common::Dependency> {
+	static DEFAULT_DEPENDENCIES: once_cell::sync::Lazy<Vec<factorio_mods_common::Dependency>> =
+		once_cell::sync::Lazy::new(|| vec![factorio_mods_common::Dependency {
+		name: factorio_mods_common::ModName("base".to_string()),
+		version: factorio_mods_common::ModVersionReq(semver::VersionReq::any()),
+		kind: package::DependencyKind::Required,
+	}]);
+
 	DEFAULT_DEPENDENCIES.clone()
 }

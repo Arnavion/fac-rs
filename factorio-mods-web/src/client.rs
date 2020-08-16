@@ -122,17 +122,22 @@ impl Client {
 	}
 }
 
-lazy_static::lazy_static! {
-	static ref WHITELISTED_HOSTS: std::collections::HashSet<&'static str> = vec![
+static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::HashSet<&'static str>> =
+	once_cell::sync::Lazy::new(|| [
 		"auth.factorio.com",
 		"direct.mods-data.factorio.com",
 		"mods.factorio.com",
 		"mods-data.factorio.com",
-	].into_iter().collect();
-	static ref APPLICATION_JSON: reqwest::header::HeaderValue = reqwest::header::HeaderValue::from_static("application/json");
-	static ref APPLICATION_ZIP: reqwest::header::HeaderValue = reqwest::header::HeaderValue::from_static("application/zip");
-	static ref WWW_FORM_URL_ENCODED: reqwest::header::HeaderValue = reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded");
-}
+	].iter().copied().collect());
+
+static APPLICATION_JSON: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
+	once_cell::sync::Lazy::new(|| reqwest::header::HeaderValue::from_static("application/json"));
+
+static APPLICATION_ZIP: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
+	once_cell::sync::Lazy::new(|| reqwest::header::HeaderValue::from_static("application/zip"));
+
+static WWW_FORM_URL_ENCODED: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
+	once_cell::sync::Lazy::new(|| reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded"));
 
 pub(crate) type GetObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
 pub(crate) type GetZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::Response, reqwest::Url)>> + 'static;

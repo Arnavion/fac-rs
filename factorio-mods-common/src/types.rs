@@ -199,12 +199,11 @@ pub fn fixup_version(s: &str) -> String {
 		}), ".")
 }
 
-lazy_static::lazy_static! {
-	static ref DEPENDENCY_REGEX: regex::Regex = regex::Regex::new(r"^((?:\?|\(\?\)|!)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap();
-}
-
 /// Parses the given string as a Dependency
 fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Error {
+	static DEPENDENCY_REGEX: once_cell::sync::Lazy<regex::Regex> =
+		once_cell::sync::Lazy::new(|| regex::Regex::new(r"^((?:\?|\(\?\)|!)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap());
+
 	let captures = DEPENDENCY_REGEX.captures(s)
 		.ok_or_else(|| serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
 

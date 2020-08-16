@@ -16,8 +16,8 @@ factorio-mods-web = { path = "./factorio-mods-web" }
 futures-core = "0.3"
 futures-util = { version = "0.3", features = ["io"] }
 itertools = "0.9"
-lazy_static = "1"
 libflate = "0.1"
+once_cell = "1.4"
 package = { path = "./package" }
 petgraph = "0.5"
 regex = "1.2"

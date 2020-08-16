@@ -22,6 +22,68 @@ pub(crate) struct Config {
 
 impl Config {
 	pub fn load(path: Option<std::path::PathBuf>) -> Result<Self, crate::Error>{
+		static FACTORIO_INSTALL_SEARCH_PATHS: once_cell::sync::Lazy<Vec<std::path::PathBuf>> =
+			once_cell::sync::Lazy::new(|| {
+				let mut result = vec![];
+
+				if cfg!(windows) {
+					if let Some(path) = std::env::var_os("ProgramW6432") {
+						let mut path: std::path::PathBuf = path.into();
+						path.push("Steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+					if let Some(path) = std::env::var_os("ProgramFiles") {
+						let mut path: std::path::PathBuf = path.into();
+						path.push("Steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+				}
+				else {
+					if let Some(mut path) = dirs::home_dir() {
+						path.push(".steam");
+						path.push("steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+
+					if let Some(mut path) = dirs::data_dir() {
+						path.push("Steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+				}
+
+				result
+			});
+
+		static FACTORIO_USER_SEARCH_PATHS: once_cell::sync::Lazy<Vec<std::path::PathBuf>> =
+			once_cell::sync::Lazy::new(|| {
+				let mut result = vec![];
+
+				if cfg!(windows) {
+					if let Some(mut path) = dirs::data_dir() {
+						path.push("Factorio");
+						result.push(path);
+					}
+				}
+				else if let Some(mut path) = dirs::home_dir() {
+					path.push(".factorio");
+					result.push(path);
+				}
+
+				result
+			});
+
 		let config_file_path =
 			if let Some(path) = path {
 				if path.iter().count() == 1 {
@@ -116,68 +178,6 @@ impl Config {
 
 		Ok(())
 	}
-}
-
-lazy_static::lazy_static! {
-	static ref FACTORIO_INSTALL_SEARCH_PATHS: Vec<std::path::PathBuf> = {
-		let mut result = vec![];
-
-		if cfg!(windows) {
-			if let Some(path) = std::env::var_os("ProgramW6432") {
-				let mut path: std::path::PathBuf = path.into();
-				path.push("Steam");
-				path.push("steamapps");
-				path.push("common");
-				path.push("Factorio");
-				result.push(path);
-			}
-			if let Some(path) = std::env::var_os("ProgramFiles") {
-				let mut path: std::path::PathBuf = path.into();
-				path.push("Steam");
-				path.push("steamapps");
-				path.push("common");
-				path.push("Factorio");
-				result.push(path);
-			}
-		}
-		else {
-			if let Some(mut path) = dirs::home_dir() {
-				path.push(".steam");
-				path.push("steam");
-				path.push("steamapps");
-				path.push("common");
-				path.push("Factorio");
-				result.push(path);
-			}
-
-			if let Some(mut path) = dirs::data_dir() {
-				path.push("Steam");
-				path.push("steamapps");
-				path.push("common");
-				path.push("Factorio");
-				result.push(path);
-			}
-		}
-
-		result
-	};
-
-	static ref FACTORIO_USER_SEARCH_PATHS: Vec<std::path::PathBuf> = {
-		let mut result = vec![];
-
-		if cfg!(windows) {
-			if let Some(mut path) = dirs::data_dir() {
-				path.push("Factorio");
-				result.push(path);
-			}
-		}
-		else if let Some(mut path) = dirs::home_dir() {
-			path.push(".factorio");
-			result.push(path);
-		}
-
-		result
-	};
 }
 
 fn serialize_config_mods<S>(

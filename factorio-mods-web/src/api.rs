@@ -10,6 +10,13 @@ pub struct API {
 impl API {
 	/// Constructs an API object with the given parameters.
 	pub fn new(builder: Option<reqwest::ClientBuilder>) -> crate::Result<Self> {
+		static BASE_URL: once_cell::sync::Lazy<reqwest::Url> =
+			once_cell::sync::Lazy::new(|| "https://mods.factorio.com/".parse().unwrap());
+		static MODS_URL: once_cell::sync::Lazy<reqwest::Url> =
+			once_cell::sync::Lazy::new(|| "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap());
+		static LOGIN_URL: once_cell::sync::Lazy<reqwest::Url> =
+			once_cell::sync::Lazy::new(|| "https://auth.factorio.com/api-login".parse().unwrap());
+
 		Ok(API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
@@ -206,12 +213,6 @@ struct Pagination {
 #[derive(Debug, serde_derive::Deserialize)]
 struct PaginationLinks {
 	next: Option<reqwest::Url>,
-}
-
-lazy_static::lazy_static! {
-	static ref BASE_URL: reqwest::Url = "https://mods.factorio.com/".parse().unwrap();
-	static ref MODS_URL: reqwest::Url = "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap();
-	static ref LOGIN_URL: reqwest::Url = "https://auth.factorio.com/api-login".parse().unwrap();
 }
 
 #[cfg(test)]
