@@ -32,7 +32,10 @@ impl Client {
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
-	pub(crate) fn get_object<T>(&self, url: reqwest::Url) -> GetObjectFuture<T> where T: serde::de::DeserializeOwned + 'static {
+	pub(crate) fn get_object<T>(&self, url: reqwest::Url) -> impl std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>>
+	where
+		T: serde::de::DeserializeOwned + 'static,
+	{
 		let builder =
 			self.inner.get(url.clone())
 			.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone());
@@ -44,12 +47,10 @@ impl Client {
 	}
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
-	pub(crate) fn get_zip(&self, url: reqwest::Url, range: Option<&str>) -> GetZipFuture {
+	pub(crate) fn get_zip(&self, url: reqwest::Url, range: Option<&str>) -> impl std::future::Future<Output = Result<(reqwest::Response, reqwest::Url), crate::Error>> {
 		let (builder, is_range_request) = {
 			let builder = self.inner.get(url.clone());
 
-			// TODO: Suppress bad clippy lint. Ref: https://github.com/rust-lang/rust-clippy/issues/5822
-			#[allow(clippy::option_if_let_else)]
 			let (builder, is_range_request) =
 				if let Some(range) = range {
 					(builder.header(reqwest::header::RANGE, range), true)
@@ -69,7 +70,7 @@ impl Client {
 	}
 
 	/// HEADs the given URL using the given client, and returns an application/zip response.
-	pub(crate) fn head_zip(&self, url: reqwest::Url) -> HeadZipFuture {
+	pub(crate) fn head_zip(&self, url: reqwest::Url) -> impl std::future::Future<Output = Result<(reqwest::Response, reqwest::Url), crate::Error>> {
 		let builder =
 			self.inner.head(url.clone())
 			.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
@@ -81,16 +82,15 @@ impl Client {
 		}
 	}
 
+	// TODO: Would like to return `impl std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>>`,
+	// but https://github.com/rust-lang/rust/issues/42940 prevents it.
 	/// POSTs the given URL using the given client and request body, and deserializes the response as a JSON object.
-	pub(crate) fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> PostObjectFuture<T>
+	pub(crate) fn post_object<B, T>(&self, url: reqwest::Url, body: &B) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>>>>
 		where B: serde::Serialize, T: serde::de::DeserializeOwned + 'static
 	{
-		// Separate inner fn so that the impl-trait type alias is independent of B
-		async fn post_object_inner<T>(
-			builder: reqwest::RequestBuilder,
-			body: Result<String, serde_urlencoded::ser::Error>,
-			url: reqwest::Url,
-		) -> Result<(T, reqwest::Url), crate::Error> where T: serde::de::DeserializeOwned + 'static {
+		let builder = self.inner.post(url.clone());
+		let body = serde_urlencoded::to_string(body);
+		Box::pin(async move {
 			let body = match body {
 				Ok(body) => body,
 				Err(err) => return Err(crate::ErrorKind::Serialize(url, err).into()),
@@ -104,11 +104,7 @@ impl Client {
 
 			let (response, url) = send(builder, url, false).await?;
 			Ok(json(response, url).await?)
-		}
-
-		let builder = self.inner.post(url.clone());
-		let body = serde_urlencoded::to_string(body);
-		post_object_inner(builder, body, url)
+		})
 	}
 }
 
@@ -128,11 +124,6 @@ static APPLICATION_ZIP: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
 
 static WWW_FORM_URL_ENCODED: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
 	once_cell::sync::Lazy::new(|| reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded"));
-
-pub(crate) type GetObjectFuture<T> = impl std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>> + 'static;
-pub(crate) type GetZipFuture = impl std::future::Future<Output = Result<(reqwest::Response, reqwest::Url), crate::Error>> + 'static;
-pub(crate) type HeadZipFuture = impl std::future::Future<Output = Result<(reqwest::Response, reqwest::Url), crate::Error>> + 'static;
-pub(crate) type PostObjectFuture<T> = impl std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>> + 'static;
 
 /// A login failure response.
 #[derive(Debug, serde_derive::Deserialize)]

@@ -299,17 +299,13 @@ pub fn compute_solution<I>(
 								})
 							.collect();
 
-						// TODO: Suppress bad clippy lint. Ref: https://github.com/rust-lang/rust-clippy/issues/5822
-						#[allow(clippy::option_if_let_else)]
-						{
-							common_conflicts =
-								if let Some(existing) = common_conflicts {
-									Some(&existing & &conflicts)
-								}
-								else {
-									Some(conflicts)
-								};
-						}
+						common_conflicts =
+							if let Some(existing) = common_conflicts {
+								Some(&existing & &conflicts)
+							}
+							else {
+								Some(conflicts)
+							};
 					}
 
 					if let Some(common_conflicts) = common_conflicts {

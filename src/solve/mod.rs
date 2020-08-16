@@ -459,7 +459,10 @@ fn get(
 }
 
 enum CacheFuture<'a> {
-	GetMod(Option<(std::rc::Rc<factorio_mods_common::ModName>, std::pin::Pin<Box<factorio_mods_web::GetResponse>>)>),
+	GetMod(Option<(
+		std::rc::Rc<factorio_mods_common::ModName>,
+		std::pin::Pin<Box<dyn std::future::Future<Output = Result<factorio_mods_web::Mod, factorio_mods_web::Error>>>>,
+	)>),
 	GetInfoJson(Option<(
 		std::rc::Rc<factorio_mods_common::ModName>,
 		std::rc::Rc<factorio_mods_web::ModRelease>,

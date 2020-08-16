@@ -1,9 +1,5 @@
 //! API to interface with <https://mods.factorio.com/>
 
-#![feature(
-	type_alias_impl_trait,
-)]
-
 #![deny(missing_docs, rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
@@ -11,6 +7,7 @@
 	clippy::default_trait_access,
 	clippy::missing_errors_doc,
 	clippy::module_name_repetitions,
+	clippy::type_complexity,
 )]
 
 #![recursion_limit = "256"]
@@ -18,7 +15,7 @@
 pub use reqwest;
 
 mod api;
-pub use self::api::{ API, DownloadResponse, GetResponse, LoginResponse, SearchResponse };
+pub use self::api::API;
 
 mod client;
 

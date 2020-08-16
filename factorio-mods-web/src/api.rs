@@ -26,7 +26,7 @@ impl API {
 	}
 
 	/// Searches for mods matching the given criteria.
-	pub fn search<'a>(&'a self, query: &str) -> SearchResponse<'a> {
+	pub fn search<'a>(&'a self, query: &str) -> impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + 'a {
 		let query = query.to_lowercase();
 
 		let mut next_page_url = self.mods_url.clone();
@@ -67,7 +67,7 @@ impl API {
 	}
 
 	/// Gets information about the specified mod.
-	pub fn get(&self, mod_name: &factorio_mods_common::ModName) -> GetResponse {
+	pub fn get(&self, mod_name: &factorio_mods_common::ModName) -> impl std::future::Future<Output = Result<crate::Mod, crate::Error>> {
 		let mut mod_url = self.mods_url.clone();
 		mod_url.path_segments_mut().unwrap().push(&mod_name.0);
 		let future = self.client.get_object(mod_url);
@@ -83,7 +83,7 @@ impl API {
 		&self,
 		username: factorio_mods_common::ServiceUsername,
 		password: &str,
-	) -> LoginResponse {
+	) -> impl std::future::Future<Output = Result<factorio_mods_common::UserCredentials, crate::Error>> {
 		let future = self.client.post_object(self.login_url.clone(), &[("username", &*username.0), ("password", password)]);
 
 		async {
@@ -97,7 +97,7 @@ impl API {
 		&self,
 		release: &crate::ModRelease,
 		user_credentials: &factorio_mods_common::UserCredentials,
-	) -> GetFilesizeResponse {
+	) -> impl std::future::Future<Output = Result<u64, crate::Error>> {
 		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
@@ -138,7 +138,7 @@ impl API {
 		release: &crate::ModRelease,
 		user_credentials: &factorio_mods_common::UserCredentials,
 		range: Option<&str>,
-	) -> DownloadResponse {
+	) -> impl futures_core::Stream<Item = Result<bytes::Bytes, crate::Error>> {
 		let download_url = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
@@ -179,21 +179,6 @@ impl API {
 		})
 	}
 }
-
-/// A [`futures_core::Stream`] of a downloaded mod's bytes.
-pub type DownloadResponse = impl futures_core::Stream<Item = Result<bytes::Bytes, crate::Error>> + 'static;
-
-/// A [`std::future::Future`] of a mod's information.
-pub type GetResponse = impl std::future::Future<Output = Result<crate::Mod, crate::Error>> + 'static;
-
-/// A [`std::future::Future`] of a mod release's file size.
-pub type GetFilesizeResponse = impl std::future::Future<Output = Result<u64, crate::Error>> + 'static;
-
-/// A [`std::future::Future`] of an attempt to login to the web API.
-pub type LoginResponse = impl std::future::Future<Output = Result<factorio_mods_common::UserCredentials, crate::Error>> + 'static;
-
-/// A [`futures_core::Stream`] of search results.
-pub type SearchResponse<'a> = impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + Unpin + 'a;
 
 /// A single page of a paged response.
 #[derive(Debug, serde_derive::Deserialize)]
