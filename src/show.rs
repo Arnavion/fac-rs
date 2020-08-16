@@ -17,9 +17,7 @@ impl SubCommand {
 				.with_context(|| format!("could not retrieve mod {}", name))
 			}).collect();
 
-		while let Some(mod_) = futures_util::StreamExt::next(&mut mods).await {
-			let mod_ = mod_?;
-
+		while let Some(mod_) = futures_util::TryStreamExt::try_next(&mut mods).await? {
 			println!("Name: {}", mod_.name);
 			println!("Author: {}", itertools::join(mod_.owner, ", "));
 			println!("Title: {}", mod_.title);

@@ -161,19 +161,19 @@ impl API {
 			let mut download_url = Some(download_url);
 
 			loop {
-				let chunk = futures_util::StreamExt::next(&mut response).await;
+				let chunk = futures_util::TryStreamExt::try_next(&mut response).await;
 				match chunk {
-					Some(Ok(chunk)) => yield chunk,
+					Ok(Some(chunk)) => yield chunk,
 
-					Some(Err(err)) => {
+					Ok(None) => return,
+
+					Err(err) => {
 						if let Some(download_url) = download_url.take() {
 							Err(crate::ErrorKind::Http(download_url, err))?;
 						}
 
 						return;
 					},
-
-					None => return,
 				}
 			}
 		})

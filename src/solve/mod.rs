@@ -147,9 +147,7 @@ fn download_mod(
 		let download_file = download_file.with_context(|| format!("could not open {} for writing", download_displayable_target))?;
 		let mut download_file = std::io::BufWriter::new(download_file);
 
-		while let Some(chunk) = futures_util::stream::StreamExt::next(&mut chunk_stream).await {
-			let chunk = chunk.context("could not download file")?;
-
+		while let Some(chunk) = futures_util::stream::TryStreamExt::try_next(&mut chunk_stream).await.context("could not download file")? {
 			std::io::Write::write_all(&mut download_file, &chunk)
 				.with_context(|| format!("could not write to file {}", download_displayable_target))?;
 		}
