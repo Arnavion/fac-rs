@@ -4,7 +4,7 @@ pub struct API {
 	base_url: reqwest::Url,
 	mods_url: reqwest::Url,
 	login_url: reqwest::Url,
-	client: std::sync::Arc<crate::client::Client>,
+	client: crate::client::Client,
 }
 
 impl API {
@@ -21,20 +21,19 @@ impl API {
 			base_url: BASE_URL.clone(),
 			mods_url: MODS_URL.clone(),
 			login_url: LOGIN_URL.clone(),
-			client: std::sync::Arc::new(crate::client::Client::new(builder)?),
+			client: crate::client::Client::new(builder)?,
 		})
 	}
 
 	/// Searches for mods matching the given criteria.
-	pub fn search(&self, query: &str) -> SearchResponse {
+	pub fn search<'a>(&'a self, query: &str) -> SearchResponse<'a> {
 		let query = query.to_lowercase();
-		let client = self.client.clone();
 
 		let mut next_page_url = self.mods_url.clone();
 
 		Box::pin(async_stream::try_stream! {
 			loop {
-				let next_page: Result<(PagedResponse<crate::SearchResponseMod>, _), _> = client.get_object(next_page_url).await;
+				let next_page: Result<(PagedResponse<crate::SearchResponseMod>, _), _> = self.client.get_object(next_page_url).await;
 				match next_page {
 					Ok((page, _)) => {
 						for mod_ in page.results {
@@ -194,7 +193,7 @@ pub type GetFilesizeResponse = impl std::future::Future<Output = Result<u64, cra
 pub type LoginResponse = impl std::future::Future<Output = Result<factorio_mods_common::UserCredentials, crate::Error>> + 'static;
 
 /// A [`futures_core::Stream`] of search results.
-pub type SearchResponse = impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + Unpin + 'static;
+pub type SearchResponse<'a> = impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + Unpin + 'a;
 
 /// A single page of a paged response.
 #[derive(Debug, serde_derive::Deserialize)]

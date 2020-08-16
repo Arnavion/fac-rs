@@ -21,9 +21,9 @@ pub(crate) fn wrapping_println(s: &str, indent: &str) {
 	}
 }
 
-pub(crate) async fn ensure_user_credentials<'a>(
-	local_api: &'a factorio_mods_local::API,
-	web_api: &'a factorio_mods_web::API,
+pub(crate) async fn ensure_user_credentials(
+	local_api: &factorio_mods_local::API,
+	web_api: &factorio_mods_web::API,
 	prompt_override: Option<bool>,
 ) -> Result<factorio_mods_common::UserCredentials, crate::Error> {
 	let mut existing_username = match local_api.user_credentials() {

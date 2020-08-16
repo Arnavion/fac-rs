@@ -1,11 +1,7 @@
-#![allow(
-	clippy::single_match_else,
-)]
-
-/// Wraps a `reqwest::unstable::r#async::Client` to only allow limited operations on it.
+/// Wraps a `reqwest::Client` to only allow limited operations on it.
 #[derive(Debug)]
 pub(crate) struct Client {
-	inner: std::sync::Arc<reqwest::Client>,
+	inner: reqwest::Client,
 }
 
 impl Client {
@@ -32,15 +28,13 @@ impl Client {
 			.build()
 			.map_err(crate::ErrorKind::CreateClient)?;
 
-		Ok(Client { inner: std::sync::Arc::new(inner) })
+		Ok(Client { inner })
 	}
 
 	/// GETs the given URL using the given client, and deserializes the response as a JSON object.
 	pub(crate) fn get_object<T>(&self, url: reqwest::Url) -> GetObjectFuture<T> where T: serde::de::DeserializeOwned + 'static {
-		let inner = self.inner.clone();
-
 		let builder =
-			inner.get(url.clone())
+			self.inner.get(url.clone())
 			.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone());
 
 		async move {
@@ -51,10 +45,8 @@ impl Client {
 
 	/// GETs the given URL using the given client, and returns an application/zip response.
 	pub(crate) fn get_zip(&self, url: reqwest::Url, range: Option<&str>) -> GetZipFuture {
-		let inner = self.inner.clone();
-
 		let (builder, is_range_request) = {
-			let builder = inner.get(url.clone());
+			let builder = self.inner.get(url.clone());
 
 			// TODO: Suppress bad clippy lint. Ref: https://github.com/rust-lang/rust-clippy/issues/5822
 			#[allow(clippy::option_if_let_else)]
@@ -78,10 +70,8 @@ impl Client {
 
 	/// HEADs the given URL using the given client, and returns an application/zip response.
 	pub(crate) fn head_zip(&self, url: reqwest::Url) -> HeadZipFuture {
-		let inner = self.inner.clone();
-
 		let builder =
-			inner.head(url.clone())
+			self.inner.head(url.clone())
 			.header(reqwest::header::ACCEPT, APPLICATION_ZIP.clone());
 
 		async move {
@@ -97,7 +87,7 @@ impl Client {
 	{
 		// Separate inner fn so that the impl-trait type alias is independent of B
 		async fn post_object_inner<T>(
-			inner: std::sync::Arc<reqwest::Client>,
+			builder: reqwest::RequestBuilder,
 			body: Result<String, serde_urlencoded::ser::Error>,
 			url: reqwest::Url,
 		) -> Result<(T, reqwest::Url), crate::Error> where T: serde::de::DeserializeOwned + 'static {
@@ -107,18 +97,18 @@ impl Client {
 			};
 
 			let builder =
-				inner.post(url.clone())
+				builder
 				.header(reqwest::header::ACCEPT, APPLICATION_JSON.clone())
 				.header(reqwest::header::CONTENT_TYPE, WWW_FORM_URL_ENCODED.clone())
-				.body(body.clone());
+				.body(body);
 
 			let (response, url) = send(builder, url, false).await?;
 			Ok(json(response, url).await?)
 		}
 
-		let inner = self.inner.clone();
+		let builder = self.inner.post(url.clone());
 		let body = serde_urlencoded::to_string(body);
-		post_object_inner(inner, body, url)
+		post_object_inner(builder, body, url)
 	}
 }
 

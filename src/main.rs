@@ -124,49 +124,49 @@ async fn main() -> Result<(), Error> {
 		}
 	}
 
-	let web_api = factorio_mods_web::API::new(client).context("could not initialize web API").map_err(Into::into);
+	let web_api = factorio_mods_web::API::new(client).context("could not initialize web API");
 
 
 	match options.subcommand {
 		SubCommand::Disable(parameters) => parameters.run(
-			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			&local_api?,
 			prompt_override,
 		).await?,
 
 		SubCommand::Enable(parameters) => parameters.run(
-			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			&local_api?,
 			prompt_override,
 		).await?,
 
 		SubCommand::Install(parameters) => parameters.run(
-			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			&local_api?,
+			&web_api?,
 			config,
 			prompt_override,
 		).await?,
 
 		SubCommand::List(parameters) => parameters.run(
-			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
+			&local_api?,
 		).await?,
 
 		SubCommand::Remove(parameters) => parameters.run(
-			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			&local_api?,
+			&web_api?,
 			config,
 			prompt_override,
 		).await?,
 
 		SubCommand::Search(parameters) => parameters.run(
-			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			&web_api?,
 		).await?,
 
 		SubCommand::Show(parameters) => parameters.run(
-			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			&web_api?,
 		).await?,
 
 		SubCommand::Update(parameters) => parameters.run(
-			match local_api { Ok(ref local_api) => Ok(local_api), Err(err) => Err(err) },
-			match web_api { Ok(ref web_api) => Ok(web_api), Err(err) => Err(err) },
+			&local_api?,
+			&web_api?,
 			config,
 			prompt_override,
 		).await?,
@@ -204,7 +204,7 @@ impl std::error::Error for Error {
 }
 
 impl From<&'_ str> for Error {
-	fn from(err: &'_ str) -> Self {
+	fn from(err: &str) -> Self {
 		Error(err.into(), Default::default())
 	}
 }

@@ -35,16 +35,13 @@ impl std::str::FromStr for Requirement {
 }
 
 impl SubCommand {
-	pub(crate) async fn run<'a>(
+	pub(crate) async fn run(
 		self,
-		local_api: Result<&'a factorio_mods_local::API, crate::Error>,
-		web_api: Result<&'a factorio_mods_web::API, crate::Error>,
+		local_api: &factorio_mods_local::API,
+		web_api: &factorio_mods_web::API,
 		mut config: crate::config::Config,
 		prompt_override: Option<bool>,
 	) -> Result<(), crate::Error> {
-		let local_api = local_api?;
-		let web_api = web_api?;
-
 		let mods = config.mods.as_mut().unwrap();
 		for requirement in self.requirements {
 			mods.insert(requirement.name, requirement.version);

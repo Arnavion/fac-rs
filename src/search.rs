@@ -7,11 +7,9 @@ pub(crate) struct SubCommand {
 impl SubCommand {
 	pub(crate) async fn run(
 		self,
-		web_api: Result<&'_ factorio_mods_web::API, crate::Error>,
+		web_api: &factorio_mods_web::API,
 	) -> Result<(), crate::Error> {
 		use crate::ResultExt;
-
-		let web_api = web_api?;
 
 		let mut mods = web_api.search(&self.query);
 

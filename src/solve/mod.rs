@@ -7,9 +7,9 @@ use crate::{ ErrorExt, ResultExt };
 /// Asks the user for confirmation, then applies the diff.
 ///
 /// Returns true if the diff was successfully applied or empty.
-pub(crate) async fn compute_and_apply_diff<'a>(
-	local_api: &'a factorio_mods_local::API,
-	web_api: &'a factorio_mods_web::API,
+pub(crate) async fn compute_and_apply_diff(
+	local_api: &factorio_mods_local::API,
+	web_api: &factorio_mods_web::API,
 	mut config: crate::config::Config,
 	prompt_override: Option<bool>,
 ) -> Result<(), crate::Error> {

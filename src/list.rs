@@ -5,11 +5,9 @@ pub(crate) struct SubCommand {
 impl SubCommand {
 	pub(crate) async fn run(
 		self,
-		local_api: Result<&'_ factorio_mods_local::API, crate::Error>,
+		local_api: &factorio_mods_local::API,
 	) -> Result<(), crate::Error> {
 		use crate::ResultExt;
-
-		let local_api = local_api?;
 
 		let mods_status = local_api.mods_status().context("could not parse installed mods status")?;
 
