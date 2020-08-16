@@ -25,8 +25,5 @@ mod client;
 mod error;
 pub use self::error::{ Error, ErrorKind };
 
-/// A type alias for [`std::result::Result`]
-pub type Result<T> = std::result::Result<T, crate::Error>;
-
 mod types;
 pub use self::types::*;

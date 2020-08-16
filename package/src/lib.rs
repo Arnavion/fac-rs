@@ -126,9 +126,6 @@ impl<Name, Version> std::error::Error for ErrorKind<Name, Version> where
 {
 }
 
-/// A type alias for [`std::result::Result`]
-pub type Result<Name, Version, T> = std::result::Result<T, Error<Name, Version>>;
-
 pub fn compute_solution<I>(
 	packages: I,
 	reqs: &std::collections::HashMap<
@@ -136,9 +133,8 @@ pub fn compute_solution<I>(
 		<<<I as IntoIterator>::Item as Package>::Dependency as Dependency<<<I as IntoIterator>::Item as Package>::Version>>::VersionReq,
 	>,
 ) -> Result<
-	<<I as IntoIterator>::Item as Package>::Name,
-	<<I as IntoIterator>::Item as Package>::Version,
 	Option<std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <I as IntoIterator>::Item>>,
+	Error<<<I as IntoIterator>::Item as Package>::Name, <<I as IntoIterator>::Item as Package>::Version>,
 > where
 	I: IntoIterator,
 	<I as IntoIterator>::Item: Package + Clone,

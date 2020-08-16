@@ -9,7 +9,7 @@ pub struct API {
 
 impl API {
 	/// Constructs an API object.
-	pub fn new(install_directory: &std::path::Path, user_directory: &std::path::Path) -> crate::Result<Self> {
+	pub fn new(install_directory: &std::path::Path, user_directory: &std::path::Path) -> Result<Self, crate::Error> {
 		let game_version = {
 			let mut base_info_file_path = install_directory.join("data");
 			base_info_file_path.push("base");
@@ -57,12 +57,12 @@ impl API {
 	}
 
 	/// Returns an iterator over all the locally installed mods, matching the given name pattern if any.
-	pub fn installed_mods(&self) -> crate::Result<impl Iterator<Item = crate::Result<crate::InstalledMod>> + 'static> {
+	pub fn installed_mods(&self) -> Result<impl Iterator<Item = Result<crate::InstalledMod, crate::Error>> + 'static, crate::Error> {
 		crate::installed_mod::find(&self.mods_directory, None, None)
 	}
 
 	/// Fetches the locally saved user credentials, if any.
-	pub fn user_credentials(&self) -> crate::Result<factorio_mods_common::UserCredentials> {
+	pub fn user_credentials(&self) -> Result<factorio_mods_common::UserCredentials, crate::Error> {
 		let player_data_json_file_path = &self.player_data_json_file_path;
 
 		let player_data_json_file = match std::fs::File::open(player_data_json_file_path) {
@@ -85,7 +85,7 @@ impl API {
 	}
 
 	/// Saves the given user credentials to `player-data.json`
-	pub fn save_user_credentials(&self, user_credentials: factorio_mods_common::UserCredentials) -> crate::Result<()> {
+	pub fn save_user_credentials(&self, user_credentials: factorio_mods_common::UserCredentials) -> Result<(), crate::Error> {
 		let player_data_json_file_path = &self.player_data_json_file_path;
 
 		let mut player_data: serde_json::Map<_, _> = {
@@ -111,13 +111,13 @@ impl API {
 	}
 
 	/// Returns a map of installed mod name to its enabled / disabled status in `mod-list.json`
-	pub fn mods_status(&self) -> crate::Result<std::collections::HashMap<factorio_mods_common::ModName, bool>> {
+	pub fn mods_status(&self) -> Result<std::collections::HashMap<factorio_mods_common::ModName, bool>, crate::Error> {
 		let mod_list = self.load_mod_list()?;
 		Ok(mod_list.mods.into_iter().map(|m| (m.name.into_owned(), m.enabled)).collect())
 	}
 
 	/// Marks the given locally installed mods as enabled or disabled in `mod-list.json`
-	pub fn set_enabled<'a, I>(&self, installed_mods: I, enabled: bool) -> crate::Result<()> where I: IntoIterator<Item = &'a crate::InstalledMod> {
+	pub fn set_enabled<'a, I>(&self, installed_mods: I, enabled: bool) -> Result<(), crate::Error> where I: IntoIterator<Item = &'a crate::InstalledMod> {
 		let mod_list = self.load_mod_list()?;
 		let mut mods_status: std::collections::HashMap<_, _> = mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect();
 
@@ -141,7 +141,7 @@ impl API {
 		serde_json::to_writer_pretty(&mut mod_list_file, &mod_list).map_err(|err| crate::ErrorKind::WriteJSONFile(mod_list_file_path.into(), err).into())
 	}
 
-	fn load_mod_list(&self) -> crate::Result<ModList<'static>> {
+	fn load_mod_list(&self) -> Result<ModList<'static>, crate::Error> {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mod_list_file = match std::fs::File::open(mod_list_file_path) {
 			Ok(mod_list_file) => mod_list_file,

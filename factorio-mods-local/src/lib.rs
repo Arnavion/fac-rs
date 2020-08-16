@@ -17,8 +17,5 @@ pub use self::api::{ API };
 mod error;
 pub use self::error::{ Error, ErrorKind };
 
-/// A type alias for [`std::result::Result`]
-pub type Result<T> = std::result::Result<T, crate::Error>;
-
 mod installed_mod;
 pub use self::installed_mod::{ InstalledMod, InstalledModType, ModInfo };

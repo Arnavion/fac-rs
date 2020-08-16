@@ -9,7 +9,7 @@ pub struct API {
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(builder: Option<reqwest::ClientBuilder>) -> crate::Result<Self> {
+	pub fn new(builder: Option<reqwest::ClientBuilder>) -> Result<Self, crate::Error> {
 		static BASE_URL: once_cell::sync::Lazy<reqwest::Url> =
 			once_cell::sync::Lazy::new(|| "https://mods.factorio.com/".parse().unwrap());
 		static MODS_URL: once_cell::sync::Lazy<reqwest::Url> =
@@ -34,7 +34,7 @@ impl API {
 
 		Box::pin(async_stream::try_stream! {
 			loop {
-				let next_page: crate::Result<(PagedResponse<crate::SearchResponseMod>, _)> = client.get_object(next_page_url).await;
+				let next_page: Result<(PagedResponse<crate::SearchResponseMod>, _), _> = client.get_object(next_page_url).await;
 				match next_page {
 					Ok((page, _)) => {
 						for mod_ in page.results {
@@ -182,19 +182,19 @@ impl API {
 }
 
 /// A [`futures_core::Stream`] of a downloaded mod's bytes.
-pub type DownloadResponse = impl futures_core::Stream<Item = crate::Result<bytes::Bytes>> + 'static;
+pub type DownloadResponse = impl futures_core::Stream<Item = Result<bytes::Bytes, crate::Error>> + 'static;
 
 /// A [`std::future::Future`] of a mod's information.
-pub type GetResponse = impl std::future::Future<Output = crate::Result<crate::Mod>> + 'static;
+pub type GetResponse = impl std::future::Future<Output = Result<crate::Mod, crate::Error>> + 'static;
 
 /// A [`std::future::Future`] of a mod release's file size.
-pub type GetFilesizeResponse = impl std::future::Future<Output = crate::Result<u64>> + 'static;
+pub type GetFilesizeResponse = impl std::future::Future<Output = Result<u64, crate::Error>> + 'static;
 
 /// A [`std::future::Future`] of an attempt to login to the web API.
-pub type LoginResponse = impl std::future::Future<Output = crate::Result<factorio_mods_common::UserCredentials>> + 'static;
+pub type LoginResponse = impl std::future::Future<Output = Result<factorio_mods_common::UserCredentials, crate::Error>> + 'static;
 
 /// A [`futures_core::Stream`] of search results.
-pub type SearchResponse = impl futures_core::Stream<Item = crate::Result<crate::SearchResponseMod>> + Unpin + 'static;
+pub type SearchResponse = impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + Unpin + 'static;
 
 /// A single page of a paged response.
 #[derive(Debug, serde_derive::Deserialize)]

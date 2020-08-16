@@ -55,7 +55,7 @@ pub enum InstalledModType {
 
 impl InstalledMod {
 	/// Parses the installed mod at the given location.
-	pub fn parse(path: std::path::PathBuf) -> crate::Result<Self> {
+	pub fn parse(path: std::path::PathBuf) -> Result<Self, crate::Error> {
 		let (info, mod_type): (ModInfo, _) = if path.is_file() {
 			if path.extension() != Some("zip".as_ref()) {
 				return Err(crate::ErrorKind::UnknownModFormat(path).into());
@@ -122,7 +122,7 @@ pub fn find(
 	mods_directory: &std::path::Path,
 	name_pattern: Option<String>,
 	version: Option<factorio_mods_common::ReleaseVersion>,
-) -> crate::Result<impl Iterator<Item = crate::Result<InstalledMod>> + 'static> {
+) -> Result<impl Iterator<Item = Result<InstalledMod, crate::Error>> + 'static, crate::Error> {
 	let directory_entries = std::fs::read_dir(mods_directory).map_err(|err| crate::ErrorKind::Io(mods_directory.to_owned(), err))?;
 
 	let name_pattern = name_pattern.map_or(std::borrow::Cow::Borrowed("*"), std::borrow::Cow::Owned);

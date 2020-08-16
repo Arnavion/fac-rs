@@ -10,7 +10,7 @@ pub(crate) struct Client {
 
 impl Client {
 	/// Creates a new `Client` object.
-	pub(crate) fn new(builder: Option<reqwest::ClientBuilder>) -> crate::Result<Self> {
+	pub(crate) fn new(builder: Option<reqwest::ClientBuilder>) -> Result<Self, crate::Error> {
 		let builder = builder.unwrap_or_else(reqwest::ClientBuilder::new);
 
 		let mut default_headers = reqwest::header::HeaderMap::new();
@@ -100,7 +100,7 @@ impl Client {
 			inner: std::sync::Arc<reqwest::Client>,
 			body: Result<String, serde_urlencoded::ser::Error>,
 			url: reqwest::Url,
-		) -> crate::Result<(T, reqwest::Url)> where T: serde::de::DeserializeOwned + 'static {
+		) -> Result<(T, reqwest::Url), crate::Error> where T: serde::de::DeserializeOwned + 'static {
 			let body = match body {
 				Ok(body) => body,
 				Err(err) => return Err(crate::ErrorKind::Serialize(url, err).into()),
@@ -139,10 +139,10 @@ static APPLICATION_ZIP: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
 static WWW_FORM_URL_ENCODED: once_cell::sync::Lazy<reqwest::header::HeaderValue> =
 	once_cell::sync::Lazy::new(|| reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded"));
 
-pub(crate) type GetObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
-pub(crate) type GetZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::Response, reqwest::Url)>> + 'static;
-pub(crate) type HeadZipFuture = impl std::future::Future<Output = crate::Result<(reqwest::Response, reqwest::Url)>> + 'static;
-pub(crate) type PostObjectFuture<T> = impl std::future::Future<Output = crate::Result<(T, reqwest::Url)>> + 'static;
+pub(crate) type GetObjectFuture<T> = impl std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>> + 'static;
+pub(crate) type GetZipFuture = impl std::future::Future<Output = Result<(reqwest::Response, reqwest::Url), crate::Error>> + 'static;
+pub(crate) type HeadZipFuture = impl std::future::Future<Output = Result<(reqwest::Response, reqwest::Url), crate::Error>> + 'static;
+pub(crate) type PostObjectFuture<T> = impl std::future::Future<Output = Result<(T, reqwest::Url), crate::Error>> + 'static;
 
 /// A login failure response.
 #[derive(Debug, serde_derive::Deserialize)]
@@ -154,7 +154,7 @@ async fn send(
 	builder: reqwest::RequestBuilder,
 	url: reqwest::Url,
 	is_range_request: bool,
-) -> crate::Result<(reqwest::Response, reqwest::Url)> {
+) -> Result<(reqwest::Response, reqwest::Url), crate::Error> {
 	match url.host_str() {
 		Some(host) if WHITELISTED_HOSTS.contains(host) => (),
 		_ => return Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
@@ -180,7 +180,7 @@ async fn send(
 	}
 }
 
-async fn json<T>(response: reqwest::Response, url: reqwest::Url) -> crate::Result<(T, reqwest::Url)>
+async fn json<T>(response: reqwest::Response, url: reqwest::Url) -> Result<(T, reqwest::Url), crate::Error>
 	where T: serde::de::DeserializeOwned + 'static
 {
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
@@ -194,7 +194,7 @@ fn expect_content_type(
 	response: &reqwest::Response,
 	url: reqwest::Url,
 	expected_mime: &reqwest::header::HeaderValue,
-) -> crate::Result<reqwest::Url> {
+) -> Result<reqwest::Url, crate::Error> {
 	let mime = match response.headers().get(reqwest::header::CONTENT_TYPE) {
 		Some(mime) => mime,
 		None => return Err(crate::ErrorKind::MalformedResponse(url, "No Content-Type header".to_string()).into()),
