@@ -52,9 +52,10 @@ pub struct ModDescription(pub String);
 /// The version of a mod release.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	derive_struct::newtype_deserialize, derive_struct::newtype_display,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
 )]
-pub struct ReleaseVersion(pub semver::Version);
+pub struct ReleaseVersion(#[serde(deserialize_with = "deserialize_version")] pub semver::Version);
 
 /// A username and token used with the parts of the web API that require authentication.
 #[derive(Clone, Debug, serde_derive::Deserialize)]
@@ -138,8 +139,12 @@ impl package::Dependency<ReleaseVersion> for Dependency {
 }
 
 /// A version requirement.
-#[derive(Clone, Debug, PartialEq, derive_struct::newtype_deserialize, derive_struct::newtype_display)]
-pub struct ModVersionReq(pub semver::VersionReq);
+#[derive(
+	Clone, Debug, PartialEq,
+	derive_struct::newtype_display,
+	serde_derive::Deserialize,
+)]
+pub struct ModVersionReq(#[serde(deserialize_with = "deserialize_version_req")] pub semver::VersionReq);
 
 /// A version requirement matcher used by the package solver.
 #[derive(Debug)]
@@ -172,12 +177,45 @@ impl serde::Serialize for ModVersionReq {
 	}
 }
 
-/// Parses the given string as a `semver::Version`
-fn parse_version(s: &str) -> Result<semver::Version, semver::SemVerError> {
-	s.parse().or_else(|_| fixup_version(s).parse())
+/// Deserializes a `semver::Version`
+fn deserialize_version<'de, D>(deserializer: D) -> Result<semver::Version, D::Error> where D: serde::Deserializer<'de> {
+	struct Visitor;
+
+	impl serde::de::Visitor<'_> for Visitor {
+		type Value = semver::Version;
+
+		fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			formatter.write_str("semver::Version")
+		}
+
+		fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E> where E: serde::de::Error {
+			v.parse().or_else(|_| fixup_version(v).parse()).map_err(serde::de::Error::custom)
+		}
+	}
+
+	deserializer.deserialize_str(Visitor)
 }
 
-/// Parses the given string as a `semver::VersionReq`
+/// Deserializes a `semver::VersionReq`
+fn deserialize_version_req<'de, D>(deserializer: D) -> Result<semver::VersionReq, D::Error> where D: serde::Deserializer<'de> {
+	struct Visitor;
+
+	impl serde::de::Visitor<'_> for Visitor {
+		type Value = semver::VersionReq;
+
+		fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			formatter.write_str("semver::VersionReq")
+		}
+
+		fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E> where E: serde::de::Error {
+			parse_version_req(v).map_err(serde::de::Error::custom)
+		}
+	}
+
+	deserializer.deserialize_str(Visitor)
+}
+
+/// Parses a `semver::VersionReq` from a string.
 fn parse_version_req(s: &str) -> Result<semver::VersionReq, semver::ReqParseError> {
 	s.parse().or_else(|_| fixup_version(s).parse())
 }

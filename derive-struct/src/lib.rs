@@ -6,50 +6,6 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 
-/// Derives `serde::Deserialize` on the newtype.
-#[proc_macro_derive(newtype_deserialize)]
-pub fn derive_newtype_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	run_derive(input, |ast| {
-		let struct_name = &ast.ident;
-
-		let ty = as_newtype(&ast).ok_or_else(||
-			error(&ast, "#[derive(newtype_deserialize)] can only be used with tuple structs of one field"))?;
-
-		let parser_func_name = syn::Ident::new(match identify_type(ty) {
-			Some(Type::SemverVersion) => "parse_version",
-			Some(Type::SemverVersionReq) => "parse_version_req",
-			_ => return Err(error(&ty, "#[derive(newtype_deserialize)] cannot be used with tuple structs with this wrapped type")),
-		}, proc_macro2::Span::call_site());
-
-		let expecting_str = format!("a string that can be deserialized into a {}", struct_name);
-		let error_str = format!("invalid {} {{:?}}: {{}}", struct_name);
-
-		let result = quote::quote! {
-			impl<'de> serde::Deserialize<'de> for #struct_name {
-				fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: serde::Deserializer<'de> {
-					struct Visitor;
-
-					impl serde::de::Visitor<'_> for Visitor {
-						type Value = #struct_name;
-
-						fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-							formatter.write_str(#expecting_str)
-						}
-
-						fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E> where E: serde::de::Error {
-							Ok(#struct_name(#parser_func_name(v).map_err(|err| serde::de::Error::custom(format!(#error_str, v, std::error::Error::description(&err))))?))
-						}
-					}
-
-					deserializer.deserialize_any(Visitor)
-				}
-			}
-		};
-
-		Ok(result.into())
-	})
-}
-
 /// Derives `std::fmt::Display` on the newtype.
 #[proc_macro_derive(newtype_display)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
