@@ -76,8 +76,8 @@ fn error<S, D>(spanned: &S, message: D) -> syn::parse::Error where S: syn::spann
 }
 
 fn as_newtype(ast: &syn::DeriveInput) -> Option<&syn::Type> {
-	match ast.data {
-		syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Unnamed(syn::FieldsUnnamed { ref unnamed, .. }), .. }) if unnamed.len() == 1 => Some(&unnamed[0].ty),
+	match &ast.data {
+		syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }), .. }) if unnamed.len() == 1 => Some(&unnamed[0].ty),
 		_ => None,
 	}
 }
@@ -91,15 +91,15 @@ enum Type {
 
 fn identify_type(ty: &syn::Type) -> Option<Type> {
 	let path =
-		if let syn::Type::Path(syn::TypePath { qself: None, ref path }) = *ty {
+		if let syn::Type::Path(syn::TypePath { qself: None, path }) = ty {
 			path
 		}
 		else {
 			return None;
 		};
 
-	match *path {
-		syn::Path { leading_colon: None, ref segments } if segments.len() == 2 => {
+	match path {
+		syn::Path { leading_colon: None, segments } if segments.len() == 2 => {
 			let first_segment = &segments[0];
 			let second_segment = &segments[1];
 
@@ -115,7 +115,7 @@ fn identify_type(ty: &syn::Type) -> Option<Type> {
 			}
 		},
 
-		syn::Path { leading_colon: None, ref segments } if segments.len() == 1 => {
+		syn::Path { leading_colon: None, segments } if segments.len() == 1 => {
 			let segment = &segments[0];
 
 			match segment.arguments {

@@ -293,7 +293,7 @@ pub fn compute_solution<I>(
 						let conflicts: std::collections::HashSet<_> =
 							graph.edges(node_index)
 							.filter_map(|edge|
-								if let Relation::Conflicts = *edge.weight() {
+								if let Relation::Conflicts = edge.weight() {
 									Some(petgraph::visit::EdgeRef::target(&edge))
 								}
 								else {

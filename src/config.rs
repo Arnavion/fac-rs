@@ -121,7 +121,7 @@ impl Config {
 				)
 			},
 
-			Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => (None, None, None),
+			Err(err) if err.kind() == std::io::ErrorKind::NotFound => (None, None, None),
 
 			Err(err) => return Err(err.context(format!("could not read config file {}", config_file_path_displayable))),
 		};
