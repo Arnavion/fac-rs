@@ -1,6 +1,6 @@
 use crate::{ ErrorExt, ResultExt };
 
-#[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "version")]
 enum StoredConfig<'a> {
 	V1 {

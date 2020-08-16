@@ -181,20 +181,20 @@ impl API {
 }
 
 /// A single page of a paged response.
-#[derive(Debug, serde_derive::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct PagedResponse<T> {
 	pagination: Option<Pagination>,
 	results: Vec<T>,
 }
 
 /// Pagination information in a paged response.
-#[derive(Debug, serde_derive::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct Pagination {
 	links: PaginationLinks,
 }
 
 /// Pagination link information in a paged response.
-#[derive(Debug, serde_derive::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct PaginationLinks {
 	next: Option<reqwest::Url>,
 }

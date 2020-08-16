@@ -126,7 +126,7 @@ static WWW_FORM_URL_ENCODED: once_cell::sync::Lazy<reqwest::header::HeaderValue>
 	once_cell::sync::Lazy::new(|| reqwest::header::HeaderValue::from_static("application/x-www-form-urlencoded"));
 
 /// A login failure response.
-#[derive(Debug, serde_derive::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct LoginFailureResponse {
 	message: String,
 }

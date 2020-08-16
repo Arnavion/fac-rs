@@ -12,7 +12,7 @@ pub struct InstalledMod {
 }
 
 /// Represents the contents of `info.json` of a mod release.
-#[derive(Clone, Debug, PartialEq, serde_derive::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
 pub struct ModInfo {
 	/// The name of the mod release.
 	pub name: factorio_mods_common::ModName,

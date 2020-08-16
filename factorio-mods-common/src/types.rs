@@ -3,7 +3,7 @@
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct Url(pub String);
 
@@ -12,7 +12,7 @@ pub struct Url(pub String);
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ModName(pub String);
 
@@ -27,7 +27,7 @@ impl serde::Serialize for ModName {
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct AuthorName(pub String);
 
@@ -36,7 +36,7 @@ pub struct AuthorName(pub String);
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ModTitle(pub String);
 
@@ -45,7 +45,7 @@ pub struct ModTitle(pub String);
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ModDescription(pub String);
 
@@ -53,12 +53,12 @@ pub struct ModDescription(pub String);
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ReleaseVersion(#[serde(deserialize_with = "deserialize_version")] pub semver::Version);
 
 /// A username and token used with the parts of the web API that require authentication.
-#[derive(Clone, Debug, serde_derive::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct UserCredentials {
 	/// The username.
 	pub username: ServiceUsername,
@@ -72,7 +72,7 @@ pub struct UserCredentials {
 	Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ServiceUsername(pub String);
 
@@ -81,7 +81,7 @@ pub struct ServiceUsername(pub String);
 	Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 	derive_struct::newtype_display,
 	derive_struct::newtype_fromstr,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ServiceToken(pub String);
 
@@ -142,7 +142,7 @@ impl package::Dependency<ReleaseVersion> for Dependency {
 #[derive(
 	Clone, Debug, PartialEq,
 	derive_struct::newtype_display,
-	serde_derive::Deserialize,
+	serde::Deserialize,
 )]
 pub struct ModVersionReq(#[serde(deserialize_with = "deserialize_version_req")] pub semver::VersionReq);
 

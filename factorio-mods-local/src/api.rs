@@ -163,13 +163,13 @@ impl API {
 }
 
 /// Represents the contents of `mod-list.json`
-#[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct ModList<'a> {
 	mods: Vec<ModListMod<'a>>,
 }
 
 /// A mod entry in the mod list
-#[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 struct ModListMod<'a> {
 	name: std::borrow::Cow<'a, factorio_mods_common::ModName>,
 
@@ -178,13 +178,13 @@ struct ModListMod<'a> {
 }
 
 /// Represents the contents of `base/info.json`
-#[derive(Debug, serde_derive::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct BaseInfo {
 	version: factorio_mods_common::ReleaseVersion,
 }
 
 /// Represents the contents of `player-data.json`
-#[derive(Debug, serde_derive::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct PlayerData {
 	// A clean install of Factorio defaults these fields to the empty string if the user has not logged in,
 	// so coerce them to the empty string even if they don't exist and treat empty string as if they don't exist.
