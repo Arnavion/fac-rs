@@ -1,8 +1,8 @@
 /// A date and time string.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	derive_struct::newtype_display,
-	derive_struct::newtype_fromstr,
+	derive_struct::NewTypeDisplay,
+	derive_struct::NewTypeFromStr,
 	serde::Deserialize,
 )]
 pub struct DateTime(pub String);
@@ -10,7 +10,7 @@ pub struct DateTime(pub String);
 /// Number of downloads.
 #[derive(
 	Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	derive_struct::newtype_display,
+	derive_struct::NewTypeDisplay,
 	serde::Deserialize,
 )]
 pub struct DownloadCount(pub u64);
@@ -41,8 +41,8 @@ pub struct Mod {
 /// The summary of a mod.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	derive_struct::newtype_display,
-	derive_struct::newtype_fromstr,
+	derive_struct::NewTypeDisplay,
+	derive_struct::NewTypeFromStr,
 	serde::Deserialize,
 )]
 pub struct ModSummary(pub String);
@@ -80,8 +80,8 @@ pub struct ModReleaseInfo {
 /// The hash of a mod release file.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	derive_struct::newtype_display,
-	derive_struct::newtype_fromstr,
+	derive_struct::NewTypeDisplay,
+	derive_struct::NewTypeFromStr,
 	serde::Deserialize,
 )]
 pub struct ModHash(pub String);
@@ -89,8 +89,8 @@ pub struct ModHash(pub String);
 /// The filename of a mod release.
 #[derive(
 	Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
-	derive_struct::newtype_display,
-	derive_struct::newtype_fromstr,
+	derive_struct::NewTypeDisplay,
+	derive_struct::NewTypeFromStr,
 	serde::Deserialize,
 )]
 pub struct Filename(pub String);

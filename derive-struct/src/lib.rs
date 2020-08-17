@@ -7,13 +7,13 @@
 #![deny(clippy::all, clippy::pedantic)]
 
 /// Derives `std::fmt::Display` on the newtype.
-#[proc_macro_derive(newtype_display)]
+#[proc_macro_derive(NewTypeDisplay)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	run_derive(input, |ast| {
 		let struct_name = &ast.ident;
 
 		let ty = as_newtype(&ast).ok_or_else(||
-			error(&ast, "#[derive(newtype_display)] can only be used with tuple structs of one field"))?;
+			error(&ast, "#[derive(NewTypeDisplay)] can only be used with tuple structs of one field"))?;
 
 		let result = match identify_type(ty) {
 			Some(Type::SemverVersion) |
@@ -27,7 +27,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 				}
 			},
 
-			None => return Err(error(&ty, "#[derive(newtype_display)] cannot be used with tuple structs with this wrapped type")),
+			None => return Err(error(&ty, "#[derive(NewTypeDisplay)] cannot be used with tuple structs with this wrapped type")),
 		};
 
 		Ok(result.into())
@@ -35,7 +35,7 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 }
 
 /// Derives `std::str::FromStr` on the newtype.
-#[proc_macro_derive(newtype_fromstr)]
+#[proc_macro_derive(NewTypeFromStr)]
 pub fn derive_newtype_fromstr(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	run_derive(input, |ast| {
 		let struct_name = &ast.ident;
@@ -55,7 +55,7 @@ pub fn derive_newtype_fromstr(input: proc_macro::TokenStream) -> proc_macro::Tok
 				}
 			},
 
-			_ => return Err(error(&ast, "#[derive(newtype_fromstr)] can only be used with tuple structs of one String field")),
+			_ => return Err(error(&ast, "#[derive(NewTypeFromStr)] can only be used with tuple structs of one String field")),
 		};
 
 		Ok(result.into())
