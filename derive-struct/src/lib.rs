@@ -1,7 +1,5 @@
 //! Custom derives used by the factorio-mods-* crates.
 
-#![recursion_limit = "200"]
-
 #![deny(rust_2018_idioms, warnings)]
 
 #![deny(clippy::all, clippy::pedantic)]
