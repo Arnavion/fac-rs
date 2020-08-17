@@ -169,18 +169,18 @@ fn download_mod(
 }
 
 fn compute_diff(
-	mut solution: std::collections::HashMap<factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>>,
+	mut solution: std::collections::BTreeMap<factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>>,
 	local_api: &factorio_mods_local::API,
 	prompt_override: Option<bool>,
 ) -> Result<Option<(Vec<factorio_mods_local::InstalledMod>, Vec<(factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>)>)>, crate::Error> {
-	let mut all_installed_mods: std::collections::HashMap<_, Vec<_>> = Default::default();
+	let mut all_installed_mods: std::collections::BTreeMap<_, Vec<_>> = Default::default();
 	for mod_ in local_api.installed_mods().context("could not enumerate installed mods")? {
 		let mod_ = mod_.context("could not process an installed mod")?;
 		all_installed_mods.entry(mod_.info.name.clone()).or_default().push(mod_);
 	}
 
 	let mut to_uninstall = vec![];
-	let mut to_install = std::collections::HashMap::new();
+	let mut to_install: std::collections::BTreeMap<_, _> = Default::default();
 
 	for (name, installed_mods) in all_installed_mods {
 		match solution.remove(&name) {
@@ -269,12 +269,12 @@ fn compute_diff(
 
 struct SolutionFuture<'a> {
 	packages: Vec<Installable>,
-	already_fetching: std::collections::HashSet<std::rc::Rc<factorio_mods_common::ModName>>,
+	already_fetching: std::collections::BTreeSet<std::rc::Rc<factorio_mods_common::ModName>>,
 	pending: Vec<CacheFuture<'a>>,
 	web_api: &'a factorio_mods_web::API,
 	user_credentials: std::rc::Rc<factorio_mods_common::UserCredentials>,
 	game_version: &'a factorio_mods_common::ReleaseVersion,
-	reqs: std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
+	reqs: std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 }
 
 impl<'a> SolutionFuture<'a> {
@@ -282,7 +282,7 @@ impl<'a> SolutionFuture<'a> {
 		web_api: &'a factorio_mods_web::API,
 		user_credentials: std::rc::Rc<factorio_mods_common::UserCredentials>,
 		game_version: &'a factorio_mods_common::ReleaseVersion,
-		mut reqs: std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
+		mut reqs: std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	) -> Self {
 		let packages = vec![Installable::Base(factorio_mods_common::ModName("base".to_owned()), game_version.clone())];
 
@@ -311,7 +311,7 @@ impl<'a> SolutionFuture<'a> {
 impl<'a> std::future::Future for SolutionFuture<'a> {
 	type Output = Result<(
 		Option<Vec<Installable>>,
-		std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
+		std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	), crate::Error>;
 
 	fn poll(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
@@ -444,7 +444,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 
 fn get(
 	mod_name: std::rc::Rc<factorio_mods_common::ModName>,
-	already_fetching: &mut std::collections::HashSet<std::rc::Rc<factorio_mods_common::ModName>>,
+	already_fetching: &mut std::collections::BTreeSet<std::rc::Rc<factorio_mods_common::ModName>>,
 	new: &mut Vec<CacheFuture<'_>>,
 	web_api: &factorio_mods_web::API,
 ) {

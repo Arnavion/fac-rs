@@ -116,7 +116,7 @@ impl API {
 	}
 
 	/// Returns a map of installed mod name to its enabled / disabled status in `mod-list.json`
-	pub fn mods_status(&self) -> Result<std::collections::HashMap<factorio_mods_common::ModName, bool>, crate::Error> {
+	pub fn mods_status(&self) -> Result<std::collections::BTreeMap<factorio_mods_common::ModName, bool>, crate::Error> {
 		let mod_list = self.load_mod_list()?;
 		Ok(mod_list.mods.into_iter().map(|m| (m.name.into_owned(), m.enabled)).collect())
 	}
@@ -124,7 +124,7 @@ impl API {
 	/// Marks the given locally installed mods as enabled or disabled in `mod-list.json`
 	pub fn set_enabled<'a, I>(&self, installed_mods: I, enabled: bool) -> Result<(), crate::Error> where I: IntoIterator<Item = &'a crate::InstalledMod> {
 		let mod_list = self.load_mod_list()?;
-		let mut mods_status: std::collections::HashMap<_, _> = mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect();
+		let mut mods_status: std::collections::BTreeMap<_, _> = mod_list.mods.into_iter().map(|m| (m.name, m.enabled)).collect();
 
 		for installed_mod in installed_mods {
 			mods_status.insert(std::borrow::Cow::Borrowed(&installed_mod.info.name), enabled);

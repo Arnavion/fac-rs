@@ -7,7 +7,6 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::default_trait_access,
-	clippy::implicit_hasher,
 	clippy::missing_errors_doc,
 	clippy::similar_names,
 	clippy::too_many_lines,
@@ -44,7 +43,7 @@ pub enum DependencyKind {
 	Required,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Relation {
 	Requires,
 	Conflicts,
@@ -130,7 +129,7 @@ impl<Name, Version> std::error::Error for ErrorKind<Name, Version> where
 
 pub fn compute_solution<I>(
 	packages: I,
-	reqs: &std::collections::HashMap<
+	reqs: &std::collections::BTreeMap<
 		&<<I as IntoIterator>::Item as Package>::Name,
 		<<<I as IntoIterator>::Item as Package>::Dependency as Dependency<'_, <<I as IntoIterator>::Item as Package>::Version>>::VersionReq,
 	>,
@@ -140,7 +139,7 @@ pub fn compute_solution<I>(
 > where
 	I: IntoIterator,
 	<I as IntoIterator>::Item: Package + Clone,
-	<<I as IntoIterator>::Item as Package>::Name: Clone + std::fmt::Debug + std::fmt::Display + Eq + std::hash::Hash + Send + Sync + 'static,
+	<<I as IntoIterator>::Item as Package>::Name: Clone + std::fmt::Debug + std::fmt::Display + std::cmp::Ord + Send + Sync + 'static,
 	<<I as IntoIterator>::Item as Package>::Version: Clone + std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 {
 	let mut graph: petgraph::Graph<_, Relation> =
@@ -202,10 +201,10 @@ pub fn compute_solution<I>(
 	}
 
 	loop {
-		let mut node_indices_to_remove = std::collections::HashSet::new();
+		let mut node_indices_to_remove = std::collections::BTreeSet::new();
 
 		{
-			let mut name_to_node_indices: std::collections::HashMap<_, Vec<petgraph::graph::NodeIndex>> = Default::default();
+			let mut name_to_node_indices: std::collections::BTreeMap<_, Vec<petgraph::graph::NodeIndex>> = Default::default();
 			for node_index in graph.node_indices() {
 				let package = &graph[node_index];
 				name_to_node_indices.entry(package.name()).or_default().push(node_index);
@@ -246,7 +245,7 @@ pub fn compute_solution<I>(
 					for &node_index1 in node_indices {
 						let package1 = &graph[node_index1];
 
-						let neighbors1: std::collections::HashSet<_> =
+						let neighbors1: std::collections::BTreeSet<_> =
 							graph.edges_directed(node_index1, petgraph::Direction::Incoming)
 							.map(|edge| (petgraph::Direction::Incoming, edge.weight(), petgraph::visit::EdgeRef::source(&edge)))
 							.chain(
@@ -259,7 +258,7 @@ pub fn compute_solution<I>(
 							if node_index2 > node_index1 {
 								let package2 = &graph[node_index2];
 
-								let neighbors2: std::collections::HashSet<_> =
+								let neighbors2: std::collections::BTreeSet<_> =
 									graph.edges_directed(node_index2, petgraph::Direction::Incoming)
 									.map(|edge| (petgraph::Direction::Incoming, edge.weight(), petgraph::visit::EdgeRef::source(&edge)))
 									.chain(
@@ -290,7 +289,7 @@ pub fn compute_solution<I>(
 					let mut common_conflicts = None;
 
 					for &node_index in node_indices {
-						let conflicts: std::collections::HashSet<_> =
+						let conflicts: std::collections::BTreeSet<_> =
 							graph.edges(node_index)
 							.filter_map(|edge|
 								if let Relation::Conflicts = edge.weight() {
@@ -330,7 +329,7 @@ pub fn compute_solution<I>(
 	}
 
 	let possibilities: Vec<_> = {
-		let mut name_to_packages: std::collections::HashMap<_, Vec<_>> = Default::default();
+		let mut name_to_packages: std::collections::BTreeMap<_, Vec<_>> = Default::default();
 		for node in graph.into_nodes_edges().0 {
 			let package = node.weight;
 			name_to_packages.entry(package.name().clone()).or_default().push(Some(package));
@@ -364,9 +363,9 @@ pub fn compute_solution<I>(
 	Ok(best_solution.map(|best_solution| best_solution.0.into_iter().map(|(_, package)| package.clone()).collect()))
 }
 
-fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) -> bool where
+fn is_valid<P>(solution: &std::collections::BTreeMap<&<P as Package>::Name, &P>) -> bool where
 	P: Package,
-	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Name: std::cmp::Ord,
 {
 	for package in solution.values() {
 		for dep in package.dependencies() {
@@ -384,14 +383,14 @@ fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) 
 	true
 }
 
-struct Solution<'a, P>(std::collections::HashMap<&'a <P as Package>::Name, &'a P>) where
+struct Solution<'a, P>(std::collections::BTreeMap<&'a <P as Package>::Name, &'a P>) where
 	P: Package,
-	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Name: std::cmp::Ord,
 ;
 
 impl<P> Ord for Solution<'_, P> where
 	P: Package,
-	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Name: std::cmp::Ord,
 {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		for (n1, i1) in &self.0 {
@@ -409,7 +408,7 @@ impl<P> Ord for Solution<'_, P> where
 
 impl<P> PartialOrd for Solution<'_, P> where
 	P: Package,
-	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Name: std::cmp::Ord,
 {
 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
 		Some(self.cmp(other))
@@ -418,7 +417,7 @@ impl<P> PartialOrd for Solution<'_, P> where
 
 impl<P> PartialEq for Solution<'_, P> where
 	P: Package,
-	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Name: std::cmp::Ord,
 {
 	fn eq(&self, other: &Self) -> bool {
 		self.cmp(other) == std::cmp::Ordering::Equal
@@ -428,7 +427,7 @@ impl<P> PartialEq for Solution<'_, P> where
 impl<P> Eq for Solution<'_, P>
  where
 	P: Package,
-	<P as Package>::Name: Eq + std::hash::Hash,
+	<P as Package>::Name: std::cmp::Ord,
 {
 }
 

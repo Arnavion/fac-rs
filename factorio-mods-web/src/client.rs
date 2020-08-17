@@ -108,7 +108,7 @@ impl Client {
 	}
 }
 
-static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::HashSet<&'static str>> =
+static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::BTreeSet<&'static str>> =
 	once_cell::sync::Lazy::new(|| [
 		"auth.factorio.com",
 		"direct.mods-data.factorio.com",

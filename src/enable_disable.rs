@@ -40,7 +40,7 @@ pub(crate) async fn enable_disable(
 ) -> Result<(), crate::Error> {
 	use crate::ResultExt;
 
-	let mut all_installed_mods: std::collections::HashMap<_, Vec<_>> = Default::default();
+	let mut all_installed_mods: std::collections::BTreeMap<_, Vec<_>> = Default::default();
 	for mod_ in local_api.installed_mods().context("could not enumerate installed mods")? {
 		let mod_ = mod_.context("could not process an installed mod")?;
 		all_installed_mods.entry(mod_.info.name.clone()).or_default().push(mod_);
@@ -55,7 +55,7 @@ pub(crate) async fn enable_disable(
 
 	let mut graph = petgraph::Graph::new();
 
-	let name_to_node_index: std::collections::HashMap<_, _> =
+	let name_to_node_index: std::collections::BTreeMap<_, _> =
 		all_installed_mods.into_iter().map(|(name, mut installed_mods)| (name, graph.add_node(installed_mods.remove(0)))).collect();
 
 	let mut edges_to_add = vec![];
@@ -82,7 +82,7 @@ pub(crate) async fn enable_disable(
 		graph.add_edge(edge_to_add.0, edge_to_add.1, ());
 	}
 
-	let mut to_change = std::collections::HashSet::new();
+	let mut to_change = std::collections::BTreeSet::new();
 
 	for name in mods {
 		if let Some(&node_index) = name_to_node_index.get(&name) {

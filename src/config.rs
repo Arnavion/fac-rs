@@ -6,8 +6,7 @@ enum StoredConfig<'a> {
 	V1 {
 		install_directory: Option<std::borrow::Cow<'a, std::path::Path>>,
 		user_directory: Option<std::borrow::Cow<'a, std::path::Path>>,
-		#[serde(serialize_with = "serialize_config_mods")]
-		mods: Option<std::borrow::Cow<'a, std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>>>,
+		mods: Option<std::borrow::Cow<'a, std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>>>,
 	},
 }
 
@@ -17,7 +16,7 @@ pub(crate) struct Config {
 
 	pub install_directory: Option<std::path::PathBuf>,
 	pub user_directory: Option<std::path::PathBuf>,
-	pub mods: Option<std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>>,
+	pub mods: Option<std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>>,
 }
 
 impl Config {
@@ -177,22 +176,5 @@ impl Config {
 		.with_context(|| format!("could not write to config file {}", config_file_path_displayable))?;
 
 		Ok(())
-	}
-}
-
-fn serialize_config_mods<S>(
-	value: &Option<std::borrow::Cow<'_, std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>>>,
-	serializer: S,
-) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-	if let Some(value) = value {
-		let mut map = serializer.serialize_map(None)?;
-		for (name, req) in itertools::Itertools::sorted_by(value.iter(), |&(n1, _), &(n2, _)| n1.cmp(n2)) {
-			serde::ser::SerializeMap::serialize_key(&mut map, name)?;
-			serde::ser::SerializeMap::serialize_value(&mut map, req)?;
-		}
-		serde::ser::SerializeMap::end(map)
-	}
-	else {
-		serializer.serialize_none()
 	}
 }
