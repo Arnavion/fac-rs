@@ -4,9 +4,7 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::default_trait_access,
 	clippy::missing_errors_doc,
-	clippy::module_name_repetitions,
 	clippy::type_complexity,
 )]
 
@@ -20,7 +18,7 @@ pub use self::api::API;
 mod client;
 
 mod error;
-pub use self::error::{ Error, ErrorKind };
+pub use self::error::Error;
 
 mod types;
 pub use self::types::*;

@@ -55,7 +55,7 @@ impl API {
 						}
 					},
 
-					Err(crate::Error { kind: crate::ErrorKind::StatusCode(_, reqwest::StatusCode::NOT_FOUND), .. }) => return,
+					Err(crate::Error::StatusCode(_, reqwest::StatusCode::NOT_FOUND)) => return,
 
 					Err(err) => {
 						Err(err)?;
@@ -109,7 +109,7 @@ impl API {
 
 			Err(err) =>
 				return futures_util::future::Either::Left(futures_util::future::ready(Err(
-					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into()))),
+					crate::Error::Parse(format!("{}/{}", self.base_url, release.download_url), err)))),
 		};
 
 		let head = self.client.head_zip(download_url);
@@ -118,15 +118,15 @@ impl API {
 			let (response, download_url) = head.await?;
 			let len = match response.headers().get(reqwest::header::CONTENT_LENGTH) {
 				Some(len) => len,
-				None => return Err(crate::ErrorKind::MalformedResponse(download_url, "No Content-Length header".to_owned()).into()),
+				None => return Err(crate::Error::MalformedResponse(download_url, "No Content-Length header".to_owned())),
 			};
 			let len = match len.to_str() {
 				Ok(len) => len,
-				Err(err) => return Err(crate::ErrorKind::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err)).into()),
+				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err))),
 			};
 			let len = match len.parse() {
 				Ok(len) => len,
-				Err(err) => return Err(crate::ErrorKind::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err)).into()),
+				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err))),
 			};
 			Ok(len)
 		})
@@ -150,7 +150,7 @@ impl API {
 
 			Err(err) =>
 				return futures_util::future::Either::Left(futures_util::stream::once(futures_util::future::ready(Err(
-					crate::ErrorKind::Parse(format!("{}/{}", self.base_url, release.download_url), err).into())))),
+					crate::Error::Parse(format!("{}/{}", self.base_url, release.download_url), err))))),
 		};
 
 		let fetch = self.client.get_zip(download_url, range);
@@ -169,7 +169,7 @@ impl API {
 
 					Err(err) => {
 						if let Some(download_url) = download_url.take() {
-							Err(crate::ErrorKind::Http(download_url, err))?;
+							Err(crate::Error::Http(download_url, err))?;
 						}
 
 						return;

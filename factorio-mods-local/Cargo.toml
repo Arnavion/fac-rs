@@ -7,7 +7,6 @@ description = "API to interface with the local Factorio installation"
 edition = "2018"
 
 [dependencies]
-backtrace = "0.3"
 derive-struct = { path = "../derive-struct" }
 dirs = "3"
 factorio-mods-common = { path = "../factorio-mods-common" }

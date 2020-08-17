@@ -15,16 +15,16 @@ impl API {
 			base_info_file_path.push("base");
 			base_info_file_path.push("info.json");
 			if !base_info_file_path.is_file() {
-				return Err(crate::ErrorKind::InstallDirectoryNotFound.into());
+				return Err(crate::Error::InstallDirectoryNotFound);
 			}
 
 			let base_info_file = match std::fs::File::open(&base_info_file_path) {
 				Ok(base_info_file) => base_info_file,
-				Err(err) => return Err(crate::ErrorKind::Io(base_info_file_path, err).into()),
+				Err(err) => return Err(crate::Error::Io(base_info_file_path, err)),
 			};
 			let base_info: BaseInfo =
 				serde_json::from_reader(base_info_file)
-				.map_err(|err| crate::ErrorKind::ReadJSONFile(base_info_file_path, err))?;
+				.map_err(|err| crate::Error::ReadJSONFile(base_info_file_path, err))?;
 			base_info.version
 		};
 
@@ -36,7 +36,7 @@ impl API {
 				(mods_directory, mod_list_file_path, player_data_json_file_path)
 			}
 			else {
-				return Err(crate::ErrorKind::UserDirectoryNotFound.into());
+				return Err(crate::Error::UserDirectoryNotFound);
 			}
 		};
 
@@ -69,18 +69,18 @@ impl API {
 
 		let player_data_json_file =
 			std::fs::File::open(player_data_json_file_path)
-			.map_err(|err| crate::ErrorKind::Io(player_data_json_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::Io(player_data_json_file_path.to_owned(), err))?;
 
 		let PlayerData { service_username, service_token } =
 			serde_json::from_reader(player_data_json_file)
-			.map_err(|err| crate::ErrorKind::ReadJSONFile(player_data_json_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::ReadJSONFile(player_data_json_file_path.to_owned(), err))?;
 
 		if service_username.0.is_empty() {
-			return Err(crate::ErrorKind::IncompleteUserCredentials(None).into());
+			return Err(crate::Error::IncompleteUserCredentials(None));
 		}
 
 		if service_token.0.is_empty() {
-			return Err(crate::ErrorKind::IncompleteUserCredentials(Some(service_username)).into());
+			return Err(crate::Error::IncompleteUserCredentials(Some(service_username)));
 		}
 
 		Ok(factorio_mods_common::UserCredentials { username: service_username, token: service_token })
@@ -93,10 +93,10 @@ impl API {
 		let mut player_data: serde_json::Map<_, _> = {
 			let player_data_json_file =
 				std::fs::File::open(player_data_json_file_path)
-				.map_err(|err| crate::ErrorKind::Io(player_data_json_file_path.to_owned(), err))?;
+				.map_err(|err| crate::Error::Io(player_data_json_file_path.to_owned(), err))?;
 
 			serde_json::from_reader(player_data_json_file)
-				.map_err(|err| crate::ErrorKind::ReadJSONFile(player_data_json_file_path.to_owned(), err))?
+				.map_err(|err| crate::Error::ReadJSONFile(player_data_json_file_path.to_owned(), err))?
 		};
 
 		player_data.insert("service-username".to_owned(), serde_json::Value::String(user_credentials.username.0));
@@ -106,11 +106,11 @@ impl API {
 
 		let mut player_data_json_file =
 			std::fs::File::create(player_data_json_file_path)
-			.map_err(|err| crate::ErrorKind::Io(player_data_json_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::Io(player_data_json_file_path.to_owned(), err))?;
 
 		let () =
 			serde_json::to_writer_pretty(&mut player_data_json_file, &player_data)
-			.map_err(|err| crate::ErrorKind::WriteJSONFile(player_data_json_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::WriteJSONFile(player_data_json_file_path.to_owned(), err))?;
 
 		Ok(())
 	}
@@ -133,7 +133,7 @@ impl API {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mut mod_list_file =
 			std::fs::File::create(mod_list_file_path)
-			.map_err(|err| crate::ErrorKind::Io(mod_list_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::Io(mod_list_file_path.to_owned(), err))?;
 
 		let mut mods: Vec<_> =
 			mods_status.into_iter()
@@ -144,7 +144,7 @@ impl API {
 		let mod_list = ModList { mods };
 		let () =
 			serde_json::to_writer_pretty(&mut mod_list_file, &mod_list)
-			.map_err(|err| crate::ErrorKind::WriteJSONFile(mod_list_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::WriteJSONFile(mod_list_file_path.to_owned(), err))?;
 
 		Ok(())
 	}
@@ -153,11 +153,11 @@ impl API {
 		let mod_list_file_path = &self.mod_list_file_path;
 		let mod_list_file =
 			std::fs::File::open(mod_list_file_path)
-			.map_err(|err| crate::ErrorKind::Io(mod_list_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::Io(mod_list_file_path.to_owned(), err))?;
 
 		let mod_list =
 			serde_json::from_reader(mod_list_file)
-			.map_err(|err| crate::ErrorKind::ReadJSONFile(mod_list_file_path.to_owned(), err))?;
+			.map_err(|err| crate::Error::ReadJSONFile(mod_list_file_path.to_owned(), err))?;
 		Ok(mod_list)
 	}
 }

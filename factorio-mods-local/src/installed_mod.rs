@@ -58,27 +58,27 @@ impl InstalledMod {
 	pub fn parse(path: std::path::PathBuf) -> Result<Self, crate::Error> {
 		let (info, mod_type): (ModInfo, _) = if path.is_file() {
 			if path.extension() != Some("zip".as_ref()) {
-				return Err(crate::ErrorKind::UnknownModFormat(path).into());
+				return Err(crate::Error::UnknownModFormat(path));
 			}
 
 			let zip_file = match std::fs::File::open(&path) {
 				Ok(zip_file) => zip_file,
-				Err(err) => return Err(crate::ErrorKind::Io(path, err).into()),
+				Err(err) => return Err(crate::Error::Io(path, err)),
 			};
 
 			let mut zip_file = match zip::ZipArchive::new(zip_file) {
 				Ok(zip_file) => zip_file,
-				Err(err) => return Err(crate::ErrorKind::Zip(path, err).into()),
+				Err(err) => return Err(crate::Error::Zip(path, err)),
 			};
 
 			if zip_file.len() == 0 {
-				return Err(crate::ErrorKind::EmptyZippedMod(path).into());
+				return Err(crate::Error::EmptyZippedMod(path));
 			}
 
 			let toplevel = {
 				let first_file = match zip_file.by_index(0) {
 					Ok(first_file) => first_file,
-					Err(err) => return Err(crate::ErrorKind::Zip(path, err).into()),
+					Err(err) => return Err(crate::Error::Zip(path, err)),
 				};
 
 				first_file.name().split('/').next().unwrap().to_owned()
@@ -88,12 +88,12 @@ impl InstalledMod {
 
 			let info_json_file = match zip_file.by_name(&info_json_file_path) {
 				Ok(info_json_file) => info_json_file,
-				Err(err) => return Err(crate::ErrorKind::Zip(path, err).into()),
+				Err(err) => return Err(crate::Error::Zip(path, err)),
 			};
 
 			match serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Zipped),
-				Err(err) => return Err(crate::ErrorKind::ReadJSONFile(path, err).into()),
+				Err(err) => return Err(crate::Error::ReadJSONFile(path, err)),
 			}
 		}
 		else {
@@ -102,14 +102,14 @@ impl InstalledMod {
 			let info_json_file = match std::fs::File::open(&info_json_file_path) {
 				Ok(info_json_file) => info_json_file,
 				Err(err) => match err.kind() {
-					std::io::ErrorKind::NotFound => return Err(crate::ErrorKind::UnknownModFormat(info_json_file_path).into()),
-					_ => return Err(crate::ErrorKind::Io(info_json_file_path, err).into()),
+					std::io::ErrorKind::NotFound => return Err(crate::Error::UnknownModFormat(info_json_file_path)),
+					_ => return Err(crate::Error::Io(info_json_file_path, err)),
 				},
 			};
 
 			match serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Unpacked),
-				Err(err) => return Err(crate::ErrorKind::ReadJSONFile(info_json_file_path, err).into()),
+				Err(err) => return Err(crate::Error::ReadJSONFile(info_json_file_path, err)),
 			}
 		};
 
@@ -123,10 +123,10 @@ pub fn find(
 	name_pattern: Option<String>,
 	version: Option<factorio_mods_common::ReleaseVersion>,
 ) -> Result<impl Iterator<Item = Result<InstalledMod, crate::Error>> + 'static, crate::Error> {
-	let directory_entries = std::fs::read_dir(mods_directory).map_err(|err| crate::ErrorKind::Io(mods_directory.to_owned(), err))?;
+	let directory_entries = std::fs::read_dir(mods_directory).map_err(|err| crate::Error::Io(mods_directory.to_owned(), err))?;
 
 	let name_pattern = name_pattern.map_or(std::borrow::Cow::Borrowed("*"), std::borrow::Cow::Owned);
-	let matcher = globset::Glob::new(&name_pattern).map_err(|err| crate::ErrorKind::Pattern(name_pattern.into_owned(), err))?.compile_matcher();
+	let matcher = globset::Glob::new(&name_pattern).map_err(|err| crate::Error::Pattern(name_pattern.into_owned(), err))?.compile_matcher();
 
 	Ok(directory_entries
 		.filter_map({
@@ -135,7 +135,7 @@ pub fn find(
 			move |directory_entry| {
 				let directory_entry = match directory_entry {
 					Ok(directory_entry) => directory_entry,
-					Err(err) => return Some(Err(crate::ErrorKind::Io(mods_directory.to_owned(), err).into())),
+					Err(err) => return Some(Err(crate::Error::Io(mods_directory.to_owned(), err))),
 				};
 
 				let path = directory_entry.path();
@@ -147,7 +147,7 @@ pub fn find(
 
 				let installed_mod = match InstalledMod::parse(path) {
 					Ok(installed_mod) => installed_mod,
-					Err(crate::Error { kind: crate::ErrorKind::UnknownModFormat(_), .. }) => return None,
+					Err(crate::Error::UnknownModFormat(_)) => return None,
 					Err(err) => return Some(Err(err)),
 				};
 

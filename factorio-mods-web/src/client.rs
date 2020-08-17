@@ -26,7 +26,7 @@ impl Client {
 				}
 			}))
 			.build()
-			.map_err(crate::ErrorKind::CreateClient)?;
+			.map_err(crate::Error::CreateClient)?;
 
 		Ok(Client { inner })
 	}
@@ -93,7 +93,7 @@ impl Client {
 		Box::pin(async move {
 			let body = match body {
 				Ok(body) => body,
-				Err(err) => return Err(crate::ErrorKind::Serialize(url, err).into()),
+				Err(err) => return Err(crate::Error::Serialize(url, err)),
 			};
 
 			let builder =
@@ -137,26 +137,26 @@ async fn send(
 	is_range_request: bool,
 ) -> Result<(reqwest::Response, reqwest::Url), crate::Error> {
 	if !matches!(url.host_str(), Some(host) if WHITELISTED_HOSTS.contains(host)) {
-		return Err(crate::ErrorKind::NotWhitelistedHost(url).into());
+		return Err(crate::Error::NotWhitelistedHost(url));
 	}
 
 	let response = match builder.send().await {
 		Ok(response) => response,
-		Err(err) => return Err(crate::ErrorKind::Http(url, err).into()),
+		Err(err) => return Err(crate::Error::Http(url, err)),
 	};
 
 	match response.status() {
 		reqwest::StatusCode::OK if !is_range_request => Ok((response, url)),
 		reqwest::StatusCode::PARTIAL_CONTENT if is_range_request => Ok((response, url)),
 
-		reqwest::StatusCode::FOUND => Err(crate::ErrorKind::NotWhitelistedHost(url).into()),
+		reqwest::StatusCode::FOUND => Err(crate::Error::NotWhitelistedHost(url)),
 
 		reqwest::StatusCode::UNAUTHORIZED => {
 			let (object, _): (LoginFailureResponse, _) = json(response, url).await?;
-			Err(crate::ErrorKind::LoginFailure(object.message).into())
+			Err(crate::Error::LoginFailure(object.message))
 		},
 
-		code => Err(crate::ErrorKind::StatusCode(url, code).into()),
+		code => Err(crate::Error::StatusCode(url, code)),
 	}
 }
 
@@ -166,7 +166,7 @@ async fn json<T>(response: reqwest::Response, url: reqwest::Url) -> Result<(T, r
 	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
 	match response.json().await {
 		Ok(object) => Ok((object, url)),
-		Err(err) => Err(crate::ErrorKind::Http(url, err).into()),
+		Err(err) => Err(crate::Error::Http(url, err)),
 	}
 }
 
@@ -177,11 +177,11 @@ fn expect_content_type(
 ) -> Result<reqwest::Url, crate::Error> {
 	let mime = match response.headers().get(reqwest::header::CONTENT_TYPE) {
 		Some(mime) => mime,
-		None => return Err(crate::ErrorKind::MalformedResponse(url, "No Content-Type header".to_owned()).into()),
+		None => return Err(crate::Error::MalformedResponse(url, "No Content-Type header".to_owned())),
 	};
 
 	if mime != expected_mime {
-		return Err(crate::ErrorKind::MalformedResponse(url, format!("Unexpected Content-Type header: {:?}", mime)).into());
+		return Err(crate::Error::MalformedResponse(url, format!("Unexpected Content-Type header: {:?}", mime)));
 	}
 
 	Ok(url)

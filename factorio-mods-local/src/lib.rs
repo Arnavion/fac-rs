@@ -4,7 +4,6 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
-	clippy::default_trait_access,
 	clippy::let_unit_value,
 	clippy::missing_errors_doc,
 	clippy::module_name_repetitions,
@@ -16,7 +15,7 @@ mod api;
 pub use self::api::{ API };
 
 mod error;
-pub use self::error::{ Error, ErrorKind };
+pub use self::error::Error;
 
 mod installed_mod;
 pub use self::installed_mod::{ InstalledMod, InstalledModType, ModInfo };

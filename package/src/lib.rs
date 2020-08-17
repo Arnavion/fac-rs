@@ -50,52 +50,7 @@ pub enum Relation {
 }
 
 #[derive(Debug)]
-pub struct Error<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static
-{
-	pub kind: ErrorKind<Name, Version>,
-	pub backtrace: backtrace::Backtrace,
-}
-
-impl<Name, Version> std::fmt::Display for Error<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-{
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		writeln!(f, "{}", self.kind)?;
-		writeln!(f)?;
-		writeln!(f, "{:?}", self.backtrace)?;
-		Ok(())
-	}
-}
-
-impl<Name, Version> std::error::Error for Error<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-{
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		self.kind.source()
-	}
-}
-
-impl<Name, Version> From<ErrorKind<Name, Version>> for Error<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-{
-	fn from(kind: ErrorKind<Name, Version>) -> Self {
-		Error {
-			kind,
-			backtrace: Default::default(),
-		}
-	}
-}
-
-#[derive(Debug)]
-pub enum ErrorKind<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-{
+pub enum Error<Name, Version> {
 	/// Package A both requires and conflicts with package B.
 	BothRequiresAndConflicts {
 		package_name: Name,
@@ -108,22 +63,22 @@ pub enum ErrorKind<Name, Version> where
 	NoPackagesMeetRequirements(Name),
 }
 
-impl<Name, Version> std::fmt::Display for ErrorKind<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+impl<Name, Version> std::fmt::Display for Error<Name, Version> where
+	Name: std::fmt::Display,
+	Version: std::fmt::Display,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			ErrorKind::BothRequiresAndConflicts { package_name, package_version, dep_name, dep_version } =>
+			Error::BothRequiresAndConflicts { package_name, package_version, dep_name, dep_version } =>
 				write!(f, "{} {} both requires and conflicts with {} {}", package_name, package_version, dep_name, dep_version),
-			ErrorKind::NoPackagesMeetRequirements(name) => write!(f, "No packages found for {} that meet the specified requirements", name),
+			Error::NoPackagesMeetRequirements(name) => write!(f, "No packages found for {} that meet the specified requirements", name),
 		}
 	}
 }
 
-impl<Name, Version> std::error::Error for ErrorKind<Name, Version> where
-	Name: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
-	Version: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+impl<Name, Version> std::error::Error for Error<Name, Version> where
+	Name: std::fmt::Debug + std::fmt::Display,
+	Version: std::fmt::Debug + std::fmt::Display,
 {
 }
 
@@ -139,8 +94,8 @@ pub fn compute_solution<I>(
 > where
 	I: IntoIterator,
 	<I as IntoIterator>::Item: Package + Clone,
-	<<I as IntoIterator>::Item as Package>::Name: Clone + std::fmt::Debug + std::fmt::Display + std::cmp::Ord + Send + Sync + 'static,
-	<<I as IntoIterator>::Item as Package>::Version: Clone + std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+	<<I as IntoIterator>::Item as Package>::Name: Clone + std::cmp::Ord + 'static,
+	<<I as IntoIterator>::Item as Package>::Version: Clone + 'static,
 {
 	let mut graph: petgraph::Graph<_, Relation> =
 		petgraph::data::FromElements::from_elements(
@@ -180,12 +135,12 @@ pub fn compute_solution<I>(
 				}
 
 				match (requires, conflicts) {
-					(true, true) => return Err((ErrorKind::BothRequiresAndConflicts {
+					(true, true) => return Err(Error::BothRequiresAndConflicts {
 						package_name: package1.name().clone(),
 						package_version: package1.version().clone(),
 						dep_name: package2.name().clone(),
 						dep_version: package2.version().clone(),
-					}).into()),
+					}),
 					(true, false) => edges_to_add.push((node_index1, node_index2, Relation::Requires)),
 					(false, true) => edges_to_add.push((node_index1, node_index2, Relation::Conflicts)),
 					(false, false) => (),
@@ -212,7 +167,7 @@ pub fn compute_solution<I>(
 
 			for &name in reqs.keys() {
 				if !matches!(name_to_node_indices.get(name), Some(node_indices) if !node_indices.is_empty()) {
-					return Err(ErrorKind::NoPackagesMeetRequirements(name.clone()).into());
+					return Err(Error::NoPackagesMeetRequirements(name.clone()));
 				}
 			}
 

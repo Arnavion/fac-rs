@@ -30,7 +30,7 @@ pub(crate) async fn ensure_user_credentials(
 		Ok(user_credentials) =>
 			return Ok(user_credentials),
 
-		Err(factorio_mods_local::Error { kind: factorio_mods_local::ErrorKind::IncompleteUserCredentials(existing_username), .. }) =>
+		Err(factorio_mods_local::Error::IncompleteUserCredentials(existing_username)) =>
 			existing_username.clone(),
 
 		Err(err) =>
@@ -71,7 +71,7 @@ pub(crate) async fn ensure_user_credentials(
 				return Ok(user_credentials);
 			},
 
-			Err(factorio_mods_web::Error { kind: factorio_mods_web::ErrorKind::LoginFailure(message), .. }) => {
+			Err(factorio_mods_web::Error::LoginFailure(message)) => {
 				println!("Authentication error: {}", message);
 				existing_username = Some(username);
 			},

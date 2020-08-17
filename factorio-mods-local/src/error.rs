@@ -1,40 +1,6 @@
 /// Errors returned by this crate.
 #[derive(Debug)]
-pub struct Error {
-	/// The kind of the error.
-	pub kind: ErrorKind,
-
-	/// The backtrace of the error.
-	pub backtrace: backtrace::Backtrace,
-}
-
-impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		writeln!(f, "{}", self.kind)?;
-		writeln!(f)?;
-		writeln!(f, "{:?}", self.backtrace)?;
-		Ok(())
-	}
-}
-
-impl std::error::Error for Error {
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		self.kind.source()
-	}
-}
-
-impl From<ErrorKind> for Error {
-	fn from(kind: ErrorKind) -> Self {
-		Error {
-			kind,
-			backtrace: Default::default(),
-		}
-	}
-}
-
-/// Error kinds for errors returned by this crate.
-#[derive(Debug)]
-pub enum ErrorKind {
+pub enum Error {
 	/// A zipped mod has no files and is thus malformed.
 	EmptyZippedMod(std::path::PathBuf),
 
@@ -66,37 +32,37 @@ pub enum ErrorKind {
 	Zip(std::path::PathBuf, zip::result::ZipError),
 }
 
-impl std::fmt::Display for ErrorKind {
+impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			ErrorKind::EmptyZippedMod(path) => write!(f, "the zipped mod file {} is empty", path.display()),
-			ErrorKind::IncompleteUserCredentials(_) => f.write_str("valid API credentials were not found in player-data.json"),
-			ErrorKind::InstallDirectoryNotFound => f.write_str("the local Factorio installation could not be found"),
-			ErrorKind::Io(path, _) => write!(f, "I/O error on {}", path.display()),
-			ErrorKind::Pattern(pattern, _) => write!(f, "the pattern {} is invalid", pattern),
-			ErrorKind::ReadJSONFile(path, _) => write!(f, "could not parse the JSON file {}", path.display()),
-			ErrorKind::UnknownModFormat(path) => write!(f, "the mod at {} could not be recognized as a valid mod", path.display()),
-			ErrorKind::UserDirectoryNotFound => f.write_str("the Factorio user directory could not be found"),
-			ErrorKind::WriteJSONFile(path, _) => write!(f, "could not save {}", path.display()),
-			ErrorKind::Zip(path, _) => write!(f, "could not parse the ZIP file {}", path.display()),
+			Error::EmptyZippedMod(path) => write!(f, "the zipped mod file {} is empty", path.display()),
+			Error::IncompleteUserCredentials(_) => f.write_str("valid API credentials were not found in player-data.json"),
+			Error::InstallDirectoryNotFound => f.write_str("the local Factorio installation could not be found"),
+			Error::Io(path, _) => write!(f, "I/O error on {}", path.display()),
+			Error::Pattern(pattern, _) => write!(f, "the pattern {} is invalid", pattern),
+			Error::ReadJSONFile(path, _) => write!(f, "could not parse the JSON file {}", path.display()),
+			Error::UnknownModFormat(path) => write!(f, "the mod at {} could not be recognized as a valid mod", path.display()),
+			Error::UserDirectoryNotFound => f.write_str("the Factorio user directory could not be found"),
+			Error::WriteJSONFile(path, _) => write!(f, "could not save {}", path.display()),
+			Error::Zip(path, _) => write!(f, "could not parse the ZIP file {}", path.display()),
 		}
 	}
 }
 
-impl std::error::Error for ErrorKind {
-	#[allow(clippy::match_same_arms)]
+impl std::error::Error for Error {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		#[allow(clippy::match_same_arms)]
 		match self {
-			ErrorKind::EmptyZippedMod(_) => None,
-			ErrorKind::IncompleteUserCredentials(_) => None,
-			ErrorKind::InstallDirectoryNotFound => None,
-			ErrorKind::Io(_, err) => Some(err),
-			ErrorKind::Pattern(_, err) => Some(err),
-			ErrorKind::ReadJSONFile(_, err) => Some(err),
-			ErrorKind::UnknownModFormat(_) => None,
-			ErrorKind::UserDirectoryNotFound => None,
-			ErrorKind::WriteJSONFile(_, err) => Some(err),
-			ErrorKind::Zip(_, err) => Some(err),
+			Error::EmptyZippedMod(_) => None,
+			Error::IncompleteUserCredentials(_) => None,
+			Error::InstallDirectoryNotFound => None,
+			Error::Io(_, err) => Some(err),
+			Error::Pattern(_, err) => Some(err),
+			Error::ReadJSONFile(_, err) => Some(err),
+			Error::UnknownModFormat(_) => None,
+			Error::UserDirectoryNotFound => None,
+			Error::WriteJSONFile(_, err) => Some(err),
+			Error::Zip(_, err) => Some(err),
 		}
 	}
 }

@@ -1,40 +1,6 @@
 /// Errors returned by this crate.
 #[derive(Debug)]
-pub struct Error {
-	/// The kind of the error.
-	pub kind: ErrorKind,
-
-	/// The backtrace of the error.
-	pub backtrace: backtrace::Backtrace,
-}
-
-impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		writeln!(f, "{}", self.kind)?;
-		writeln!(f)?;
-		writeln!(f, "{:?}", self.backtrace)?;
-		Ok(())
-	}
-}
-
-impl std::error::Error for Error {
-	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-		self.kind.source()
-	}
-}
-
-impl From<ErrorKind> for Error {
-	fn from(kind: ErrorKind) -> Self {
-		Error {
-			kind,
-			backtrace: Default::default(),
-		}
-	}
-}
-
-/// Error kinds for errors returned by this crate.
-#[derive(Debug)]
-pub enum ErrorKind {
+pub enum Error {
 	/// Could not create HTTP client.
 	CreateClient(reqwest::Error),
 
@@ -60,33 +26,33 @@ pub enum ErrorKind {
 	StatusCode(reqwest::Url, reqwest::StatusCode),
 }
 
-impl std::fmt::Display for ErrorKind {
+impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			ErrorKind::CreateClient(_) => f.write_str("could not create HTTP client"),
-			ErrorKind::Http(url, _) => write!(f, "could not fetch URL {}", url),
-			ErrorKind::LoginFailure(message) => write!(f, "login failed: {}", message),
-			ErrorKind::MalformedResponse(url, message) => write!(f, "request to URL {} got malformed response: {}", url, message),
-			ErrorKind::NotWhitelistedHost(url) => write!(f, "host {} is not whitelisted", url),
-			ErrorKind::Parse(url, _) => write!(f, "could not parse URL {}", url),
-			ErrorKind::Serialize(url, _) => write!(f, "could not serialize request body for URL {}", url),
-			ErrorKind::StatusCode(url, status_code) => write!(f, "request to URL {} returned {}", url, status_code),
+			Error::CreateClient(_) => f.write_str("could not create HTTP client"),
+			Error::Http(url, _) => write!(f, "could not fetch URL {}", url),
+			Error::LoginFailure(message) => write!(f, "login failed: {}", message),
+			Error::MalformedResponse(url, message) => write!(f, "request to URL {} got malformed response: {}", url, message),
+			Error::NotWhitelistedHost(url) => write!(f, "host {} is not whitelisted", url),
+			Error::Parse(url, _) => write!(f, "could not parse URL {}", url),
+			Error::Serialize(url, _) => write!(f, "could not serialize request body for URL {}", url),
+			Error::StatusCode(url, status_code) => write!(f, "request to URL {} returned {}", url, status_code),
 		}
 	}
 }
 
-impl std::error::Error for ErrorKind {
-	#[allow(clippy::match_same_arms)]
+impl std::error::Error for Error {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+		#[allow(clippy::match_same_arms)]
 		match self {
-			ErrorKind::CreateClient(err) => Some(err),
-			ErrorKind::Http(_, err) => Some(err),
-			ErrorKind::LoginFailure(_) => None,
-			ErrorKind::MalformedResponse(_, _) => None,
-			ErrorKind::NotWhitelistedHost(_) => None,
-			ErrorKind::Parse(_, err) => Some(err),
-			ErrorKind::Serialize(_, err) => Some(err),
-			ErrorKind::StatusCode(_, _) => None,
+			Error::CreateClient(err) => Some(err),
+			Error::Http(_, err) => Some(err),
+			Error::LoginFailure(_) => None,
+			Error::MalformedResponse(_, _) => None,
+			Error::NotWhitelistedHost(_) => None,
+			Error::Parse(_, err) => Some(err),
+			Error::Serialize(_, err) => Some(err),
+			Error::StatusCode(_, _) => None,
 		}
 	}
 }

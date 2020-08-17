@@ -364,10 +364,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 						},
 
 						// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
-						std::task::Poll::Ready(Err(factorio_mods_web::Error {
-							kind: factorio_mods_web::ErrorKind::StatusCode(_, crate::reqwest::StatusCode::NOT_FOUND),
-							..
-						})) => {
+						std::task::Poll::Ready(Err(factorio_mods_web::Error::StatusCode(_, crate::reqwest::StatusCode::NOT_FOUND))) => {
 							let _ = get_mod.take();
 						},
 
