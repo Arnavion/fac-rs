@@ -118,17 +118,17 @@ impl<'de> serde::Deserialize<'de> for Dependency {
 	}
 }
 
-impl package::Dependency<ReleaseVersion> for Dependency {
+impl<'a> package::Dependency<'a, ReleaseVersion> for Dependency {
 	type Name = ModName;
-	type VersionReq = VersionReqMatcher;
+	type VersionReq = VersionReqMatcher<'a>;
 
 	fn name(&self) -> &Self::Name {
 		&self.name
 	}
 
-	fn version_req(&self) -> Self::VersionReq {
+	fn version_req(&'a self) -> Self::VersionReq {
 		VersionReqMatcher {
-			version_req: self.version.0.clone(),
+			version_req: &self.version.0,
 			is_base: self.name.0 == "base",
 		}
 	}
@@ -146,17 +146,23 @@ impl package::Dependency<ReleaseVersion> for Dependency {
 )]
 pub struct ModVersionReq(#[serde(deserialize_with = "deserialize_version_req")] pub semver::VersionReq);
 
+impl serde::Serialize for ModVersionReq {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+		serializer.serialize_str(&self.0.to_string())
+	}
+}
+
 /// A version requirement matcher used by the package solver.
 #[derive(Debug)]
-pub struct VersionReqMatcher {
+pub struct VersionReqMatcher<'a> {
 	/// The version requirement.
-	pub version_req: semver::VersionReq,
+	pub version_req: &'a semver::VersionReq,
 
 	/// Whether this version requirement is for the base mod or not.
 	pub is_base: bool,
 }
 
-impl package::VersionReq<ReleaseVersion> for VersionReqMatcher {
+impl package::VersionReq<ReleaseVersion> for VersionReqMatcher<'_> {
 	fn matches(&self, other: &ReleaseVersion) -> bool {
 		if self.version_req.matches(&other.0) {
 			return true;
@@ -168,12 +174,6 @@ impl package::VersionReq<ReleaseVersion> for VersionReqMatcher {
 		}
 
 		false
-	}
-}
-
-impl serde::Serialize for ModVersionReq {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-		serializer.serialize_str(&self.0.to_string())
 	}
 }
 

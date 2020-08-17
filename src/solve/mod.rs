@@ -30,8 +30,8 @@ pub(crate) async fn compute_and_apply_diff(
 		solution
 		.ok_or_else(|| "no solution found.")?
 		.into_iter()
-		.filter_map(|(name, installable)|
-			if let Installable::Mod(_, release, _) = installable {
+		.filter_map(|installable|
+			if let Installable::Mod(name, release, _) = installable {
 				Some((name, release))
 			}
 			else {
@@ -310,7 +310,7 @@ impl<'a> SolutionFuture<'a> {
 
 impl<'a> std::future::Future for SolutionFuture<'a> {
 	type Output = Result<(
-		Option<std::collections::HashMap<factorio_mods_common::ModName, Installable>>,
+		Option<Vec<Installable>>,
 		std::collections::HashMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
 	), crate::Error>;
 
@@ -334,7 +334,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 
 							for release in mod_.releases {
 								let game_version_req = factorio_mods_common::VersionReqMatcher {
-									version_req: release.info_json.factorio_version.0.clone(),
+									version_req: &release.info_json.factorio_version.0,
 									is_base: true,
 								};
 								if !package::VersionReq::matches(&game_version_req, &this.game_version) {
@@ -424,11 +424,11 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 		println!("Computing solution...");
 
 		let solver_reqs =
-			reqs.clone().into_iter()
+			reqs.iter()
 			.map(|(name, version_req)| {
 				let is_base = name.0 == "base";
 				(name, factorio_mods_common::VersionReqMatcher {
-					version_req: version_req.0,
+					version_req: &version_req.0,
 					is_base,
 				})
 			})

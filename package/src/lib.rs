@@ -17,19 +17,19 @@
 pub trait Package {
 	type Name;
 	type Version: std::cmp::Ord;
-	type Dependency: Dependency<Self::Version, Name = Self::Name>;
+	type Dependency: for<'r> Dependency<'r, Self::Version, Name = Self::Name>;
 
 	fn name(&self) -> &Self::Name;
 	fn version(&self) -> &Self::Version;
 	fn dependencies(&self) -> &[Self::Dependency];
 }
 
-pub trait Dependency<TVersion> {
+pub trait Dependency<'a, TVersion> {
 	type Name;
 	type VersionReq: VersionReq<TVersion>;
 
 	fn name(&self) -> &Self::Name;
-	fn version_req(&self) -> Self::VersionReq;
+	fn version_req(&'a self) -> Self::VersionReq;
 	fn kind(&self) -> DependencyKind;
 }
 
@@ -131,11 +131,11 @@ impl<Name, Version> std::error::Error for ErrorKind<Name, Version> where
 pub fn compute_solution<I>(
 	packages: I,
 	reqs: &std::collections::HashMap<
-		<<I as IntoIterator>::Item as Package>::Name,
-		<<<I as IntoIterator>::Item as Package>::Dependency as Dependency<<<I as IntoIterator>::Item as Package>::Version>>::VersionReq,
+		&<<I as IntoIterator>::Item as Package>::Name,
+		<<<I as IntoIterator>::Item as Package>::Dependency as Dependency<'_, <<I as IntoIterator>::Item as Package>::Version>>::VersionReq,
 	>,
 ) -> Result<
-	Option<std::collections::HashMap<<<I as IntoIterator>::Item as Package>::Name, <I as IntoIterator>::Item>>,
+	Option<Vec<<I as IntoIterator>::Item>>,
 	Error<<<I as IntoIterator>::Item as Package>::Name, <<I as IntoIterator>::Item as Package>::Version>,
 > where
 	I: IntoIterator,
@@ -211,7 +211,7 @@ pub fn compute_solution<I>(
 				name_to_node_indices.entry(package.name()).or_default().push(node_index);
 			}
 
-			for name in reqs.keys() {
+			for &name in reqs.keys() {
 				if !matches!(name_to_node_indices.get(name), Some(node_indices) if !node_indices.is_empty()) {
 					return Err(ErrorKind::NoPackagesMeetRequirements(name.clone()).into());
 				}
@@ -361,7 +361,7 @@ pub fn compute_solution<I>(
 		}
 	}
 
-	Ok(best_solution.map(|best_solution| best_solution.0.into_iter().map(|(name, package)| (name.clone(), package.clone())).collect()))
+	Ok(best_solution.map(|best_solution| best_solution.0.into_iter().map(|(_, package)| package.clone()).collect()))
 }
 
 fn is_valid<P>(solution: &std::collections::HashMap<&<P as Package>::Name, &P>) -> bool where
