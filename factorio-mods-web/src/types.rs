@@ -112,7 +112,7 @@ pub struct SearchResponseMod {
 	pub summary: ModSummary,
 
 	/// The latest release of the mod.
-	pub latest_release: ModRelease,
+	pub latest_release: Option<ModRelease>,
 
 	/// The number of times the mod has been downloaded.
 	pub downloads_count: DownloadCount,
