@@ -147,7 +147,7 @@ pub(super) async fn find_info_json(
 	let mut buf = vec![0_u8; info_json_entry.file_meta.compressed_size as usize];
 	futures_util::io::AsyncReadExt::read_exact(reader, &mut buf).await.map_err(Error::Io)?;
 
-	let reader = Reader::new(info_json_entry.file_meta.compression_method, buf, info_json_entry.file_meta.crc32)?;
+	let reader = Reader::new(info_json_entry.file_meta.compression_method, &buf, info_json_entry.file_meta.crc32)?;
 	let info_json = serde_json::from_reader(reader).map_err(Error::FileInvalidJson)?;
 	Ok(info_json)
 }
@@ -261,26 +261,26 @@ async fn read_u32_le(reader: &mut (impl futures_util::io::AsyncRead + Unpin)) ->
 }
 
 #[derive(Debug)]
-struct Reader {
-	inner: ReaderInner,
+struct Reader<'a> {
+	inner: ReaderInner<'a>,
 	hasher: crc32fast::Hasher,
 	expected_crc32: u32,
 }
 
 #[derive(Debug)]
-enum ReaderInner {
-	Deflated(libflate::deflate::Decoder<std::io::Cursor<Vec<u8>>>),
-	Stored(std::io::Cursor<Vec<u8>>),
+enum ReaderInner<'a> {
+	Deflated(libflate::deflate::Decoder<&'a [u8]>),
+	Stored(&'a [u8]),
 }
 
-impl Reader {
-	fn new(compression_method: zip::CompressionMethod, data: Vec<u8>, expected_crc32: u32) -> Result<Self, Error> {
+impl<'a> Reader<'a> {
+	fn new(compression_method: zip::CompressionMethod, data: &'a [u8], expected_crc32: u32) -> Result<Self, Error> {
 		let inner = match compression_method {
 			zip::CompressionMethod::Deflated =>
-				ReaderInner::Deflated(libflate::deflate::Decoder::new(std::io::Cursor::new(data))),
+				ReaderInner::Deflated(libflate::deflate::Decoder::new(data)),
 
 			zip::CompressionMethod::Stored =>
-				ReaderInner::Stored(std::io::Cursor::new(data)),
+				ReaderInner::Stored(data),
 
 			compression_method => return Err(Error::UnsupportedCompressionMethod(compression_method)),
 		};
@@ -293,7 +293,7 @@ impl Reader {
 	}
 }
 
-impl std::io::Read for Reader {
+impl std::io::Read for Reader<'_> {
 	fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
 		let result = match &mut self.inner {
 			ReaderInner::Deflated(reader) => std::io::Read::read(reader, buf)?,
