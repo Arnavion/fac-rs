@@ -14,7 +14,7 @@ pub(super) enum Error {
 	FileMetadataCorrupt,
 	FileNotFound,
 	Io(std::io::Error),
-	UnsupportedCompressionMethod(zip::CompressionMethod),
+	UnsupportedCompressionMethod(u16),
 }
 
 impl std::fmt::Display for Error {
@@ -155,7 +155,7 @@ pub(super) async fn find_info_json(
 #[derive(Debug, PartialEq)]
 struct FileMeta {
 	filename: Vec<u8>,
-	compression_method: zip::CompressionMethod,
+	compression_method: u16,
 	crc32: u32,
 	compressed_size: u64,
 	uncompressed_size: u64,
@@ -175,7 +175,7 @@ impl CentralDirectoryEntry {
 
 		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(6)).await.map_err(Error::Io)?;
 
-		let compression_method = zip::CompressionMethod::from_u16(read_u16_le(reader).await?);
+		let compression_method = read_u16_le(reader).await?;
 
 		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
 
@@ -221,7 +221,7 @@ impl FileLocalHeader {
 
 		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
 
-		let compression_method = zip::CompressionMethod::from_u16(read_u16_le(reader).await?);
+		let compression_method = read_u16_le(reader).await?;
 
 		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(4)).await.map_err(Error::Io)?;
 
@@ -274,14 +274,10 @@ enum ReaderInner<'a> {
 }
 
 impl<'a> Reader<'a> {
-	fn new(compression_method: zip::CompressionMethod, data: &'a [u8], expected_crc32: u32) -> Result<Self, Error> {
+	fn new(compression_method: u16, data: &'a [u8], expected_crc32: u32) -> Result<Self, Error> {
 		let inner = match compression_method {
-			zip::CompressionMethod::Deflated =>
-				ReaderInner::Deflated(libflate::deflate::Decoder::new(data)),
-
-			zip::CompressionMethod::Stored =>
-				ReaderInner::Stored(data),
-
+			0 => ReaderInner::Stored(data),
+			8 => ReaderInner::Deflated(libflate::deflate::Decoder::new(data)),
 			compression_method => return Err(Error::UnsupportedCompressionMethod(compression_method)),
 		};
 

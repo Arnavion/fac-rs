@@ -71,7 +71,7 @@ impl InstalledMod {
 				Err(err) => return Err(crate::Error::Zip(path, err)),
 			};
 
-			if zip_file.len() == 0 {
+			if zip_file.is_empty() {
 				return Err(crate::Error::EmptyZippedMod(path));
 			}
 
