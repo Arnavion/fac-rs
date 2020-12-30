@@ -83,7 +83,7 @@ pub(super) async fn find_info_json(
 	let file_len = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::End(0)).await.map_err(Error::Io)?;
 	let eocd_start_pos_min = file_len.saturating_sub(EOCD_MIN_LEN + u64::from(u16::max_value()));
 
-	let mut eocd_start_pos = file_len.checked_sub(EOCD_MIN_LEN).ok_or_else(|| Error::EndOfCentralDirectorRecordNotFound)?;
+	let mut eocd_start_pos = file_len.checked_sub(EOCD_MIN_LEN).ok_or(Error::EndOfCentralDirectorRecordNotFound)?;
 
 	let (central_directory_pos, num_central_directory_entries) = loop {
 		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Start(eocd_start_pos)).await.map_err(Error::Io)?;
@@ -130,7 +130,7 @@ pub(super) async fn find_info_json(
 			break;
 		}
 	}
-	let info_json_entry = info_json_entry.ok_or_else(|| Error::FileNotFound)?;
+	let info_json_entry = info_json_entry.ok_or(Error::FileNotFound)?;
 
 	let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Start(info_json_entry.local_header_pos)).await.map_err(Error::Io)?;
 

@@ -86,7 +86,7 @@ impl Config {
 		let config_file_path =
 			if let Some(path) = path {
 				if path.iter().count() == 1 {
-					let mut user_config_dir = dirs::config_dir().ok_or_else(|| "could not derive path to config directory")?;
+					let mut user_config_dir = dirs::config_dir().ok_or("could not derive path to config directory")?;
 					user_config_dir.push("fac");
 					user_config_dir.push(path);
 					user_config_dir
@@ -96,7 +96,7 @@ impl Config {
 				}
 			}
 			else {
-				let mut user_config_dir = dirs::config_dir().ok_or_else(|| "could not derive path to config directory")?;
+				let mut user_config_dir = dirs::config_dir().ok_or("could not derive path to config directory")?;
 				user_config_dir.push("fac");
 				std::fs::create_dir_all(&user_config_dir).with_context(|| format!("could not create config directory {}", user_config_dir.display()))?;
 				user_config_dir.push("config.json");

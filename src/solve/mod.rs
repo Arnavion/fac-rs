@@ -28,7 +28,7 @@ pub(crate) async fn compute_and_apply_diff(
 
 	let solution =
 		solution
-		.ok_or_else(|| "no solution found.")?
+		.ok_or("no solution found.")?
 		.into_iter()
 		.filter_map(|installable|
 			if let Installable::Mod(name, release, _) = installable {
@@ -364,9 +364,8 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 						},
 
 						// Don't fail the whole process due to non-existent deps. Releases with unmet deps will be handled when computing the solution.
-						std::task::Poll::Ready(Err(factorio_mods_web::Error::StatusCode(_, crate::reqwest::StatusCode::NOT_FOUND))) => {
-							let _ = get_mod.take();
-						},
+						std::task::Poll::Ready(Err(factorio_mods_web::Error::StatusCode(_, http::StatusCode::NOT_FOUND))) =>
+							drop(get_mod.take()),
 
 						std::task::Poll::Ready(Err(err)) =>
 							return std::task::Poll::Ready(Err(err.context(format!("could not get mod info for {}", mod_name)))),
