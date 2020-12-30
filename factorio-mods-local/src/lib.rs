@@ -5,6 +5,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::let_unit_value,
+	clippy::map_err_ignore, // Moved to restriction in nightly
 	clippy::missing_errors_doc,
 	clippy::module_name_repetitions,
 	clippy::must_use_candidate,
