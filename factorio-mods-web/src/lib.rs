@@ -4,11 +4,11 @@
 
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
+	clippy::default_trait_access,
 	clippy::missing_errors_doc,
+	clippy::similar_names,
 	clippy::type_complexity,
 )]
-
-pub use reqwest;
 
 mod api;
 pub use self::api::API;

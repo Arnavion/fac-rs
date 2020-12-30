@@ -22,17 +22,12 @@ mod config;
 mod solve;
 mod util;
 
-use factorio_mods_web::reqwest;
-
 #[derive(Debug, structopt::StructOpt)]
 #[structopt(about, author)]
 #[structopt(setting(structopt::clap::AppSettings::VersionlessSubcommands))]
 pub(crate) struct Options {
 	#[structopt(help = "Path to fac config file. Defaults to .../fac/config.json", short = "c", parse(from_os_str))]
 	config: Option<std::path::PathBuf>,
-
-	#[structopt(help = "HTTP proxy URL")]
-	proxy: Option<String>,
 
 	#[structopt(help = "Answer yes to all prompts", short = "y")]
 	yes: bool,
@@ -71,20 +66,11 @@ pub(crate) enum SubCommand {
 	Update(update::SubCommand),
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
 	std::env::set_var("RUST_BACKTRACE", "1");
 
 	let options: Options = structopt::StructOpt::from_args();
-
-	let client = if let Some(proxy_url) = options.proxy {
-		let builder = crate::reqwest::ClientBuilder::new();
-		let builder = builder.proxy(reqwest::Proxy::all(&proxy_url).context("couldn't parse proxy URL")?);
-		Some(builder)
-	}
-	else {
-		None
-	};
 
 	let prompt_override = match (options.yes, options.no) {
 		(true, false) => Some(true),
@@ -124,7 +110,7 @@ async fn main() -> Result<(), Error> {
 		}
 	}
 
-	let web_api = factorio_mods_web::API::new(client).context("could not initialize web API");
+	let web_api = factorio_mods_web::API::new().context("could not initialize web API");
 
 
 	match options.subcommand {

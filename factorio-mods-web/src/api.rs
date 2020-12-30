@@ -1,32 +1,25 @@
 /// Entry-point to the <https://mods.factorio.com/> API
 #[derive(Debug)]
 pub struct API {
-	base_url: reqwest::Url,
-	mods_url: reqwest::Url,
-	login_url: reqwest::Url,
+	base_url: url::Url,
+	mods_url: url::Url,
+	login_url: url::Url,
 	client: crate::client::Client,
 }
 
 impl API {
 	/// Constructs an API object with the given parameters.
-	pub fn new(builder: Option<reqwest::ClientBuilder>) -> Result<Self, crate::Error> {
-		static BASE_URL: once_cell::sync::Lazy<reqwest::Url> =
-			once_cell::sync::Lazy::new(|| "https://mods.factorio.com/".parse().unwrap());
-		static MODS_URL: once_cell::sync::Lazy<reqwest::Url> =
-			once_cell::sync::Lazy::new(|| "https://mods.factorio.com/api/mods?page_size=max".parse().unwrap());
-		static LOGIN_URL: once_cell::sync::Lazy<reqwest::Url> =
-			once_cell::sync::Lazy::new(|| "https://auth.factorio.com/api-login".parse().unwrap());
-
+	pub fn new() -> Result<Self, crate::Error> {
 		Ok(API {
-			base_url: BASE_URL.clone(),
-			mods_url: MODS_URL.clone(),
-			login_url: LOGIN_URL.clone(),
-			client: crate::client::Client::new(builder)?,
+			base_url: "https://mods.factorio.com/".parse().expect("hard-coded URL must parse successfully"),
+			mods_url: "https://mods.factorio.com/api/mods?page_size=max".parse().expect("hard-coded URL must parse successfully"),
+			login_url: "https://auth.factorio.com/api-login".parse().expect("hard-coded URL must parse successfully"),
+			client: crate::client::Client::new(),
 		})
 	}
 
 	/// Searches for mods matching the given criteria.
-	pub fn search<'a>(&'a self, query: &str) -> impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + 'a {
+	pub fn search(&self, query: &str) -> impl futures_core::Stream<Item = Result<crate::SearchResponseMod, crate::Error>> + '_ {
 		let query = query.to_lowercase();
 
 		let mut next_page_url = self.mods_url.clone();
@@ -55,7 +48,7 @@ impl API {
 						}
 					},
 
-					Err(crate::Error::StatusCode(_, reqwest::StatusCode::NOT_FOUND)) => return,
+					Err(crate::Error::StatusCode(_, http::StatusCode::NOT_FOUND)) => return,
 
 					Err(err) => {
 						Err(err)?;
@@ -72,7 +65,7 @@ impl API {
 		mod_url.path_segments_mut().unwrap().push(&mod_name.0);
 		let future = self.client.get_object(mod_url);
 
-		async {
+		async move {
 			let (mod_, _) = future.await?;
 			Ok(mod_)
 		}
@@ -98,25 +91,20 @@ impl API {
 		release: &crate::ModRelease,
 		user_credentials: &factorio_mods_common::UserCredentials,
 	) -> impl std::future::Future<Output = Result<u64, crate::Error>> {
-		let download_url = match self.base_url.join(&release.download_url.0) {
+		let future = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
 					.append_pair("username", &user_credentials.username.0)
 					.append_pair("token", &user_credentials.token.0);
-
-				download_url
+				Ok(self.client.head_zip(download_url))
 			},
 
-			Err(err) =>
-				return futures_util::future::Either::Left(futures_util::future::ready(Err(
-					crate::Error::Parse(format!("{}/{}", self.base_url, release.download_url), err)))),
+			Err(err) => Err(crate::Error::Parse(format!("{}/{}", self.base_url, release.download_url), err)),
 		};
 
-		let head = self.client.head_zip(download_url);
-
-		futures_util::future::Either::Right(async {
-			let (response, download_url) = head.await?;
-			let len = match response.headers().get(reqwest::header::CONTENT_LENGTH) {
+		async move {
+			let (response, download_url) = future?.await?;
+			let len = match response.headers().get(http::header::CONTENT_LENGTH) {
 				Some(len) => len,
 				None => return Err(crate::Error::MalformedResponse(download_url, "No Content-Length header".to_owned())),
 			};
@@ -129,7 +117,7 @@ impl API {
 				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err))),
 			};
 			Ok(len)
-		})
+		}
 	}
 
 	/// Downloads the file for the specified mod release and returns a reader to the file contents.
@@ -139,25 +127,33 @@ impl API {
 		user_credentials: &factorio_mods_common::UserCredentials,
 		range: Option<&str>,
 	) -> impl futures_core::Stream<Item = Result<bytes::Bytes, crate::Error>> {
-		let download_url = match self.base_url.join(&release.download_url.0) {
+		let future = match self.base_url.join(&release.download_url.0) {
 			Ok(mut download_url) => {
 				download_url.query_pairs_mut()
 					.append_pair("username", &user_credentials.username.0)
 					.append_pair("token", &user_credentials.token.0);
 
-				download_url
+				let range = match range {
+					Some(range) => match range.parse() {
+						Ok(range) => Ok(Some(range)),
+						Err(err) => Err(crate::Error::InvalidRange(range.to_owned(), err)),
+					},
+
+					None => Ok(None),
+				};
+
+				match range {
+					Ok(range) => Ok(self.client.get_zip(download_url, range)),
+					Err(err) => Err(err),
+				}
 			},
 
-			Err(err) =>
-				return futures_util::future::Either::Left(futures_util::stream::once(futures_util::future::ready(Err(
-					crate::Error::Parse(format!("{}/{}", self.base_url, release.download_url), err))))),
+			Err(err) => Err(crate::Error::Parse(format!("{}/{}", self.base_url, release.download_url), err)),
 		};
 
-		let fetch = self.client.get_zip(download_url, range);
-
-		futures_util::future::Either::Right(async_stream::try_stream! {
-			let (response, download_url) = fetch.await?;
-			let mut response = response.bytes_stream();
+		async_stream::try_stream! {
+			let (response, download_url) = future?.await?;
+			let mut response = response.into_body();
 			let mut download_url = Some(download_url);
 
 			loop {
@@ -176,7 +172,7 @@ impl API {
 					},
 				}
 			}
-		})
+		}
 	}
 }
 
@@ -196,7 +192,7 @@ struct Pagination {
 /// Pagination link information in a paged response.
 #[derive(Debug, serde::Deserialize)]
 struct PaginationLinks {
-	next: Option<reqwest::Url>,
+	next: Option<url::Url>,
 }
 
 #[cfg(test)]
@@ -205,7 +201,7 @@ mod tests {
 	async fn search_list_all_mods() {
 		use futures_util::TryStreamExt;
 
-		let api = super::API::new(None).unwrap();
+		let api = super::API::new().unwrap();
 		let count =
 			api.search("")
 			.try_fold(0_usize, |count, _| futures_util::future::ready(Ok(count + 1)))
@@ -216,7 +212,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn search_by_title() {
-		let api = super::API::new(None).unwrap();
+		let api = super::API::new().unwrap();
 
 		let mut search_results = api.search("bob's functions library mod");
 		while let Some(mod_) = futures_util::StreamExt::next(&mut search_results).await {
@@ -232,14 +228,14 @@ mod tests {
 
 	#[tokio::test]
 	async fn search_non_existing() {
-		let api = super::API::new(None).unwrap();
+		let api = super::API::new().unwrap();
 		let mut search_results = api.search("arnavion's awesome mod");
 		assert!(futures_util::StreamExt::next(&mut search_results).await.is_none());
 	}
 
 	#[tokio::test]
 	async fn get() {
-		let api = super::API::new(None).unwrap();
+		let api = super::API::new().unwrap();
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_owned());
 		let mod_ = api.get(&mod_name).await.unwrap();
