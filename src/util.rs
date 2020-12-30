@@ -1,26 +1,5 @@
 use crate::{ ErrorExt, ResultExt };
 
-pub(crate) fn wrapping_println(s: &str, indent: &str) {
-	if let Some((width, _)) = term_size::dimensions() {
-		let wrapper = textwrap::Wrapper {
-			width,
-			initial_indent: indent,
-			subsequent_indent: indent,
-			break_words: true,
-			splitter: textwrap::NoHyphenation,
-		};
-
-		for line in s.split('\n') {
-			for line in wrapper.wrap_iter(line) {
-				println!("{}", line);
-			}
-		}
-	}
-	else {
-		println!("{}{}", indent, s);
-	}
-}
-
 pub(crate) async fn ensure_user_credentials(
 	local_api: &factorio_mods_local::API,
 	web_api: &factorio_mods_web::API,
