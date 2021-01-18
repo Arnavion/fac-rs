@@ -12,7 +12,7 @@ impl API {
 	pub fn new() -> Result<Self, crate::Error> {
 		Ok(API {
 			base_url: "https://mods.factorio.com/".parse().expect("hard-coded URL must parse successfully"),
-			mods_url: "https://mods.factorio.com/api/mods?page_size=max".parse().expect("hard-coded URL must parse successfully"),
+			mods_url: "https://mods.factorio.com/api/mods?page_size=10000".parse().expect("hard-coded URL must parse successfully"),
 			login_url: "https://auth.factorio.com/api-login".parse().expect("hard-coded URL must parse successfully"),
 			client: crate::client::Client::new(),
 		})
