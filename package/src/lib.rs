@@ -278,12 +278,11 @@ pub fn compute_solution<I>(
 		if node_indices_to_remove.is_empty() {
 			break;
 		}
-		else {
-			let node_indices_to_remove = itertools::Itertools::sorted_by(node_indices_to_remove.into_iter(), |i1, i2| i1.cmp(i2).reverse());
 
-			for node_index in node_indices_to_remove {
-				graph.remove_node(node_index);
-			}
+		let node_indices_to_remove = itertools::Itertools::sorted_by(node_indices_to_remove.into_iter(), |i1, i2| i1.cmp(i2).reverse());
+
+		for node_index in node_indices_to_remove {
+			graph.remove_node(node_index);
 		}
 	}
 
