@@ -38,7 +38,7 @@ impl Client {
 			};
 
 			let (response, url) = inner.send(request, None, &*APPLICATION_JSON, url).await?;
-			Ok(json(response, url).await?)
+			json(response, url).await
 		}
 	}
 
@@ -113,7 +113,7 @@ impl Client {
 			};
 
 			let (response, url) = inner.send(request, None, &*APPLICATION_JSON, url).await?;
-			Ok(json(response, url).await?)
+			json(response, url).await
 		})
 	}
 }
