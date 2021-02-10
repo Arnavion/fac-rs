@@ -8,8 +8,8 @@ use crate::{ ErrorExt, ResultExt };
 ///
 /// Returns true if the diff was successfully applied or empty.
 pub(crate) async fn compute_and_apply_diff(
-	local_api: &factorio_mods_local::API,
-	web_api: &factorio_mods_web::API,
+	local_api: &factorio_mods_local::Api,
+	web_api: &factorio_mods_web::Api,
 	mut config: crate::config::Config,
 	prompt_override: Option<bool>,
 ) -> Result<(), crate::Error> {
@@ -99,7 +99,7 @@ pub(crate) async fn compute_and_apply_diff(
 }
 
 fn download_mod(
-	web_api: &factorio_mods_web::API,
+	web_api: &factorio_mods_web::Api,
 	mod_name: factorio_mods_common::ModName,
 	release: std::rc::Rc<factorio_mods_web::ModRelease>,
 	mods_directory: &std::path::Path,
@@ -170,7 +170,7 @@ fn download_mod(
 
 fn compute_diff(
 	mut solution: std::collections::BTreeMap<factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>>,
-	local_api: &factorio_mods_local::API,
+	local_api: &factorio_mods_local::Api,
 	prompt_override: Option<bool>,
 ) -> Result<Option<(Vec<factorio_mods_local::InstalledMod>, Vec<(factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>)>)>, crate::Error> {
 	let mut all_installed_mods: std::collections::BTreeMap<_, Vec<_>> = Default::default();
@@ -271,7 +271,7 @@ struct SolutionFuture<'a> {
 	packages: Vec<Installable>,
 	already_fetching: std::collections::BTreeSet<std::rc::Rc<factorio_mods_common::ModName>>,
 	pending: Vec<CacheFuture<'a>>,
-	web_api: &'a factorio_mods_web::API,
+	web_api: &'a factorio_mods_web::Api,
 	user_credentials: std::rc::Rc<factorio_mods_common::UserCredentials>,
 	game_version: &'a factorio_mods_common::ReleaseVersion,
 	reqs: std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
@@ -279,7 +279,7 @@ struct SolutionFuture<'a> {
 
 impl<'a> SolutionFuture<'a> {
 	fn new(
-		web_api: &'a factorio_mods_web::API,
+		web_api: &'a factorio_mods_web::Api,
 		user_credentials: std::rc::Rc<factorio_mods_common::UserCredentials>,
 		game_version: &'a factorio_mods_common::ReleaseVersion,
 		mut reqs: std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
@@ -442,7 +442,7 @@ fn get(
 	mod_name: std::rc::Rc<factorio_mods_common::ModName>,
 	already_fetching: &mut std::collections::BTreeSet<std::rc::Rc<factorio_mods_common::ModName>>,
 	new: &mut Vec<CacheFuture<'_>>,
-	web_api: &factorio_mods_web::API,
+	web_api: &factorio_mods_web::Api,
 ) {
 	if already_fetching.insert(mod_name.clone()) {
 		println!("    Getting {} ...", mod_name);

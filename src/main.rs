@@ -83,7 +83,7 @@ async fn main() -> Result<(), Error> {
 
 	let local_api: Result<_, crate::Error> = match (&config.install_directory, &config.user_directory) {
 		(Some(install_directory), Some(user_directory)) =>
-			factorio_mods_local::API::new(install_directory, user_directory)
+			factorio_mods_local::Api::new(install_directory, user_directory)
 			.context("could not initialize local API").map_err(Into::into),
 
 		(None, _) => Err(
@@ -110,7 +110,7 @@ async fn main() -> Result<(), Error> {
 		}
 	}
 
-	let web_api = factorio_mods_web::API::new().context("could not initialize web API");
+	let web_api = factorio_mods_web::Api::new().context("could not initialize web API");
 
 
 	match options.subcommand {

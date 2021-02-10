@@ -93,7 +93,7 @@ impl InstalledMod {
 
 			match serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Zipped),
-				Err(err) => return Err(crate::Error::ReadJSONFile(path, err)),
+				Err(err) => return Err(crate::Error::ReadJsonFile(path, err)),
 			}
 		}
 		else {
@@ -109,7 +109,7 @@ impl InstalledMod {
 
 			match serde_json::from_reader(info_json_file) {
 				Ok(info) => (info, InstalledModType::Unpacked),
-				Err(err) => return Err(crate::Error::ReadJSONFile(info_json_file_path, err)),
+				Err(err) => return Err(crate::Error::ReadJsonFile(info_json_file_path, err)),
 			}
 		};
 

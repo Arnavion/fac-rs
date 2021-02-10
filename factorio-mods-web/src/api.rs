@@ -1,16 +1,16 @@
 /// Entry-point to the <https://mods.factorio.com/> API
 #[derive(Debug)]
-pub struct API {
+pub struct Api {
 	base_url: url::Url,
 	mods_url: url::Url,
 	login_url: url::Url,
 	client: crate::client::Client,
 }
 
-impl API {
-	/// Constructs an API object with the given parameters.
+impl Api {
+	/// Constructs an API client with the given parameters.
 	pub fn new() -> Result<Self, crate::Error> {
-		Ok(API {
+		Ok(Api {
 			base_url: "https://mods.factorio.com/".parse().expect("hard-coded URL must parse successfully"),
 			mods_url: "https://mods.factorio.com/api/mods?page_size=10000".parse().expect("hard-coded URL must parse successfully"),
 			login_url: "https://auth.factorio.com/api-login".parse().expect("hard-coded URL must parse successfully"),
@@ -201,7 +201,7 @@ mod tests {
 	async fn search_list_all_mods() {
 		use futures_util::TryStreamExt;
 
-		let api = super::API::new().unwrap();
+		let api = super::Api::new().unwrap();
 		let count =
 			api.search("")
 			.try_fold(0_usize, |count, _| futures_util::future::ready(Ok(count + 1)))
@@ -212,7 +212,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn search_by_title() {
-		let api = super::API::new().unwrap();
+		let api = super::Api::new().unwrap();
 
 		let mut search_results = api.search("bob's functions library mod");
 		while let Some(mod_) = futures_util::StreamExt::next(&mut search_results).await {
@@ -228,14 +228,14 @@ mod tests {
 
 	#[tokio::test]
 	async fn search_non_existing() {
-		let api = super::API::new().unwrap();
+		let api = super::Api::new().unwrap();
 		let mut search_results = api.search("arnavion's awesome mod");
 		assert!(futures_util::StreamExt::next(&mut search_results).await.is_none());
 	}
 
 	#[tokio::test]
 	async fn get() {
-		let api = super::API::new().unwrap();
+		let api = super::Api::new().unwrap();
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_owned());
 		let mod_ = api.get(&mod_name).await.unwrap();

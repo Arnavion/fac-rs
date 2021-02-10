@@ -15,7 +15,7 @@ pub struct DateTime(pub String);
 )]
 pub struct DownloadCount(pub u64);
 
-/// A mod object returned by `API::get`.
+/// A mod object returned by [`crate::Api::get`].
 #[derive(Clone, Debug, PartialEq, serde::Deserialize)]
 pub struct Mod {
 	/// The name of the mod.
@@ -95,7 +95,7 @@ pub struct ModHash(pub String);
 )]
 pub struct Filename(pub String);
 
-/// A mod object returned by `API::search`.
+/// A mod object returned by [`crate::Api::search`].
 #[derive(Clone, Debug, PartialEq, serde::Deserialize)]
 pub struct SearchResponseMod {
 	/// The name of the mod.

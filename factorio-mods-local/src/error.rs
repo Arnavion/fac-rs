@@ -17,7 +17,7 @@ pub enum Error {
 	Pattern(String, globset::Error),
 
 	/// Reading a JSON file failed.
-	ReadJSONFile(std::path::PathBuf, serde_json::Error),
+	ReadJsonFile(std::path::PathBuf, serde_json::Error),
 
 	/// The file or directory is not recognized as a valid mod format.
 	UnknownModFormat(std::path::PathBuf),
@@ -26,7 +26,7 @@ pub enum Error {
 	UserDirectoryNotFound,
 
 	/// Writing a JSON file failed.
-	WriteJSONFile(std::path::PathBuf, serde_json::Error),
+	WriteJsonFile(std::path::PathBuf, serde_json::Error),
 
 	/// An error encountered while working with a .zip file.
 	Zip(std::path::PathBuf, zip::result::ZipError),
@@ -40,10 +40,10 @@ impl std::fmt::Display for Error {
 			Error::InstallDirectoryNotFound => f.write_str("the local Factorio installation could not be found"),
 			Error::Io(path, _) => write!(f, "I/O error on {}", path.display()),
 			Error::Pattern(pattern, _) => write!(f, "the pattern {} is invalid", pattern),
-			Error::ReadJSONFile(path, _) => write!(f, "could not parse the JSON file {}", path.display()),
+			Error::ReadJsonFile(path, _) => write!(f, "could not parse the JSON file {}", path.display()),
 			Error::UnknownModFormat(path) => write!(f, "the mod at {} could not be recognized as a valid mod", path.display()),
 			Error::UserDirectoryNotFound => f.write_str("the Factorio user directory could not be found"),
-			Error::WriteJSONFile(path, _) => write!(f, "could not save {}", path.display()),
+			Error::WriteJsonFile(path, _) => write!(f, "could not save {}", path.display()),
 			Error::Zip(path, _) => write!(f, "could not parse the ZIP file {}", path.display()),
 		}
 	}
@@ -58,10 +58,10 @@ impl std::error::Error for Error {
 			Error::InstallDirectoryNotFound => None,
 			Error::Io(_, err) => Some(err),
 			Error::Pattern(_, err) => Some(err),
-			Error::ReadJSONFile(_, err) => Some(err),
+			Error::ReadJsonFile(_, err) => Some(err),
 			Error::UnknownModFormat(_) => None,
 			Error::UserDirectoryNotFound => None,
-			Error::WriteJSONFile(_, err) => Some(err),
+			Error::WriteJsonFile(_, err) => Some(err),
 			Error::Zip(_, err) => Some(err),
 		}
 	}

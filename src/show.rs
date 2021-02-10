@@ -7,7 +7,7 @@ pub(crate) struct SubCommand {
 impl SubCommand {
 	pub(crate) async fn run(
 		self,
-		web_api: &factorio_mods_web::API,
+		web_api: &factorio_mods_web::Api,
 	) -> Result<(), crate::Error> {
 		use crate::ResultExt;
 

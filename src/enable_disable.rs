@@ -7,7 +7,7 @@ pub(crate) struct EnableSubCommand {
 impl EnableSubCommand {
 	pub(crate) async fn run(
 		self,
-		local_api: &factorio_mods_local::API,
+		local_api: &factorio_mods_local::Api,
 		prompt_override: Option<bool>,
 	) -> Result<(), crate::Error> {
 		enable_disable(self.names, local_api, prompt_override, true).await?;
@@ -24,7 +24,7 @@ pub(crate) struct DisableSubCommand {
 impl DisableSubCommand {
 	pub(crate) async fn run(
 		self,
-		local_api: &factorio_mods_local::API,
+		local_api: &factorio_mods_local::Api,
 		prompt_override: Option<bool>,
 	) -> Result<(), crate::Error> {
 		enable_disable(self.names, local_api, prompt_override, false).await?;
@@ -34,7 +34,7 @@ impl DisableSubCommand {
 
 pub(crate) async fn enable_disable(
 	mods: Vec<factorio_mods_common::ModName>,
-	local_api: &factorio_mods_local::API,
+	local_api: &factorio_mods_local::Api,
 	prompt_override: Option<bool>,
 	enable: bool,
 ) -> Result<(), crate::Error> {
