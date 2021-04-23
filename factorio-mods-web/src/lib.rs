@@ -6,6 +6,7 @@
 #![allow(
 	clippy::default_trait_access,
 	clippy::missing_errors_doc,
+	clippy::missing_panics_doc,
 	clippy::similar_names,
 	clippy::type_complexity,
 )]
