@@ -16,7 +16,7 @@ pub(super) struct WebReader<'a> {
 	// - B: The region that contains the end of the current read. Same as A unless the read crosses a region boundary.
 	//      Regions are larger than the largest expected read, so a read will never cross *two* boundaries.
 	// - C: One region past B, if it exists, to hold the reusable ReqwestResponseReader.
-	content_cache: uluru::LRUCache<[uluru::Entry<(u64, DataRegion<'a>)>; 3]>,
+	content_cache: uluru::LRUCache<(u64, DataRegion<'a>), 3>,
 }
 
 enum DataRegion<'a> {
