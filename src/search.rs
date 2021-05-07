@@ -27,7 +27,7 @@ impl SubCommand {
 			println!("    Name: {}", mod_.name);
 			println!();
 
-			for line in mod_.summary.0.split('\n') {
+			for line in mod_.summary.0.lines() {
 				for line in textwrap::wrap(line, textwrap_options.clone()) {
 					println!("{}", line);
 				}

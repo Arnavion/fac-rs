@@ -81,7 +81,9 @@ impl InstalledMod {
 					Err(err) => return Err(crate::Error::Zip(path, err)),
 				};
 
-				first_file.name().split('/').next().unwrap().to_owned()
+				let first_file_name = first_file.name();
+				let (toplevel, _) = first_file_name.split_once('/').unwrap_or((first_file_name, ""));
+				toplevel.to_owned()
 			};
 
 			let info_json_file_path = format!("{}/info.json", toplevel);
@@ -135,7 +137,7 @@ pub fn find(
 			move |directory_entry| {
 				let directory_entry = match directory_entry {
 					Ok(directory_entry) => directory_entry,
-					Err(err) => return Some(Err(crate::Error::Io(mods_directory.to_owned(), err))),
+					Err(err) => return Some(Err(crate::Error::Io(mods_directory.clone(), err))),
 				};
 
 				let path = directory_entry.path();

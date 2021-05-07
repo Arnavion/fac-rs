@@ -237,9 +237,9 @@ impl FileLocalHeader {
 		let result = FileLocalHeader(FileMeta {
 			filename,
 			compression_method,
+			crc32,
 			compressed_size,
 			uncompressed_size,
-			crc32,
 		});
 
 		let _ = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::Current(extra_field_len)).await.map_err(Error::Io)?;
