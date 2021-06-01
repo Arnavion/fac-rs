@@ -181,7 +181,7 @@ fn default_dependencies() -> Vec<factorio_mods_common::Dependency> {
 	static DEFAULT_DEPENDENCIES: once_cell::sync::Lazy<Vec<factorio_mods_common::Dependency>> =
 		once_cell::sync::Lazy::new(|| vec![factorio_mods_common::Dependency {
 		name: factorio_mods_common::ModName("base".to_owned()),
-		version: factorio_mods_common::ModVersionReq(semver::VersionReq::any()),
+		version: factorio_mods_common::ModVersionReq(semver::VersionReq::STAR),
 		kind: package::DependencyKind::Required,
 	}]);
 

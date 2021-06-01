@@ -104,7 +104,7 @@ async fn main() -> Result<(), Error> {
 					local_api.installed_mods().context("could not enumerate installed mods")?
 					.map(|mod_|
 						mod_
-						.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::any())))
+						.map(|mod_| (mod_.info.name, factorio_mods_common::ModVersionReq(semver::VersionReq::STAR)))
 						.context("could not process an installed mod")))
 				.context("could not enumerate installed mods")?;
 			config.mods = Some(installed_mods);

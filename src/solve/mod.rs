@@ -300,7 +300,15 @@ impl<'a> SolutionFuture<'a> {
 			get(mod_name.clone().into(), &mut result.already_fetching, &mut result.pending, web_api);
 		}
 
-		reqs.insert(factorio_mods_common::ModName("base".to_owned()), factorio_mods_common::ModVersionReq(semver::VersionReq::exact(&game_version.0)));
+		reqs.insert(factorio_mods_common::ModName("base".to_owned()), factorio_mods_common::ModVersionReq(semver::VersionReq {
+			comparators: vec![semver::Comparator {
+				op: semver::Op::Exact,
+				major: game_version.0.major,
+				minor: Some(game_version.0.minor),
+				patch: Some(game_version.0.patch),
+				pre: game_version.0.pre.clone(),
+			}],
+		}));
 
 		result.reqs = reqs;
 

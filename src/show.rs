@@ -38,7 +38,11 @@ impl SubCommand {
 
 				println!("Releases:");
 				for release in releases {
-					println!("    Version: {:-9} Game version: {:-9}", release.version, release.info_json.factorio_version);
+					println!(
+						"    Version: {:-9} Game version: {:-9}",
+						format_args!("{}", release.version),
+						format_args!("{}", release.info_json.factorio_version),
+					);
 				}
 			}
 

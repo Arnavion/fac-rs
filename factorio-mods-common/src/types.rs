@@ -169,7 +169,7 @@ impl package::VersionReq<ReleaseVersion> for VersionReqMatcher<'_> {
 		}
 
 		if self.is_base && other.0.major == 1 && other.0.minor == 0 {
-			let other = semver::Version { major: 0, minor: 18, patch: 99, pre: vec![], build: vec![] };
+			let other = semver::Version { major: 0, minor: 18, patch: 99, pre: semver::Prerelease::EMPTY, build: semver::BuildMetadata::EMPTY };
 			return self.version_req.matches(&other);
 		}
 
@@ -216,7 +216,7 @@ fn deserialize_version_req<'de, D>(deserializer: D) -> Result<semver::VersionReq
 }
 
 /// Parses a `semver::VersionReq` from a string.
-fn parse_version_req(s: &str) -> Result<semver::VersionReq, semver::ReqParseError> {
+fn parse_version_req(s: &str) -> Result<semver::VersionReq, semver::Error> {
 	s.parse().or_else(|_| fixup_version(s).parse())
 }
 
