@@ -16,8 +16,9 @@ impl SubCommand {
 			initial_indent: "    ",
 			subsequent_indent: "    ",
 			break_words: true,
-			wrap_algorithm: textwrap::core::WrapAlgorithm::OptimalFit,
-			splitter: textwrap::NoHyphenation,
+			wrap_algorithm: textwrap::wrap_algorithms::OptimalFit,
+			word_separator: textwrap::word_separators::UnicodeBreakProperties,
+			word_splitter: textwrap::word_splitters::NoHyphenation,
 		};
 
 		let mut mods = web_api.search(&self.query);
