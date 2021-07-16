@@ -118,12 +118,12 @@ async fn main() -> Result<(), Error> {
 		SubCommand::Disable(parameters) => parameters.run(
 			&local_api?,
 			prompt_override,
-		).await?,
+		)?,
 
 		SubCommand::Enable(parameters) => parameters.run(
 			&local_api?,
 			prompt_override,
-		).await?,
+		)?,
 
 		SubCommand::Install(parameters) => parameters.run(
 			&local_api?,

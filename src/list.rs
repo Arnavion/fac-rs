@@ -16,7 +16,7 @@ impl SubCommand {
 				local_api.installed_mods()
 				.context("could not enumerate installed mods")?
 				.map(|installed_mod| installed_mod.map(|installed_mod| {
-					let enabled = mods_status.get(&installed_mod.info.name).cloned().unwrap_or(true);
+					let enabled = mods_status.get(&installed_mod.info.name).copied().unwrap_or(true);
 					(installed_mod, enabled)
 				})))
 			.context("could not enumerate installed mods")?;

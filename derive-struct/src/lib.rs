@@ -14,10 +14,12 @@ pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::Tok
 			error(&ast, "#[derive(NewTypeDisplay)] can only be used with tuple structs of one field"))?;
 
 		let result = match identify_type(ty) {
-			Some(Type::SemverVersion) |
-			Some(Type::SemverVersionReq) |
-			Some(Type::String) |
-			Some(Type::U64) => quote::quote! {
+			Some(
+				Type::SemverVersion |
+				Type::SemverVersionReq |
+				Type::String |
+				Type::U64
+			) => quote::quote! {
 				impl std::fmt::Display for #struct_name {
 					fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 						self.0.fmt(f)

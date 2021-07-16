@@ -119,12 +119,12 @@ impl Client {
 }
 
 static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::BTreeSet<&'static str>> =
-	once_cell::sync::Lazy::new(|| [
+	once_cell::sync::Lazy::new(|| std::array::IntoIter::new([
 		"auth.factorio.com",
 		"direct.mods-data.factorio.com",
 		"mods.factorio.com",
 		"mods-data.factorio.com",
-	].iter().copied().collect());
+	]).collect());
 
 static APPLICATION_JSON: once_cell::sync::Lazy<http::HeaderValue> =
 	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/json"));

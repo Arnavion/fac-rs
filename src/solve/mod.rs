@@ -136,7 +136,7 @@ fn download_mod(
 
 	println!("    Installing {} {} ... downloading to {} ...", mod_name, release.version, download_displayable_target);
 
-	let mut chunk_stream = Box::pin(web_api.download(&release, &user_credentials, None));
+	let mut chunk_stream = Box::pin(web_api.download(&release, user_credentials, None));
 
 	let download_file =
 		std::fs::OpenOptions::new()
@@ -235,7 +235,7 @@ fn compute_diff(
 
 	let to_install: Vec<_> =
 		itertools::Itertools::sorted_by(to_install.into_iter(), |(name1, release1), (name2, release2)|
-			name1.cmp(&name2)
+			name1.cmp(name2)
 			.then_with(|| release1.version.cmp(&release2.version)))
 		.collect();
 
@@ -345,7 +345,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 									version_req: &release.info_json.factorio_version.0,
 									is_base: true,
 								};
-								if !package::VersionReq::matches(&game_version_req, &this.game_version) {
+								if !package::VersionReq::matches(&game_version_req, this.game_version) {
 									continue;
 								}
 
