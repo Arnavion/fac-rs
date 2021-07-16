@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 backtrace = "0.3"
 itertools = "0.10"
-petgraph = "0.5"
+petgraph = "0.6"
