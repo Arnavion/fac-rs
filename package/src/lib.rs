@@ -319,7 +319,7 @@ pub fn compute_solution<I>(
 		}
 	}
 
-	Ok(best_solution.map(|best_solution| best_solution.0.into_iter().map(|(_, package)| package.clone()).collect()))
+	Ok(best_solution.map(|best_solution| best_solution.0.into_values().cloned().collect()))
 }
 
 fn is_valid<P>(solution: &std::collections::BTreeMap<&<P as Package>::Name, &P>) -> bool where
