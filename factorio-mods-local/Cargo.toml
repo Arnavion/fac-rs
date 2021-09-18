@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 derive-struct = { path = "../derive-struct" }
-dirs = "3"
+dirs = "4"
 factorio-mods-common = { path = "../factorio-mods-common" }
 globset = "0.4"
 once_cell = "1.4"

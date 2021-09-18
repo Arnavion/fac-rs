@@ -10,7 +10,7 @@ edition = "2018"
 backtrace = "0.3"
 bytes = "1"
 crc32fast = "1"
-dirs = "3"
+dirs = "4"
 factorio-mods-common = { path = "./factorio-mods-common" }
 factorio-mods-local = { path = "./factorio-mods-local" }
 factorio-mods-web = { path = "./factorio-mods-web" }
