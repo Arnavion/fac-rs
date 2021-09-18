@@ -244,3 +244,20 @@ impl<T, E> ResultExt<T> for Result<T, E> where E: ErrorExt {
 		self.map_err(|err| err.context(context()))
 	}
 }
+
+fn textwrap_options() -> textwrap::Options<
+	'static,
+	impl Clone + textwrap::wrap_algorithms::WrapAlgorithm,
+	impl Clone + textwrap::word_separators::WordSeparator,
+	impl Clone + textwrap::word_splitters::WordSplitter
+> {
+	textwrap::Options {
+		width: textwrap::termwidth(),
+		initial_indent: "    ",
+		subsequent_indent: "    ",
+		break_words: true,
+		wrap_algorithm: textwrap::wrap_algorithms::OptimalFit,
+		word_separator: textwrap::word_separators::UnicodeBreakProperties,
+		word_splitter: textwrap::word_splitters::NoHyphenation,
+	}
+}

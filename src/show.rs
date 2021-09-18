@@ -11,6 +11,8 @@ impl SubCommand {
 	) -> Result<(), crate::Error> {
 		use crate::ResultExt;
 
+		let textwrap_options = crate::textwrap_options();
+
 		let mut mods: futures_util::stream::FuturesOrdered<_> =
 			self.names.into_iter().map(|name| async move {
 				web_api.get(&name).await
@@ -21,7 +23,13 @@ impl SubCommand {
 			println!("Name: {}", mod_.name);
 			println!("Author: {}", itertools::join(mod_.owner, ", "));
 			println!("Title: {}", mod_.title);
-			println!("Summary: {}", mod_.summary);
+			println!("Summary:");
+
+			for line in mod_.summary.0.lines() {
+				for line in textwrap::wrap(line, textwrap_options.clone()) {
+					println!("{}", line);
+				}
+			}
 
 			let releases = mod_.releases;
 

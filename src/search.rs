@@ -11,15 +11,7 @@ impl SubCommand {
 	) -> Result<(), crate::Error> {
 		use crate::ResultExt;
 
-		let textwrap_options = textwrap::Options {
-			width: textwrap::termwidth(),
-			initial_indent: "    ",
-			subsequent_indent: "    ",
-			break_words: true,
-			wrap_algorithm: textwrap::wrap_algorithms::OptimalFit,
-			word_separator: textwrap::word_separators::UnicodeBreakProperties,
-			word_splitter: textwrap::word_splitters::NoHyphenation,
-		};
+		let textwrap_options = crate::textwrap_options();
 
 		let mut mods = web_api.search(&self.query);
 
