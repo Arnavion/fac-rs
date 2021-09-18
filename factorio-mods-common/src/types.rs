@@ -240,7 +240,7 @@ pub fn fixup_version(s: &str) -> String {
 /// Parses the given string as a Dependency
 fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Error {
 	static DEPENDENCY_REGEX: once_cell::sync::Lazy<regex::Regex> =
-		once_cell::sync::Lazy::new(|| regex::Regex::new(r"^((?:\?|\(\?\)|!)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap());
+		once_cell::sync::Lazy::new(|| regex::Regex::new(r"^((?:\?|\(\?\)|!|~)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap());
 
 	let captures = DEPENDENCY_REGEX.captures(s)
 		.ok_or_else(|| serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
@@ -248,7 +248,7 @@ fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Err
 	let kind = match &captures[1] {
 		"!" => package::DependencyKind::Conflicts,
 		"?" | "(?)" => package::DependencyKind::Optional,
-		"" => package::DependencyKind::Required,
+		"" | "~" => package::DependencyKind::Required,
 		_ => unreachable!(),
 	};
 
