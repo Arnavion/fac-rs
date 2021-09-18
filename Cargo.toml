@@ -31,6 +31,6 @@ serde_json = "1"
 structopt = "0.3"
 textwrap = { version = "0.14", features = ["smawk", "terminal_size"] }
 tokio = { version = "1", features = ["macros", "rt"] }
-uluru = "2"
+uluru = "3"
 
 [workspace]

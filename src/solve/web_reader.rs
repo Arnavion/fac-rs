@@ -72,7 +72,7 @@ impl futures_util::io::AsyncRead for WebReader<'_> {
 							if (key + 1).saturating_mul(REGION_LEN_MAX as u64) < this.len && this.content_cache.find(|entry| entry.0 == key + 1).is_none() {
 								// Reuse reader for next region
 								let download = download_region(reader, key + 1, this.len);
-								this.content_cache.insert((key + 1, DataRegion::Download(Box::pin(download))));
+								let _ = this.content_cache.insert((key + 1, DataRegion::Download(Box::pin(download))));
 							}
 						},
 
@@ -91,7 +91,7 @@ impl futures_util::io::AsyncRead for WebReader<'_> {
 								response,
 								|err| std::io::Error::new(std::io::ErrorKind::Other, err))) as _);
 				let download = download_region(reader, key, this.len);
-				this.content_cache.insert((key, DataRegion::Download(Box::pin(download))));
+				let _ = this.content_cache.insert((key, DataRegion::Download(Box::pin(download))));
 			}
 		};
 
