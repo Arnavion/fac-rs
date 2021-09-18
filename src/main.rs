@@ -14,7 +14,7 @@
 mod enable_disable;
 mod install;
 mod list;
-mod remove;
+mod uninstall;
 mod search;
 mod show;
 mod update;
@@ -48,20 +48,20 @@ pub(crate) enum SubCommand {
 	#[structopt(name = "enable", about = "Enable mods")]
 	Enable(enable_disable::EnableSubCommand),
 
-	#[structopt(name = "install", about = "Install (or update) mods")]
+	#[structopt(name = "install", about = "Install (or update) mods", visible_alias = "add")]
 	Install(install::SubCommand),
 
 	#[structopt(name = "list", about = "List installed mods and their status")]
 	List(list::SubCommand),
-
-	#[structopt(name = "remove", about = "Remove mods")]
-	Remove(remove::SubCommand),
 
 	#[structopt(name = "search", about = "Search the mods database")]
 	Search(search::SubCommand),
 
 	#[structopt(name = "show", about = "Show details about specific mods")]
 	Show(show::SubCommand),
+
+	#[structopt(name = "uninstall", about = "Uninstall mods", visible_alias = "remove")]
+	Uninstall(uninstall::SubCommand),
 
 	#[structopt(name = "update", about = "Update installed mods")]
 	Update(update::SubCommand),
@@ -136,19 +136,19 @@ async fn main() -> Result<(), Error> {
 			&local_api?,
 		).await?,
 
-		SubCommand::Remove(parameters) => parameters.run(
-			&local_api?,
-			&web_api?,
-			config,
-			prompt_override,
-		).await?,
-
 		SubCommand::Search(parameters) => parameters.run(
 			&web_api?,
 		).await?,
 
 		SubCommand::Show(parameters) => parameters.run(
 			&web_api?,
+		).await?,
+
+		SubCommand::Uninstall(parameters) => parameters.run(
+			&local_api?,
+			&web_api?,
+			config,
+			prompt_override,
 		).await?,
 
 		SubCommand::Update(parameters) => parameters.run(

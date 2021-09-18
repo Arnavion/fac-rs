@@ -1,6 +1,6 @@
 #[derive(Debug, structopt::StructOpt)]
 pub(crate) struct SubCommand {
-	#[structopt(help = "mod names to remove", required = true)]
+	#[structopt(help = "mods to uninstall", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
