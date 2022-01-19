@@ -109,7 +109,7 @@ impl Config {
 			Ok(mut file) => {
 				let config: StoredConfig<'_> =
 					serde_json::from_reader(&mut file)
-					.with_context(|| format!("could not parse JSON file {}", config_file_path_displayable))?;
+					.with_context(|| format!("could not parse JSON file {config_file_path_displayable}"))?;
 
 				let StoredConfig::V1 { install_directory, user_directory, mods } = config;
 
@@ -122,7 +122,7 @@ impl Config {
 
 			Err(err) if err.kind() == std::io::ErrorKind::NotFound => (None, None, None),
 
-			Err(err) => return Err(err.context(format!("could not read config file {}", config_file_path_displayable))),
+			Err(err) => return Err(err.context(format!("could not read config file {config_file_path_displayable}"))),
 		};
 
 		let install_directory =
@@ -165,7 +165,7 @@ impl Config {
 		let config_file_path_displayable = self.path.display();
 		let mut config_file =
 			std::fs::File::create(&self.path)
-			.with_context(|| format!("could not create config file {}", config_file_path_displayable))?;
+			.with_context(|| format!("could not create config file {config_file_path_displayable}"))?;
 
 		let stored_config = StoredConfig::V1 {
 			install_directory: self.install_directory.as_ref().map(AsRef::as_ref).map(std::borrow::Cow::Borrowed),
@@ -173,7 +173,7 @@ impl Config {
 			mods: self.mods.as_ref().map(std::borrow::Cow::Borrowed),
 		};
 		serde_json::to_writer_pretty(&mut config_file, &stored_config)
-		.with_context(|| format!("could not write to config file {}", config_file_path_displayable))?;
+		.with_context(|| format!("could not write to config file {config_file_path_displayable}"))?;
 
 		Ok(())
 	}

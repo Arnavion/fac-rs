@@ -110,11 +110,11 @@ impl Api {
 			};
 			let len = match len.to_str() {
 				Ok(len) => len,
-				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err))),
+				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {err}"))),
 			};
 			let len = match len.parse() {
 				Ok(len) => len,
-				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {}", err))),
+				Err(err) => return Err(crate::Error::MalformedResponse(download_url, format!("Malformed Content-Length header: {err}"))),
 			};
 			Ok(len)
 		}
@@ -207,7 +207,7 @@ mod tests {
 			api.search("")
 			.try_fold(0_usize, |count, _| futures_util::future::ready(Ok(count + 1)))
 			.await.unwrap();
-		println!("Found {} mods", count);
+		println!("Found {count} mods");
 		assert!(count > 5200); // 5200+ as of 2019-12-14
 	}
 
@@ -217,7 +217,7 @@ mod tests {
 
 		let mut search_results = api.search("bob's functions library mod");
 		while let Some(mod_) = futures_util::StreamExt::next(&mut search_results).await {
-			println!("{:?}", mod_);
+			println!("{mod_:?}");
 			let mod_ = mod_.unwrap();
 			if mod_.title.0 == "Bob's Functions Library mod" {
 				return;
@@ -240,7 +240,7 @@ mod tests {
 
 		let mod_name = factorio_mods_common::ModName("boblibrary".to_owned());
 		let mod_ = api.get(&mod_name).await.unwrap();
-		println!("{:?}", mod_);
+		println!("{mod_:?}");
 		assert_eq!(mod_.title.0, "Bob's Functions Library mod");
 	}
 }

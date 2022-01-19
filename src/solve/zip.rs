@@ -20,17 +20,17 @@ pub(super) enum Error {
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Error::CentralDirectoryEntryCorrupt(record_number, reason) => write!(f, "central-directory record #{} is corrupt: {}", record_number, reason),
+			Error::CentralDirectoryEntryCorrupt(record_number, reason) => write!(f, "central-directory record #{record_number} is corrupt: {reason}"),
 			Error::EndOfCentralDirectorRecordCorrupt => f.write_str("end-of-central-directory record is corrupt"),
 			Error::EndOfCentralDirectorRecordNotFound => f.write_str("could not find end-of-central-directory record"),
 			Error::FileCorrupt => f.write_str("info.json is corrupt"),
 			Error::FileInvalidJson(_) => f.write_str("info.json could not be parsed"),
-			Error::FileLocalHeaderCorrupt(reason) => write!(f, "info.json local-header record is corrupt: {}", reason),
+			Error::FileLocalHeaderCorrupt(reason) => write!(f, "info.json local-header record is corrupt: {reason}"),
 			Error::FileMetadataCorrupt => f.write_str("info.json file-local-header record has different metadata than its central-directory-entry record"),
 			Error::FileNotFound => f.write_str("info.json not found"),
 			Error::Io(_) => f.write_str("I/O error"),
 			Error::UnsupportedCompressionMethod(compression_method) =>
-				write!(f, "info.json is compressed with method {} but only Deflated and Stored are supported", compression_method),
+				write!(f, "info.json is compressed with method {compression_method} but only Deflated and Stored are supported"),
 		}
 	}
 }

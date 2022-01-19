@@ -35,16 +35,16 @@ pub enum Error {
 impl std::fmt::Display for Error {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Error::Deserialize(url, _) => write!(f, "could not deserialize response body for URL {}", url),
-			Error::Http(url, _) => write!(f, "could not fetch URL {}", url),
-			Error::InvalidRange(range, _) => write!(f, "could not parse HTTP range {}", range),
-			Error::LoginFailure(message) => write!(f, "login failed: {}", message),
-			Error::MalformedResponse(url, message) => write!(f, "request to URL {} got malformed response: {}", url, message),
-			Error::NotWhitelistedHost(url) => write!(f, "host of {} is not whitelisted", url),
-			Error::Parse(url, _) => write!(f, "could not parse URL {}", url),
-			Error::ParseUri(url, _) => write!(f, "could not parse URL {}", url),
-			Error::Serialize(url, _) => write!(f, "could not serialize request body for URL {}", url),
-			Error::StatusCode(url, status_code) => write!(f, "request to URL {} returned {}", url, status_code),
+			Error::Deserialize(url, _) => write!(f, "could not deserialize response body for URL {url}"),
+			Error::Http(url, _) => write!(f, "could not fetch URL {url}"),
+			Error::InvalidRange(range, _) => write!(f, "could not parse HTTP range {range}"),
+			Error::LoginFailure(message) => write!(f, "login failed: {message}"),
+			Error::MalformedResponse(url, message) => write!(f, "request to URL {url} got malformed response: {message}"),
+			Error::NotWhitelistedHost(url) => write!(f, "host of {url} is not whitelisted"),
+			Error::Parse(url, _) => write!(f, "could not parse URL {url}"),
+			Error::ParseUri(url, _) => write!(f, "could not parse URL {url}"),
+			Error::Serialize(url, _) => write!(f, "could not serialize request body for URL {url}"),
+			Error::StatusCode(url, status_code) => write!(f, "request to URL {url} returned {status_code}"),
 		}
 	}
 }

@@ -86,7 +86,7 @@ impl InstalledMod {
 				toplevel.to_owned()
 			};
 
-			let info_json_file_path = format!("{}/info.json", toplevel);
+			let info_json_file_path = format!("{toplevel}/info.json");
 
 			let info_json_file = match zip_file.by_name(&info_json_file_path) {
 				Ok(info_json_file) => info_json_file,

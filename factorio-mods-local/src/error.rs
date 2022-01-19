@@ -39,7 +39,7 @@ impl std::fmt::Display for Error {
 			Error::IncompleteUserCredentials(_) => f.write_str("valid API credentials were not found in player-data.json"),
 			Error::InstallDirectoryNotFound => f.write_str("the local Factorio installation could not be found"),
 			Error::Io(path, _) => write!(f, "I/O error on {}", path.display()),
-			Error::Pattern(pattern, _) => write!(f, "the pattern {} is invalid", pattern),
+			Error::Pattern(pattern, _) => write!(f, "the pattern {pattern} is invalid"),
 			Error::ReadJsonFile(path, _) => write!(f, "could not parse the JSON file {}", path.display()),
 			Error::UnknownModFormat(path) => write!(f, "the mod at {} could not be recognized as a valid mod", path.display()),
 			Error::UserDirectoryNotFound => f.write_str("the Factorio user directory could not be found"),

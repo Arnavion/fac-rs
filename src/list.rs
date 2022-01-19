@@ -43,7 +43,7 @@ impl SubCommand {
 
 				let tags_string = if tags.is_empty() { String::new() } else { format!(" ({})", tags.join(", ")) };
 
-				println!("    {} {}{}", installed_mod.0.info.name, installed_mod.0.info.version, tags_string);
+				println!("    {} {}{tags_string}", installed_mod.0.info.name, installed_mod.0.info.version);
 			}
 		}
 

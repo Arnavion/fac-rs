@@ -205,7 +205,7 @@ fn deserialize_mod_list_mod_enabled<'de, D>(deserializer: D) -> Result<bool, D::
 		type Value = bool;
 
 		fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-			write!(f, r#""true" or "false" or true or false"#)
+			f.write_str(r#""true" or "false" or true or false"#)
 		}
 
 		fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E> where E: serde::de::Error {

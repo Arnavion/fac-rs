@@ -71,8 +71,8 @@ impl<Name, Version> std::fmt::Display for Error<Name, Version> where
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Error::BothRequiresAndConflicts { package_name, package_version, dep_name, dep_version } =>
-				write!(f, "{} {} both requires and conflicts with {} {}", package_name, package_version, dep_name, dep_version),
-			Error::NoPackagesMeetRequirements(name) => write!(f, "No packages found for {} that meet the specified requirements", name),
+				write!(f, "{package_name} {package_version} both requires and conflicts with {dep_name} {dep_version}"),
+			Error::NoPackagesMeetRequirements(name) => write!(f, "No packages found for {name} that meet the specified requirements"),
 		}
 	}
 }

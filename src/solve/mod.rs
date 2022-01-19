@@ -113,7 +113,7 @@ fn download_mod(
 		Some(download_filename) => download_filename.to_owned(),
 		None =>
 			return futures_util::future::Either::Left(futures_util::future::err(
-				format!("Filename {} is malformed", displayable_target).into())),
+				format!("Filename {displayable_target} is malformed").into())),
 	};
 	download_filename.push(".new");
 	let download_target = target.with_file_name(download_filename);
@@ -130,11 +130,11 @@ fn download_mod(
 			Some(true) => (),
 			_ =>
 				return futures_util::future::Either::Left(futures_util::future::err(
-					format!("Filename {} is malformed", download_displayable_target).into())),
+					format!("Filename {download_displayable_target} is malformed").into())),
 		}
 	}
 
-	println!("    Installing {} {} ... downloading to {} ...", mod_name, release.version, download_displayable_target);
+	println!("    Installing {mod_name} {} ... downloading to {download_displayable_target} ...", release.version);
 
 	let mut chunk_stream = Box::pin(web_api.download(&release, user_credentials, None));
 
@@ -144,25 +144,25 @@ fn download_mod(
 		.open(&download_target);
 
 	futures_util::future::Either::Right(async move {
-		let download_file = download_file.with_context(|| format!("could not open {} for writing", download_displayable_target))?;
+		let download_file = download_file.with_context(|| format!("could not open {download_displayable_target} for writing"))?;
 		let mut download_file = std::io::BufWriter::new(download_file);
 
 		while let Some(chunk) = futures_util::stream::TryStreamExt::try_next(&mut chunk_stream).await.context("could not download file")? {
 			std::io::Write::write_all(&mut download_file, &chunk)
-				.with_context(|| format!("could not write to file {}", download_displayable_target))?;
+				.with_context(|| format!("could not write to file {download_displayable_target}"))?;
 		}
 
 		std::io::Write::flush(&mut download_file)
-			.with_context(|| format!("could not write to file {}", download_displayable_target))?;
+			.with_context(|| format!("could not write to file {download_displayable_target}"))?;
 
 		drop(download_file);
 
-		println!("    Installing {} {} ... renaming {} to {}", mod_name, release.version, download_displayable_target, displayable_target);
+		println!("    Installing {mod_name} {} ... renaming {download_displayable_target} to {displayable_target}", release.version);
 
 		std::fs::rename(&download_target, &target)
-			.with_context(|| format!("could not rename {} to {}", download_displayable_target, displayable_target))?;
+			.with_context(|| format!("could not rename {download_displayable_target} to {displayable_target}"))?;
 
-		println!("    Installing {} {} ... done", mod_name, release.version);
+		println!("    Installing {mod_name} {} ... done", release.version);
 
 		Ok(())
 	})
@@ -251,7 +251,7 @@ fn compute_diff(
 		println!();
 		println!("The following new mods will be installed:");
 		for (name, release) in &to_install {
-			println!("    {} {}", name, release.version);
+			println!("    {name} {}", release.version);
 		}
 	}
 
@@ -338,7 +338,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 						std::task::Poll::Ready(Ok(mod_)) => {
 							let (mod_name, _) = get_mod.take().unwrap();
 
-							println!("    Getting {} ... done", mod_name);
+							println!("    Getting {mod_name} ... done");
 
 							for release in mod_.releases {
 								let game_version_req = factorio_mods_common::VersionReqMatcher {
@@ -351,7 +351,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 
 								let release = std::rc::Rc::new(release);
 
-								println!("        Getting {} {} info.json ...", mod_name, release.version);
+								println!("        Getting {mod_name} {} info.json ...", release.version);
 
 								let web_api = this.web_api;
 								let user_credentials = this.user_credentials.clone();
@@ -376,7 +376,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 							drop(get_mod.take()),
 
 						std::task::Poll::Ready(Err(err)) =>
-							return std::task::Poll::Ready(Err(err.context(format!("could not get mod info for {}", mod_name)))),
+							return std::task::Poll::Ready(Err(err.context(format!("could not get mod info for {mod_name}")))),
 					},
 
 					None => unreachable!(),
@@ -393,12 +393,12 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 
 							this.packages.push(Installable::Mod(mod_info.name, release.clone(), mod_info.dependencies));
 
-							println!("        Getting {} {} info.json ... done", mod_name, release.version);
+							println!("        Getting {mod_name} {} info.json ... done", release.version);
 						},
 
 						std::task::Poll::Ready(Err(err)) => {
 							let (mod_name, release, _) = get_info_json.take().unwrap();
-							eprintln!("        Getting {} {} info.json ... failed: {}", mod_name, release.version, err);
+							eprintln!("        Getting {mod_name} {} info.json ... failed: {err}", release.version);
 						},
 
 						std::task::Poll::Pending => (),
@@ -453,7 +453,7 @@ fn get(
 	web_api: &factorio_mods_web::Api,
 ) {
 	if already_fetching.insert(mod_name.clone()) {
-		println!("    Getting {} ...", mod_name);
+		println!("    Getting {mod_name} ...");
 
 		let f = Box::pin(web_api.get(&mod_name));
 		new.push(CacheFuture::GetMod(Some((mod_name, f))));

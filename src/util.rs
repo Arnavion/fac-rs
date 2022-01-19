@@ -28,7 +28,7 @@ pub(crate) async fn ensure_user_credentials(
 
 		let username = {
 			let prompt: std::borrow::Cow<'_, _> =
-				existing_username.as_ref().map_or_else(|| "Username: ".into(), |username| format!("Username [{}]: ", username).into());
+				existing_username.as_ref().map_or_else(|| "Username: ".into(), |username| format!("Username [{username}]: ").into());
 			rprompt::prompt_reply_stdout(&prompt).context("could not read username")?
 		};
 
@@ -51,7 +51,7 @@ pub(crate) async fn ensure_user_credentials(
 			},
 
 			Err(factorio_mods_web::Error::LoginFailure(message)) => {
-				println!("Authentication error: {}", message);
+				println!("Authentication error: {message}");
 				existing_username = Some(username);
 			},
 

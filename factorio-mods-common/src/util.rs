@@ -9,7 +9,7 @@ pub fn deserialize_string_or_seq_string<'de, T, D>(deserializer: D) -> Result<Ve
 		type Value = Vec<T>;
 
 		fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-			write!(f, "a string or sequence of strings")
+			f.write_str("a string or sequence of strings")
 		}
 
 		fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

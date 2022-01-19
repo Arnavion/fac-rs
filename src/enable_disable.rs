@@ -48,7 +48,7 @@ pub(crate) fn enable_disable(
 
 	for (name, installed_mods) in &all_installed_mods {
 		if installed_mods.len() > 1 {
-			println!("There is more than one version of {} installed. Run `fac update` or remove all but one version manually.", name);
+			println!("There is more than one version of {name} installed. Run `fac update` or remove all but one version manually.");
 			return Ok(());
 		}
 	}
@@ -72,7 +72,10 @@ pub(crate) fn enable_disable(
 					}
 				}
 				else {
-					println!("Mod {} is a required dependency of {} but isn't installed. Run `fac update` to install missing dependencies.", dep.name, installed_mod.info.name);
+					println!(
+						"Mod {} is a required dependency of {} but isn't installed. Run `fac update` to install missing dependencies.",
+						dep.name, installed_mod.info.name,
+					);
 					return Ok(());
 				}
 			}
@@ -90,7 +93,7 @@ pub(crate) fn enable_disable(
 			to_change.extend(petgraph::visit::Walker::iter(bfs, &graph));
 		}
 		else {
-			println!("No match found for mod {}", name);
+			println!("No match found for mod {name}");
 			return Ok(());
 		}
 	}

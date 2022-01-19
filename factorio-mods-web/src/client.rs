@@ -119,12 +119,12 @@ impl Client {
 }
 
 static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::BTreeSet<&'static str>> =
-	once_cell::sync::Lazy::new(|| std::array::IntoIter::new([
+	once_cell::sync::Lazy::new(|| [
 		"auth.factorio.com",
 		"direct.mods-data.factorio.com",
 		"mods.factorio.com",
 		"mods-data.factorio.com",
-	]).collect());
+	].into_iter().collect());
 
 static APPLICATION_JSON: once_cell::sync::Lazy<http::HeaderValue> =
 	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/json"));
@@ -186,11 +186,11 @@ impl ClientInner {
 					};
 					let location = match location.to_str() {
 						Ok(location) => location,
-						Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {}", err))),
+						Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {err}"))),
 					};
 					let location = match url.join(location) {
 						Ok(location) => location,
-						Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {}", err))),
+						Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {err}"))),
 					};
 
 					let request = {
@@ -267,7 +267,7 @@ fn expect_content_type(
 	};
 
 	if mime != expected_mime {
-		return Err(crate::Error::MalformedResponse(url, format!("Unexpected Content-Type header: {:?}", mime)));
+		return Err(crate::Error::MalformedResponse(url, format!("Unexpected Content-Type header: {mime:?}")));
 	}
 
 	Ok(url)

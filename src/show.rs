@@ -16,7 +16,7 @@ impl SubCommand {
 		let mut mods: futures_util::stream::FuturesOrdered<_> =
 			self.names.into_iter().map(|name| async move {
 				web_api.get(&name).await
-				.with_context(|| format!("could not retrieve mod {}", name))
+				.with_context(|| format!("could not retrieve mod {name}"))
 			}).collect();
 
 		while let Some(mod_) = futures_util::TryStreamExt::try_next(&mut mods).await? {
@@ -27,7 +27,7 @@ impl SubCommand {
 
 			for line in mod_.summary.0.lines() {
 				for line in textwrap::wrap(line, textwrap_options.clone()) {
-					println!("{}", line);
+					println!("{line}");
 				}
 			}
 

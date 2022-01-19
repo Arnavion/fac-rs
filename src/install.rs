@@ -19,12 +19,12 @@ impl std::str::FromStr for Requirement {
 		static REQUIREMENT_REGEX: once_cell::sync::Lazy<regex::Regex> =
 			once_cell::sync::Lazy::new(|| regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap());
 
-		let captures = REQUIREMENT_REGEX.captures(s).ok_or_else(|| format!(r#"Could not parse requirement "{}""#, s))?;
+		let captures = REQUIREMENT_REGEX.captures(s).ok_or_else(|| format!(r#"Could not parse requirement "{s}""#))?;
 		let name = factorio_mods_common::ModName(captures[1].to_owned());
 		let version_string = captures.get(2).map_or("*", |m| m.as_str());
 		let version =
 			version_string.parse::<semver::VersionReq>()
-			.with_context(|| format!(r#"could not parse "{}" as a valid version requirement"#, version_string))?;
+			.with_context(|| format!(r#"could not parse "{version_string}" as a valid version requirement"#))?;
 		let version = factorio_mods_common::ModVersionReq(version);
 
 		Ok(Requirement {

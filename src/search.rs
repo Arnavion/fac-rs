@@ -22,7 +22,7 @@ impl SubCommand {
 
 			for line in mod_.summary.0.lines() {
 				for line in textwrap::wrap(line, textwrap_options.clone()) {
-					println!("{}", line);
+					println!("{line}");
 				}
 			}
 
