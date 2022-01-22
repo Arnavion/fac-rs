@@ -7,6 +7,8 @@ description = "Package solver used by fac-rs"
 edition = "2021"
 
 [dependencies]
-backtrace = "0.3"
-itertools = "0.10"
-petgraph = "0.6"
+backtrace = { version = "0.3", default-features = false }
+itertools = { version = "0.10", default-features = false, features = [
+	"use_std", # for itertools::sorted_by
+] }
+petgraph = { version = "0.6", default-features = false }

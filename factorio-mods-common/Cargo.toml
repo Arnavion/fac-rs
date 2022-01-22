@@ -6,14 +6,29 @@ authors = ["Arnavion <me@arnavion.dev>"]
 description = "Common types and functionality used by the factorio-mods-* crates"
 edition = "2021"
 
+
 [dependencies]
+itertools = { version = "0.10", default-features = false, features = [
+	"use_std", # for itertools::join
+] }
+once_cell = { version = "1.4", default-features = false, features = [
+	"std", # for once_cell::sync
+] }
+regex = { version = "1.2", default-features = false, features = [
+	"std", # "`std` feature is currently required to build this crate"
+	"unicode-perl", # for \s and \d support
+] }
+semver = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = [
+	"derive",
+	"alloc", # for {String, Vec<T>}: serde::Deserialize
+] }
+
 derive-struct = { path = "../derive-struct" }
-itertools = "0.10"
-once_cell = "1.4"
 package = { path = "../package" }
-regex = "1.2"
-semver = "1"
-serde = { version = "1", features = ["derive"] }
+
 
 [dev-dependencies]
-serde_json = "1"
+serde_json = { version = "1", default-features = false, features = [
+	"alloc", # serde_json requires either `std` or `alloc`
+] }

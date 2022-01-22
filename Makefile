@@ -9,5 +9,9 @@ target/release/fac:
 	cargo build --release -p fac
 
 test:
-	cargo test --all
-	cargo clippy --all
+	set -e; \
+	for crate in 'factorio-mods-common' 'factorio-mods-local' 'factorio-mods-web' 'package' 'fac'; do \
+		cargo test -p "$$crate"; \
+		cargo clippy -p "$$crate"; \
+		cargo clippy --tests -p "$$crate"; \
+	done
