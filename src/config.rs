@@ -1,4 +1,4 @@
-use crate::{ ErrorExt, ResultExt };
+use anyhow::Context;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "version")]
@@ -20,7 +20,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-	pub fn load(path: Option<std::path::PathBuf>) -> Result<Self, crate::Error>{
+	pub fn load(path: Option<std::path::PathBuf>) -> anyhow::Result<Self> {
 		static FACTORIO_INSTALL_SEARCH_PATHS: once_cell::sync::Lazy<Vec<std::path::PathBuf>> =
 			once_cell::sync::Lazy::new(|| {
 				let mut result = vec![];
@@ -86,7 +86,7 @@ impl Config {
 		let config_file_path =
 			if let Some(path) = path {
 				if path.iter().count() == 1 {
-					let mut user_config_dir = dirs::config_dir().ok_or("could not derive path to config directory")?;
+					let mut user_config_dir = dirs::config_dir().context("could not derive path to config directory")?;
 					user_config_dir.push("fac");
 					user_config_dir.push(path);
 					user_config_dir
@@ -96,7 +96,7 @@ impl Config {
 				}
 			}
 			else {
-				let mut user_config_dir = dirs::config_dir().ok_or("could not derive path to config directory")?;
+				let mut user_config_dir = dirs::config_dir().context("could not derive path to config directory")?;
 				user_config_dir.push("fac");
 				std::fs::create_dir_all(&user_config_dir).with_context(|| format!("could not create config directory {}", user_config_dir.display()))?;
 				user_config_dir.push("config.json");
@@ -122,7 +122,7 @@ impl Config {
 
 			Err(err) if err.kind() == std::io::ErrorKind::NotFound => (None, None, None),
 
-			Err(err) => return Err(err.context(format!("could not read config file {config_file_path_displayable}"))),
+			Err(err) => return Err(anyhow::Error::new(err).context(format!("could not read config file {config_file_path_displayable}"))),
 		};
 
 		let install_directory =
@@ -161,7 +161,7 @@ impl Config {
 		})
 	}
 
-	pub fn save(&self) -> Result<(), crate::Error> {
+	pub fn save(&self) -> anyhow::Result<()> {
 		let config_file_path_displayable = self.path.display();
 		let mut config_file =
 			std::fs::File::create(&self.path)

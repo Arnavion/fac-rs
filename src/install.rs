@@ -1,6 +1,6 @@
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) struct SubCommand {
-	#[structopt(help = "requirements to install", required = true)]
+	#[clap(help = "requirements to install", required = true)]
 	requirements: Vec<Requirement>,
 }
 
@@ -11,15 +11,15 @@ struct Requirement {
 }
 
 impl std::str::FromStr for Requirement {
-	type Err = crate::Error;
+	type Err = anyhow::Error;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		use crate::ResultExt;
+		use anyhow::Context;
 
 		static REQUIREMENT_REGEX: once_cell::sync::Lazy<regex::Regex> =
 			once_cell::sync::Lazy::new(|| regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap());
 
-		let captures = REQUIREMENT_REGEX.captures(s).ok_or_else(|| format!(r#"Could not parse requirement "{s}""#))?;
+		let captures = REQUIREMENT_REGEX.captures(s).with_context(|| format!(r#"Could not parse requirement "{s}""#))?;
 		let name = factorio_mods_common::ModName(captures[1].to_owned());
 		let version_string = captures.get(2).map_or("*", |m| m.as_str());
 		let version =
@@ -41,7 +41,7 @@ impl SubCommand {
 		web_api: &factorio_mods_web::Api,
 		mut config: crate::config::Config,
 		prompt_override: Option<bool>,
-	) -> Result<(), crate::Error> {
+	) -> anyhow::Result<()> {
 		let mods = config.mods.as_mut().unwrap();
 		for requirement in self.requirements {
 			mods.insert(requirement.name, requirement.version);

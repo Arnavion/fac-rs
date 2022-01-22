@@ -1,6 +1,6 @@
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) struct SubCommand {
-	#[structopt(help = "mods to uninstall", required = true)]
+	#[clap(help = "mods to uninstall", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
@@ -11,7 +11,7 @@ impl SubCommand {
 		web_api: &factorio_mods_web::Api,
 		mut config: crate::config::Config,
 		prompt_override: Option<bool>,
-	) -> Result<(), crate::Error> {
+	) -> anyhow::Result<()> {
 		let mods = config.mods.as_mut().unwrap();
 
 		for mod_ in self.names {

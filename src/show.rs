@@ -1,6 +1,6 @@
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) struct SubCommand {
-	#[structopt(help = "mods to show", required = true)]
+	#[clap(help = "mods to show", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
@@ -8,8 +8,8 @@ impl SubCommand {
 	pub(crate) async fn run(
 		self,
 		web_api: &factorio_mods_web::Api,
-	) -> Result<(), crate::Error> {
-		use crate::ResultExt;
+	) -> anyhow::Result<()> {
+		use anyhow::Context;
 
 		let textwrap_options = crate::textwrap_options();
 

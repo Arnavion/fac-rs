@@ -11,6 +11,8 @@
 	clippy::type_complexity,
 )]
 
+use anyhow::Context;
+
 mod enable_disable;
 mod install;
 mod list;
@@ -23,55 +25,54 @@ mod config;
 mod solve;
 mod util;
 
-#[derive(Debug, structopt::StructOpt)]
-#[structopt(about, author)]
-#[structopt(setting(structopt::clap::AppSettings::VersionlessSubcommands))]
+#[derive(clap::Parser)]
+#[clap(about, author)]
 pub(crate) struct Options {
-	#[structopt(help = "Path to fac config file. Defaults to .../fac/config.json", short = "c", parse(from_os_str))]
+	#[clap(help = "Path to fac config file. Defaults to .../fac/config.json", short = 'c', parse(from_os_str))]
 	config: Option<std::path::PathBuf>,
 
-	#[structopt(help = "Answer yes to all prompts", short = "y")]
+	#[clap(help = "Answer yes to all prompts", short = 'y')]
 	yes: bool,
 
-	#[structopt(help = "Answer no to all prompts", short = "n", conflicts_with = "yes")]
+	#[clap(help = "Answer no to all prompts", short = 'n', conflicts_with = "yes")]
 	no: bool,
 
-	#[structopt(subcommand)]
+	#[clap(subcommand)]
 	subcommand: SubCommand,
 }
 
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) enum SubCommand {
-	#[structopt(name = "disable", about = "Disable mods")]
+	#[clap(name = "disable", about = "Disable mods")]
 	Disable(enable_disable::DisableSubCommand),
 
-	#[structopt(name = "enable", about = "Enable mods")]
+	#[clap(name = "enable", about = "Enable mods")]
 	Enable(enable_disable::EnableSubCommand),
 
-	#[structopt(name = "install", about = "Install (or update) mods", visible_alias = "add")]
+	#[clap(name = "install", about = "Install (or update) mods", visible_alias = "add")]
 	Install(install::SubCommand),
 
-	#[structopt(name = "list", about = "List installed mods and their status")]
+	#[clap(name = "list", about = "List installed mods and their status")]
 	List(list::SubCommand),
 
-	#[structopt(name = "search", about = "Search the mods database")]
+	#[clap(name = "search", about = "Search the mods database")]
 	Search(search::SubCommand),
 
-	#[structopt(name = "show", about = "Show details about specific mods")]
+	#[clap(name = "show", about = "Show details about specific mods")]
 	Show(show::SubCommand),
 
-	#[structopt(name = "uninstall", about = "Uninstall mods", visible_alias = "remove")]
+	#[clap(name = "uninstall", about = "Uninstall mods", visible_alias = "remove")]
 	Uninstall(uninstall::SubCommand),
 
-	#[structopt(name = "update", about = "Update installed mods")]
+	#[clap(name = "update", about = "Update installed mods")]
 	Update(update::SubCommand),
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Error> {
+async fn main() -> anyhow::Result<()> {
 	std::env::set_var("RUST_BACKTRACE", "1");
 
-	let options: Options = structopt::StructOpt::from_args();
+	let options: Options = clap::Parser::parse();
 
 	let prompt_override = match (options.yes, options.no) {
 		(true, false) => Some(true),
@@ -82,18 +83,18 @@ async fn main() -> Result<(), Error> {
 
 	let mut config = crate::config::Config::load(options.config)?;
 
-	let local_api: Result<_, crate::Error> = match (&config.install_directory, &config.user_directory) {
+	let local_api: anyhow::Result<_> = match (&config.install_directory, &config.user_directory) {
 		(Some(install_directory), Some(user_directory)) =>
 			factorio_mods_local::Api::new(install_directory, user_directory)
-			.context("could not initialize local API").map_err(Into::into),
+			.context("could not initialize local API"),
 
-		(None, _) => Err(
-			factorio_mods_local::Error::InstallDirectoryNotFound
-			.context(r#"could not initialize local API. Consider setting "install_directory" to the path in the config file."#)),
+		(None, _) =>
+			Err(anyhow::Error::new(factorio_mods_local::Error::InstallDirectoryNotFound))
+			.context(r#"could not initialize local API. Consider setting "install_directory" to the path in the config file."#),
 
-		(_, None) => Err(
-			factorio_mods_local::Error::UserDirectoryNotFound
-			.context(r#"could not initialize local API. Consider setting "user_directory" to the path in the config file."#)),
+		(_, None) =>
+			Err(anyhow::Error::new(factorio_mods_local::Error::UserDirectoryNotFound))
+			.context(r#"could not initialize local API. Consider setting "user_directory" to the path in the config file."#),
 	};
 
 	if config.mods.is_none() {
@@ -160,89 +161,6 @@ async fn main() -> Result<(), Error> {
 	}
 
 	Ok(())
-}
-
-struct Error(Box<dyn std::error::Error>, backtrace::Backtrace);
-
-impl std::fmt::Debug for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		writeln!(f, "{}", self.0)?;
-
-		let mut source = self.0.source();
-		while let Some(err) = source {
-			writeln!(f, "caused by: {err}")?;
-			source = err.source();
-		}
-
-		writeln!(f)?;
-		writeln!(f, "{:?}", self.1)?;
-
-		Ok(())
-	}
-}
-
-impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		std::fmt::Debug::fmt(self, f)
-	}
-}
-
-impl std::error::Error for Error {
-}
-
-impl From<&'_ str> for Error {
-	fn from(err: &str) -> Self {
-		Error(err.into(), Default::default())
-	}
-}
-
-impl From<String> for Error {
-	fn from(err: String) -> Self {
-		Error(err.into(), Default::default())
-	}
-}
-
-trait ErrorExt: std::error::Error + Sized + 'static {
-	fn context<D>(self, context: D) -> Error where D: std::fmt::Display + std::fmt::Debug + 'static {
-		#[derive(Debug)]
-		struct ErrorWithContext<D, E> {
-			context: D,
-			err: E,
-		}
-
-		impl<D, E> std::fmt::Display for ErrorWithContext<D, E> where D: std::fmt::Display, E: std::error::Error {
-			fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-				self.context.fmt(f)
-			}
-		}
-
-		impl<D, E> std::error::Error for ErrorWithContext<D, E> where D: std::fmt::Display + std::fmt::Debug, E: std::error::Error + 'static {
-			fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-				Some(&self.err)
-			}
-		}
-
-		Error(Box::new(ErrorWithContext { context, err: self }), Default::default())
-	}
-}
-
-impl<E> ErrorExt for E where E: std::error::Error + 'static {
-}
-
-trait ResultExt<T> {
-	fn context<D>(self, context: D) -> Result<T, Error> where D: std::fmt::Display + std::fmt::Debug + 'static;
-
-	fn with_context<F, D>(self, context: F) -> Result<T, Error> where F: FnOnce() -> D, D: std::fmt::Display + std::fmt::Debug + 'static;
-}
-
-impl<T, E> ResultExt<T> for Result<T, E> where E: ErrorExt {
-	fn context<D>(self, context: D) -> Result<T, Error> where D: std::fmt::Display + std::fmt::Debug + 'static {
-		self.map_err(|err| err.context(context))
-	}
-
-	fn with_context<F, D>(self, context: F) -> Result<T, Error> where F: FnOnce() -> D, D: std::fmt::Display + std::fmt::Debug + 'static {
-		self.map_err(|err| err.context(context()))
-	}
 }
 
 fn textwrap_options() -> textwrap::Options<

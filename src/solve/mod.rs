@@ -1,7 +1,7 @@
+use anyhow::Context;
+
 mod web_reader;
 mod zip;
-
-use crate::{ ErrorExt, ResultExt };
 
 /// Computes which old mods to uninstall and which new mods to install based on the given reqs.
 /// Asks the user for confirmation, then applies the diff.
@@ -12,7 +12,7 @@ pub(crate) async fn compute_and_apply_diff(
 	web_api: &factorio_mods_web::Api,
 	mut config: crate::config::Config,
 	prompt_override: Option<bool>,
-) -> Result<(), crate::Error> {
+) -> anyhow::Result<()> {
 	let user_credentials = std::rc::Rc::new(crate::util::ensure_user_credentials(local_api, web_api, prompt_override).await?);
 
 	let game_version = local_api.game_version();
@@ -28,7 +28,7 @@ pub(crate) async fn compute_and_apply_diff(
 
 	let solution =
 		solution
-		.ok_or("no solution found.")?
+		.context("no solution found.")?
 		.into_iter()
 		.filter_map(|installable|
 			if let Installable::Mod(name, release, _) = installable {
@@ -105,7 +105,7 @@ fn download_mod(
 	mods_directory: &std::path::Path,
 	mods_directory_canonicalized: &std::path::Path,
 	user_credentials: &factorio_mods_common::UserCredentials,
-) -> impl std::future::Future<Output = Result<(), crate::Error>> + 'static {
+) -> impl std::future::Future<Output = anyhow::Result<()>> + 'static {
 	let target = mods_directory.join(&release.filename.0);
 	let displayable_target = target.display().to_string();
 
@@ -113,7 +113,7 @@ fn download_mod(
 		Some(download_filename) => download_filename.to_owned(),
 		None =>
 			return futures_util::future::Either::Left(futures_util::future::err(
-				format!("Filename {displayable_target} is malformed").into())),
+				anyhow::anyhow!("Filename {displayable_target} is malformed"))),
 	};
 	download_filename.push(".new");
 	let download_target = target.with_file_name(download_filename);
@@ -130,7 +130,7 @@ fn download_mod(
 			Some(true) => (),
 			_ =>
 				return futures_util::future::Either::Left(futures_util::future::err(
-					format!("Filename {download_displayable_target} is malformed").into())),
+					anyhow::anyhow!("Filename {download_displayable_target} is malformed"))),
 		}
 	}
 
@@ -172,7 +172,7 @@ fn compute_diff(
 	mut solution: std::collections::BTreeMap<factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>>,
 	local_api: &factorio_mods_local::Api,
 	prompt_override: Option<bool>,
-) -> Result<Option<(Vec<factorio_mods_local::InstalledMod>, Vec<(factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>)>)>, crate::Error> {
+) -> anyhow::Result<Option<(Vec<factorio_mods_local::InstalledMod>, Vec<(factorio_mods_common::ModName, std::rc::Rc<factorio_mods_web::ModRelease>)>)>> {
 	let mut all_installed_mods: std::collections::BTreeMap<_, Vec<_>> = Default::default();
 	for mod_ in local_api.installed_mods().context("could not enumerate installed mods")? {
 		let mod_ = mod_.context("could not process an installed mod")?;
@@ -317,10 +317,10 @@ impl<'a> SolutionFuture<'a> {
 }
 
 impl<'a> std::future::Future for SolutionFuture<'a> {
-	type Output = Result<(
+	type Output = anyhow::Result<(
 		Option<Vec<Installable>>,
 		std::collections::BTreeMap<factorio_mods_common::ModName, factorio_mods_common::ModVersionReq>,
-	), crate::Error>;
+	)>;
 
 	fn poll(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
 		let this = &mut *self;
@@ -376,7 +376,7 @@ impl<'a> std::future::Future for SolutionFuture<'a> {
 							drop(get_mod.take()),
 
 						std::task::Poll::Ready(Err(err)) =>
-							return std::task::Poll::Ready(Err(err.context(format!("could not get mod info for {mod_name}")))),
+							return std::task::Poll::Ready(Err(anyhow::Error::new(err).context(format!("could not get mod info for {mod_name}")))),
 					},
 
 					None => unreachable!(),
@@ -468,7 +468,7 @@ enum CacheFuture<'a> {
 	GetInfoJson(Option<(
 		std::rc::Rc<factorio_mods_common::ModName>,
 		std::rc::Rc<factorio_mods_web::ModRelease>,
-		std::pin::Pin<Box<dyn std::future::Future<Output = Result<factorio_mods_local::ModInfo, crate::Error>> + 'a>>,
+		std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<factorio_mods_local::ModInfo>> + 'a>>,
 	)>),
 }
 

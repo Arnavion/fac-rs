@@ -1,6 +1,6 @@
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) struct EnableSubCommand {
-	#[structopt(help = "mods to enable", required = true)]
+	#[clap(help = "mods to enable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
@@ -9,15 +9,15 @@ impl EnableSubCommand {
 		self,
 		local_api: &factorio_mods_local::Api,
 		prompt_override: Option<bool>,
-	) -> Result<(), crate::Error> {
+	) -> anyhow::Result<()> {
 		enable_disable(self.names, local_api, prompt_override, true)?;
 		Ok(())
 	}
 }
 
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) struct DisableSubCommand {
-	#[structopt(help = "mods to disable", required = true)]
+	#[clap(help = "mods to disable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
@@ -26,7 +26,7 @@ impl DisableSubCommand {
 		self,
 		local_api: &factorio_mods_local::Api,
 		prompt_override: Option<bool>,
-	) -> Result<(), crate::Error> {
+	) -> anyhow::Result<()> {
 		enable_disable(self.names, local_api, prompt_override, false)?;
 		Ok(())
 	}
@@ -37,8 +37,8 @@ pub(crate) fn enable_disable(
 	local_api: &factorio_mods_local::Api,
 	prompt_override: Option<bool>,
 	enable: bool,
-) -> Result<(), crate::Error> {
-	use crate::ResultExt;
+) -> anyhow::Result<()> {
+	use anyhow::Context;
 
 	let mut all_installed_mods: std::collections::BTreeMap<_, Vec<_>> = Default::default();
 	for mod_ in local_api.installed_mods().context("could not enumerate installed mods")? {

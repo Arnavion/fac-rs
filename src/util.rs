@@ -1,10 +1,10 @@
-use crate::{ ErrorExt, ResultExt };
+use anyhow::Context;
 
 pub(crate) async fn ensure_user_credentials(
 	local_api: &factorio_mods_local::Api,
 	web_api: &factorio_mods_web::Api,
 	prompt_override: Option<bool>,
-) -> Result<factorio_mods_common::UserCredentials, crate::Error> {
+) -> anyhow::Result<factorio_mods_common::UserCredentials> {
 	let mut existing_username = match local_api.user_credentials() {
 		Ok(user_credentials) =>
 			return Ok(user_credentials),
@@ -13,7 +13,7 @@ pub(crate) async fn ensure_user_credentials(
 			existing_username.clone(),
 
 		Err(err) =>
-			return Err(err.context("could not read user credentials")),
+			return Err(anyhow::Error::new(err).context("could not read user credentials")),
 	};
 
 	loop {
@@ -21,8 +21,8 @@ pub(crate) async fn ensure_user_credentials(
 		println!("Please provide your username and password to authenticate yourself.");
 
 		match prompt_override {
-			Some(true) => return Err("Exiting because --yes was specified ...".into()),
-			Some(false) => return Err("Exiting because --no was specified ...".into()),
+			Some(true) => return Err(anyhow::anyhow!("Exiting because --yes was specified ...")),
+			Some(false) => return Err(anyhow::anyhow!("Exiting because --no was specified ...")),
 			None => (),
 		}
 
@@ -55,12 +55,12 @@ pub(crate) async fn ensure_user_credentials(
 				existing_username = Some(username);
 			},
 
-			Err(err) => return Err(err.context("authentication error")),
+			Err(err) => return Err(anyhow::Error::new(err).context("authentication error")),
 		}
 	}
 }
 
-pub(crate) fn prompt_continue(prompt_override: Option<bool>) -> Result<bool, crate::Error> {
+pub(crate) fn prompt_continue(prompt_override: Option<bool>) -> anyhow::Result<bool> {
 	match prompt_override {
 		Some(true) => {
 			println!("Continue? [y/n]: y");

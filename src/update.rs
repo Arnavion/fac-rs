@@ -1,4 +1,4 @@
-#[derive(Debug, structopt::StructOpt)]
+#[derive(clap::Parser)]
 pub(crate) struct SubCommand {
 }
 
@@ -9,7 +9,7 @@ impl SubCommand {
 		web_api: &factorio_mods_web::Api,
 		config: crate::config::Config,
 		prompt_override: Option<bool>,
-	) -> Result<(), crate::Error> {
+	) -> anyhow::Result<()> {
 		crate::solve::compute_and_apply_diff(local_api, web_api, config, prompt_override).await?;
 
 		Ok(())
