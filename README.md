@@ -16,12 +16,10 @@
 # Build
 
 ```bash
-cargo +nightly build --release
+cargo build --release
 ```
 
 This creates the `fac` binary at `./target/release/fac`
-
-`fac` requires a nightly compiler since it uses an unstable feature (impl-trait-type-aliases).
 
 
 # Run
