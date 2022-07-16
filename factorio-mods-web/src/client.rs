@@ -60,7 +60,7 @@ impl Client {
 			};
 
 			let (response, url) = inner.send(request, range, &*APPLICATION_ZIP, url).await?;
-			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
+			let url = expect_content_type(&response, url, [&APPLICATION_OCTET_STREAM, &APPLICATION_ZIP])?;
 			Ok((response, url))
 		}
 	}
@@ -81,7 +81,7 @@ impl Client {
 			};
 
 			let (response, url) = inner.send(request, None, &*APPLICATION_ZIP, url).await?;
-			let url = expect_content_type(&response, url, &APPLICATION_ZIP)?;
+			let url = expect_content_type(&response, url, [&APPLICATION_OCTET_STREAM, &APPLICATION_ZIP])?;
 			Ok((response, url))
 		}
 	}
@@ -121,13 +121,15 @@ impl Client {
 static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::BTreeSet<&'static str>> =
 	once_cell::sync::Lazy::new(|| [
 		"auth.factorio.com",
-		"direct.mods-data.factorio.com",
+		"dl-mod.factorio.com",
 		"mods.factorio.com",
-		"mods-data.factorio.com",
 	].into_iter().collect());
 
 static APPLICATION_JSON: once_cell::sync::Lazy<http::HeaderValue> =
 	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/json"));
+
+static APPLICATION_OCTET_STREAM: once_cell::sync::Lazy<http::HeaderValue> =
+	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/octet-stream"));
 
 static APPLICATION_ZIP: once_cell::sync::Lazy<http::HeaderValue> =
 	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/zip"));
@@ -228,7 +230,7 @@ struct LoginFailureResponse {
 async fn json<T>(response: http::Response<hyper::Body>, url: url::Url) -> Result<(T, url::Url), crate::Error>
 	where T: serde::de::DeserializeOwned + 'static
 {
-	let url = expect_content_type(&response, url, &APPLICATION_JSON)?;
+	let url = expect_content_type(&response, url, [&APPLICATION_JSON])?;
 	let response = response.into_body();
 	let response = match hyper::body::aggregate(response).await {
 		Ok(response) => response,
@@ -256,17 +258,21 @@ async fn json<T>(response: http::Response<hyper::Body>, url: url::Url) -> Result
 	Ok((object, url))
 }
 
-fn expect_content_type(
+fn expect_content_type<'a, I, T>(
 	response: &http::Response<hyper::Body>,
 	url: url::Url,
-	expected_mime: &http::HeaderValue,
-) -> Result<url::Url, crate::Error> {
+	expected_mime: I,
+) -> Result<url::Url, crate::Error>
+where
+	I: IntoIterator<Item = &'a T>,
+	T: std::ops::Deref<Target = http::HeaderValue> + 'a,
+{
 	let mime = match response.headers().get(http::header::CONTENT_TYPE) {
 		Some(mime) => mime,
 		None => return Err(crate::Error::MalformedResponse(url, "No Content-Type header".to_owned())),
 	};
 
-	if mime != expected_mime {
+	if !expected_mime.into_iter().any(|expected_mime| mime == **expected_mime) {
 		return Err(crate::Error::MalformedResponse(url, format!("Unexpected Content-Type header: {mime:?}")));
 	}
 
