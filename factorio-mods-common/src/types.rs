@@ -86,7 +86,7 @@ pub struct ServiceUsername(pub String);
 pub struct ServiceToken(pub String);
 
 /// The specification of a dependency in a mod's info.json
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Dependency {
 	/// The name of the dependency.
 	pub name: ModName,
@@ -140,7 +140,7 @@ impl<'a> package::Dependency<'a, ReleaseVersion> for Dependency {
 
 /// A version requirement.
 #[derive(
-	Clone, Debug, PartialEq,
+	Clone, Debug, Eq, PartialEq,
 	derive_struct::NewTypeDisplay,
 	serde::Deserialize,
 )]

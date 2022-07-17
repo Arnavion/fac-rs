@@ -5,30 +5,10 @@ on:
 
 jobs:
   run:
-    runs-on: 'ubuntu-18.04'
-
-    strategy:
-      fail-fast: false
-
-      matrix:
-        crate:
-        - 'factorio-mods-common'
-        - 'factorio-mods-local'
-        - 'factorio-mods-web'
-        - 'package'
-        - 'fac'
-
-        op:
-        - 'build'
-        - 'clippy'
-        - 'clippy-tests'
-        - 'test'
+    runs-on: 'ubuntu-20.04'
 
     steps:
     - uses: 'actions/checkout@v1'
 
     - name: 'Run'
       run: bash ./ci/run.sh
-      env:
-        CRATE: "${{ matrix.crate }}"
-        OP: "${{ matrix.op }}"

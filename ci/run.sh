@@ -16,24 +16,4 @@ rustup default stable
 rustup component add clippy
 
 
-case "$OP" in
-	'build')
-		cargo build -p "$CRATE"
-		;;
-
-	'clippy')
-		cargo clippy -p "$CRATE"
-		;;
-
-	'clippy-tests')
-		cargo clippy -p "$CRATE" --tests
-		;;
-
-	'test')
-		cargo test -p "$CRATE"
-		;;
-
-	*)
-		exit 1
-		;;
-esac
+make test

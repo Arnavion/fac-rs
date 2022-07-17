@@ -37,7 +37,7 @@ pub trait VersionReq<TVersion> {
 	fn matches(&self, other: &TVersion) -> bool;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DependencyKind {
 	Conflicts,
 	Optional,
@@ -83,6 +83,7 @@ impl<Name, Version> std::error::Error for Error<Name, Version> where
 {
 }
 
+#[allow(clippy::trait_duplication_in_bounds)] // TODO: https://github.com/rust-lang/rust-clippy/issues/9076
 pub fn compute_solution<I>(
 	packages: I,
 	reqs: &std::collections::BTreeMap<
@@ -256,17 +257,13 @@ pub fn compute_solution<I>(
 								})
 							.collect();
 
-						// TODO: https://github.com/rust-lang/rust-clippy/issues/5822
-						#[allow(clippy::option_if_let_else)]
-						{
-							common_conflicts =
-								if let Some(existing) = common_conflicts {
-									Some(&existing & &conflicts)
-								}
-								else {
-									Some(conflicts)
-								};
-						}
+						common_conflicts =
+							if let Some(existing) = common_conflicts {
+								Some(&existing & &conflicts)
+							}
+							else {
+								Some(conflicts)
+							};
 					}
 
 					if let Some(common_conflicts) = common_conflicts {

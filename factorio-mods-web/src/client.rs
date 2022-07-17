@@ -37,7 +37,7 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, &*APPLICATION_JSON, url).await?;
+			let (response, url) = inner.send(request, None, &APPLICATION_JSON, url).await?;
 			json(response, url).await
 		}
 	}
@@ -59,7 +59,7 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, range, &*APPLICATION_ZIP, url).await?;
+			let (response, url) = inner.send(request, range, &APPLICATION_ZIP, url).await?;
 			let url = expect_content_type(&response, url, [&APPLICATION_OCTET_STREAM, &APPLICATION_ZIP])?;
 			Ok((response, url))
 		}
@@ -80,7 +80,7 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, &*APPLICATION_ZIP, url).await?;
+			let (response, url) = inner.send(request, None, &APPLICATION_ZIP, url).await?;
 			let url = expect_content_type(&response, url, [&APPLICATION_OCTET_STREAM, &APPLICATION_ZIP])?;
 			Ok((response, url))
 		}
@@ -112,7 +112,7 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, &*APPLICATION_JSON, url).await?;
+			let (response, url) = inner.send(request, None, &APPLICATION_JSON, url).await?;
 			json(response, url).await
 		})
 	}

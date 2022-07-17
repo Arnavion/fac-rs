@@ -3,8 +3,7 @@ pub(crate) struct SubCommand {
 }
 
 impl SubCommand {
-	pub(crate) async fn run(
-		self,
+	pub(crate) fn run(
 		local_api: &factorio_mods_local::Api,
 	) -> anyhow::Result<()> {
 		use anyhow::Context;

@@ -16,7 +16,7 @@ pub struct DateTime(pub String);
 pub struct DownloadCount(pub u64);
 
 /// A mod object returned by [`crate::Api::get`].
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
 pub struct Mod {
 	/// The name of the mod.
 	pub name: factorio_mods_common::ModName,
@@ -48,7 +48,7 @@ pub struct Mod {
 pub struct ModSummary(pub String);
 
 /// A single mod release.
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
 pub struct ModRelease {
 	/// The version of the mod release.
 	pub version: factorio_mods_common::ReleaseVersion,
@@ -71,7 +71,7 @@ pub struct ModRelease {
 }
 
 /// Extra information about a single mod release.
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
 pub struct ModReleaseInfo {
 	/// The versions of the game supported by the mod release.
 	pub factorio_version: factorio_mods_common::ModVersionReq,
@@ -96,7 +96,7 @@ pub struct ModHash(pub String);
 pub struct Filename(pub String);
 
 /// A mod object returned by [`crate::Api::search`].
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
 pub struct SearchResponseMod {
 	/// The name of the mod.
 	pub name: factorio_mods_common::ModName,

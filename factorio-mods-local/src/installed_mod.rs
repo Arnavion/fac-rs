@@ -1,5 +1,5 @@
 /// An installed mod object.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InstalledMod {
 	/// The path of the mod.
 	pub path: std::path::PathBuf,
@@ -12,7 +12,7 @@ pub struct InstalledMod {
 }
 
 /// Represents the contents of `info.json` of a mod release.
-#[derive(Clone, Debug, PartialEq, serde::Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize)]
 pub struct ModInfo {
 	/// The name of the mod release.
 	pub name: factorio_mods_common::ModName,

@@ -133,9 +133,9 @@ async fn main() -> anyhow::Result<()> {
 			prompt_override,
 		).await?,
 
-		SubCommand::List(parameters) => parameters.run(
+		SubCommand::List(_) => list::SubCommand::run(
 			&local_api?,
-		).await?,
+		)?,
 
 		SubCommand::Search(parameters) => parameters.run(
 			&web_api?,

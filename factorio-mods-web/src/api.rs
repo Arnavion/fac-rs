@@ -196,7 +196,6 @@ struct PaginationLinks {
 }
 
 #[cfg(test)]
-#[allow(clippy::semicolon_if_nothing_returned)] // TODO: https://github.com/rust-lang/rust-clippy/issues/7438
 mod tests {
 	#[tokio::test]
 	async fn search_list_all_mods() {
