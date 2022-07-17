@@ -163,19 +163,14 @@ async fn main() -> anyhow::Result<()> {
 	Ok(())
 }
 
-fn textwrap_options() -> textwrap::Options<
-	'static,
-	impl Clone + textwrap::wrap_algorithms::WrapAlgorithm,
-	impl Clone + textwrap::word_separators::WordSeparator,
-	impl Clone + textwrap::word_splitters::WordSplitter
-> {
+fn textwrap_options() -> textwrap::Options<'static> {
 	textwrap::Options {
 		width: textwrap::termwidth(),
 		initial_indent: "    ",
 		subsequent_indent: "    ",
 		break_words: true,
-		wrap_algorithm: textwrap::wrap_algorithms::OptimalFit,
-		word_separator: textwrap::word_separators::UnicodeBreakProperties,
-		word_splitter: textwrap::word_splitters::NoHyphenation,
+		wrap_algorithm: textwrap::WrapAlgorithm::OptimalFit(Default::default()),
+		word_separator: textwrap::WordSeparator::UnicodeBreakProperties,
+		word_splitter: textwrap::WordSplitter::NoHyphenation,
 	}
 }

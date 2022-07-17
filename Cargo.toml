@@ -35,7 +35,7 @@ petgraph = { version = "0.6", default-features = false }
 regex = { version = "1.2", default-features = false, features = [
 	"std", # "`std` feature is currently required to build this crate"
 ] }
-rpassword = { version = "5", default-features = false }
+rpassword = { version = "7", default-features = false }
 rprompt = { version = "1", default-features = false }
 semver = { version = "1", default-features = false, features = [
 	"std", # for semver::Error: std::error::Error
@@ -46,10 +46,10 @@ serde = { version = "1", default-features = false, features = [
 serde_json = { version = "1", default-features = false, features = [
 	"std", # for serde_json::from_reader, serde_json::to_writer_pretty
 ] }
-textwrap = { version = "0.14", default-features = false, features = [
-	"smawk", # for textwrap::wrap_algorithms::OptimalFit
+textwrap = { version = "0.15", default-features = false, features = [
+	"smawk", # for textwrap::WrapAlgorithm::OptimalFit
 	"terminal_size", # for textwrap::termwidth()
-	"unicode-linebreak", # for textwrap::word_separators::UnicodeBreakProperties
+	"unicode-linebreak", # for textwrap::WordSeparator::UnicodeBreakProperties
 ] }
 tokio = { version = "1", default-features = false, features = [
 	"macros",

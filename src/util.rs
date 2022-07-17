@@ -41,7 +41,7 @@ pub(crate) async fn ensure_user_credentials(
 			},
 		};
 
-		let password = rpassword::prompt_password_stdout("Password (not shown): ").context("could not read password")?;
+		let password = rpassword::prompt_password("Password (not shown): ").context("could not read password")?;
 
 		match web_api.login(username.clone(), &password).await {
 			Ok(user_credentials) => {
