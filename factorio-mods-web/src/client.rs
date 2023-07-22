@@ -37,7 +37,7 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, &APPLICATION_JSON, url).await?;
+			let (response, url) = inner.send(request, None, application_json(), url).await?;
 			json(response, url).await
 		}
 	}
@@ -59,8 +59,8 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, range, &APPLICATION_ZIP, url).await?;
-			let url = expect_content_type(&response, url, [&APPLICATION_OCTET_STREAM, &APPLICATION_ZIP])?;
+			let (response, url) = inner.send(request, range, application_zip(), url).await?;
+			let url = expect_content_type(&response, url, [application_octet_stream(), application_zip()])?;
 			Ok((response, url))
 		}
 	}
@@ -80,8 +80,8 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, &APPLICATION_ZIP, url).await?;
-			let url = expect_content_type(&response, url, [&APPLICATION_OCTET_STREAM, &APPLICATION_ZIP])?;
+			let (response, url) = inner.send(request, None, application_zip(), url).await?;
+			let url = expect_content_type(&response, url, [application_octet_stream(), application_zip()])?;
 			Ok((response, url))
 		}
 	}
@@ -108,34 +108,44 @@ impl Client {
 					Ok(uri) => uri,
 					Err(err) => return Err(crate::Error::ParseUri(url, err)),
 				};
-				request.headers_mut().insert(http::header::CONTENT_TYPE, WWW_FORM_URL_ENCODED.clone());
+				request.headers_mut().insert(http::header::CONTENT_TYPE, www_form_url_encoded().clone());
 				request
 			};
 
-			let (response, url) = inner.send(request, None, &APPLICATION_JSON, url).await?;
+			let (response, url) = inner.send(request, None, application_json(), url).await?;
 			json(response, url).await
 		})
 	}
 }
 
-static WHITELISTED_HOSTS: once_cell::sync::Lazy<std::collections::BTreeSet<&'static str>> =
-	once_cell::sync::Lazy::new(|| [
+static WHITELISTED_HOSTS: std::sync::OnceLock<std::collections::BTreeSet<&'static str>> = std::sync::OnceLock::new();
+fn whitelisted_hosts() -> &'static std::collections::BTreeSet<&'static str> {
+	WHITELISTED_HOSTS.get_or_init(|| [
 		"auth.factorio.com",
 		"dl-mod.factorio.com",
 		"mods.factorio.com",
-	].into_iter().collect());
+	].into_iter().collect())
+}
 
-static APPLICATION_JSON: once_cell::sync::Lazy<http::HeaderValue> =
-	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/json"));
+static APPLICATION_JSON: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
+fn application_json() -> &'static http::HeaderValue {
+	APPLICATION_JSON.get_or_init(|| http::HeaderValue::from_static("application/json"))
+}
 
-static APPLICATION_OCTET_STREAM: once_cell::sync::Lazy<http::HeaderValue> =
-	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/octet-stream"));
+static APPLICATION_OCTET_STREAM: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
+fn application_octet_stream() -> &'static http::HeaderValue {
+	APPLICATION_OCTET_STREAM.get_or_init(|| http::HeaderValue::from_static("application/octet-stream"))
+}
 
-static APPLICATION_ZIP: once_cell::sync::Lazy<http::HeaderValue> =
-	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/zip"));
+static APPLICATION_ZIP: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
+fn application_zip() -> &'static http::HeaderValue {
+	APPLICATION_ZIP.get_or_init(|| http::HeaderValue::from_static("application/zip"))
+}
 
-static WWW_FORM_URL_ENCODED: once_cell::sync::Lazy<http::HeaderValue> =
-	once_cell::sync::Lazy::new(|| http::HeaderValue::from_static("application/x-www-form-urlencoded"));
+static WWW_FORM_URL_ENCODED: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
+fn www_form_url_encoded() -> &'static http::HeaderValue {
+	WWW_FORM_URL_ENCODED.get_or_init(|| http::HeaderValue::from_static("application/x-www-form-urlencoded"))
+}
 
 #[derive(Debug)]
 struct ClientInner {
@@ -158,7 +168,7 @@ impl ClientInner {
 			accept: &'static http::HeaderValue,
 			url: url::Url,
 		) -> Result<(http::Response<hyper::Body>, url::Url), crate::Error> {
-			if !matches!(url.host_str(), Some(host) if WHITELISTED_HOSTS.contains(host)) {
+			if !matches!(url.host_str(), Some(host) if whitelisted_hosts().contains(host)) {
 				return Err(crate::Error::NotWhitelistedHost(url));
 			}
 
@@ -230,7 +240,7 @@ struct LoginFailureResponse {
 async fn json<T>(response: http::Response<hyper::Body>, url: url::Url) -> Result<(T, url::Url), crate::Error>
 	where T: serde::de::DeserializeOwned + 'static
 {
-	let url = expect_content_type(&response, url, [&APPLICATION_JSON])?;
+	let url = expect_content_type(&response, url, [application_json()])?;
 	let response = response.into_body();
 	let response = match hyper::body::aggregate(response).await {
 		Ok(response) => response,
@@ -258,21 +268,20 @@ async fn json<T>(response: http::Response<hyper::Body>, url: url::Url) -> Result
 	Ok((object, url))
 }
 
-fn expect_content_type<'a, I, T>(
+fn expect_content_type<'a, I>(
 	response: &http::Response<hyper::Body>,
 	url: url::Url,
 	expected_mime: I,
 ) -> Result<url::Url, crate::Error>
 where
-	I: IntoIterator<Item = &'a T>,
-	T: std::ops::Deref<Target = http::HeaderValue> + 'a,
+	I: IntoIterator,
+	I::Item: std::ops::Deref<Target = http::HeaderValue> + 'a,
 {
-	let mime = match response.headers().get(http::header::CONTENT_TYPE) {
-		Some(mime) => mime,
-		None => return Err(crate::Error::MalformedResponse(url, "No Content-Type header".to_owned())),
+	let Some(mime) = response.headers().get(http::header::CONTENT_TYPE) else {
+		return Err(crate::Error::MalformedResponse(url, "No Content-Type header".to_owned()));
 	};
 
-	if !expected_mime.into_iter().any(|expected_mime| mime == **expected_mime) {
+	if !expected_mime.into_iter().any(|expected_mime| mime == *expected_mime) {
 		return Err(crate::Error::MalformedResponse(url, format!("Unexpected Content-Type header: {mime:?}")));
 	}
 

@@ -16,10 +16,10 @@ impl std::str::FromStr for Requirement {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		use anyhow::Context;
 
-		static REQUIREMENT_REGEX: once_cell::sync::Lazy<regex::Regex> =
-			once_cell::sync::Lazy::new(|| regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap());
+		static REQUIREMENT_REGEX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
 
-		let captures = REQUIREMENT_REGEX.captures(s).with_context(|| format!(r#"Could not parse requirement "{s}""#))?;
+		let requirement_regex = REQUIREMENT_REGEX.get_or_init(|| regex::Regex::new(r"^([^@]+)(?:@(.*))?").unwrap());
+		let captures = requirement_regex.captures(s).with_context(|| format!(r#"Could not parse requirement "{s}""#))?;
 		let name = factorio_mods_common::ModName(captures[1].to_owned());
 		let version_string = captures.get(2).map_or("*", |m| m.as_str());
 		let version =

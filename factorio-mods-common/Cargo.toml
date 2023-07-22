@@ -11,9 +11,6 @@ edition = "2021"
 itertools = { version = "0.10", default-features = false, features = [
 	"use_std", # for itertools::join
 ] }
-once_cell = { version = "1.4", default-features = false, features = [
-	"std", # for once_cell::sync
-] }
 regex = { version = "1.2", default-features = false, features = [
 	"std", # "`std` feature is currently required to build this crate"
 	"unicode-perl", # for \s and \d support

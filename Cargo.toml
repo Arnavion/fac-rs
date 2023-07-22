@@ -28,9 +28,6 @@ itertools = { version = "0.10", default-features = false, features = [
 	"use_std", # for itertools::join, itertools::Itertools::sorted_by, itertools::Itertools::try_collect
 ] }
 libflate = { version = "1", default-features = false }
-once_cell = { version = "1.4", default-features = false, features = [
-	"std", # for once_cell::sync
-] }
 petgraph = { version = "0.6", default-features = false }
 regex = { version = "1.2", default-features = false, features = [
 	"std", # "`std` feature is currently required to build this crate"
