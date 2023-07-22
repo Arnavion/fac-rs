@@ -90,13 +90,7 @@ enum Type {
 }
 
 fn identify_type(ty: &syn::Type) -> Option<Type> {
-	let path =
-		if let syn::Type::Path(syn::TypePath { qself: None, path }) = ty {
-			path
-		}
-		else {
-			return None;
-		};
+	let syn::Type::Path(syn::TypePath { qself: None, path }) = ty else { return None; };
 
 	match path {
 		syn::Path { leading_colon: None, segments } if segments.len() == 2 => {

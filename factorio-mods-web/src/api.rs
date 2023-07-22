@@ -40,12 +40,8 @@ impl Api {
 							}
 						}
 
-						if let Some(url) = page.pagination.and_then(|pagination| pagination.links.next) {
-							next_page_url = url;
-						}
-						else {
-							return;
-						}
+						let Some(next_page_url_) = page.pagination.and_then(|pagination| pagination.links.next) else { return; };
+						next_page_url = next_page_url_;
 					},
 
 					Err(crate::Error::StatusCode(_, http::StatusCode::NOT_FOUND)) => return,
@@ -104,9 +100,8 @@ impl Api {
 
 		async move {
 			let (response, download_url) = future?.await?;
-			let len = match response.headers().get(http::header::CONTENT_LENGTH) {
-				Some(len) => len,
-				None => return Err(crate::Error::MalformedResponse(download_url, "No Content-Length header".to_owned())),
+			let Some(len) = response.headers().get(http::header::CONTENT_LENGTH) else {
+				return Err(crate::Error::MalformedResponse(download_url, "No Content-Length header".to_owned()));
 			};
 			let len = match len.to_str() {
 				Ok(len) => len,

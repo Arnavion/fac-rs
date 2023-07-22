@@ -83,7 +83,6 @@ impl<Name, Version> std::error::Error for Error<Name, Version> where
 {
 }
 
-#[allow(clippy::trait_duplication_in_bounds)] // TODO: https://github.com/rust-lang/rust-clippy/issues/9076
 pub fn compute_solution<I>(
 	packages: I,
 	reqs: &std::collections::BTreeMap<
@@ -248,13 +247,7 @@ pub fn compute_solution<I>(
 					for &node_index in node_indices {
 						let conflicts: std::collections::BTreeSet<_> =
 							graph.edges(node_index)
-							.filter_map(|edge|
-								if let Relation::Conflicts = edge.weight() {
-									Some(petgraph::visit::EdgeRef::target(&edge))
-								}
-								else {
-									None
-								})
+							.filter_map(|edge| matches!(edge.weight(), Relation::Conflicts).then(|| petgraph::visit::EdgeRef::target(&edge)))
 							.collect();
 
 						common_conflicts =
@@ -266,9 +259,7 @@ pub fn compute_solution<I>(
 							};
 					}
 
-					if let Some(common_conflicts) = common_conflicts {
-						node_indices_to_remove.extend(common_conflicts);
-					}
+					node_indices_to_remove.extend(common_conflicts.into_iter().flatten());
 				}
 			}
 		}

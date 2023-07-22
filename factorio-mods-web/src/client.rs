@@ -192,9 +192,8 @@ impl ClientInner {
 				http::StatusCode::PARTIAL_CONTENT if range.is_some() => Ok((response, url)),
 
 				http::StatusCode::FOUND => {
-					let location = match response.headers().get(http::header::LOCATION) {
-						Some(location) => location,
-						None => return Err(crate::Error::MalformedResponse(url, "No Location header".to_owned())),
+					let Some(location) = response.headers().get(http::header::LOCATION) else {
+						return Err(crate::Error::MalformedResponse(url, "No Location header".to_owned()));
 					};
 					let location = match location.to_str() {
 						Ok(location) => location,

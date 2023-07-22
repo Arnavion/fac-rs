@@ -39,13 +39,12 @@ pub(crate) async fn compute_and_apply_diff(
 			})
 		.collect();
 
-	let (to_uninstall, to_install) = match compute_diff(solution, local_api, prompt_override)? {
-		Some(diff) => diff,
-		None => return Ok(()),
+	let Some((to_uninstall, to_install)) = compute_diff(solution, local_api, prompt_override)? else {
+		return Ok(());
 	};
 
 	let mods_directory = local_api.mods_directory();
-	std::fs::create_dir_all(&mods_directory)
+	std::fs::create_dir_all(mods_directory)
 		.with_context(|| format!("could not create mods directory {}", mods_directory.display()))?;
 
 	let mods_directory_canonicalized =

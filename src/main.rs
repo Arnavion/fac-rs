@@ -5,7 +5,6 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
 	clippy::default_trait_access,
-	clippy::let_underscore_drop,
 	clippy::similar_names,
 	clippy::too_many_lines,
 	clippy::type_complexity,
