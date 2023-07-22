@@ -1,14 +1,17 @@
-.PHONY: clean default test
+.PHONY: clean default outdated print test
 
-default: target/release/fac
+default:
+	cargo build --release -p fac
 
 clean:
 	rm -rf Cargo.lock target/
 
-target/release/fac:
-	cargo build --release -p fac
+outdated:
+	cargo-outdated
+
+print:
+	git status --porcelain
 
 test:
-	cargo test --all
-	cargo clippy --all
-	cargo clippy --all --tests
+	cargo test --workspace
+	cargo clippy --workspace --tests --examples
