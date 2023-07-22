@@ -45,9 +45,9 @@ serde = { version = "1", default-features = false, features = [
 serde_json = { version = "1", default-features = false, features = [
 	"std", # for serde_json::from_reader, serde_json::to_writer_pretty
 ] }
-textwrap = { version = "0.15", default-features = false, features = [
+textwrap = { version = "0.16", default-features = false, features = [
 	"smawk", # for textwrap::WrapAlgorithm::OptimalFit
-	"terminal_size", # for textwrap::termwidth()
+	"terminal_size", # for textwrap::Options::with_termwidth()
 	"unicode-linebreak", # for textwrap::WordSeparator::UnicodeBreakProperties
 ] }
 tokio = { version = "1", default-features = false, features = [
