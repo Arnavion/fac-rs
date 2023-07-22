@@ -4,7 +4,7 @@ pub(crate) struct SubCommand {
 	requirements: Vec<Requirement>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Requirement {
 	name: factorio_mods_common::ModName,
 	version: factorio_mods_common::ModVersionReq,

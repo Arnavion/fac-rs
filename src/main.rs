@@ -28,7 +28,7 @@ mod util;
 #[derive(clap::Parser)]
 #[clap(about, author)]
 pub(crate) struct Options {
-	#[clap(help = "Path to fac config file. Defaults to .../fac/config.json", short = 'c', parse(from_os_str))]
+	#[clap(help = "Path to fac config file. Defaults to .../fac/config.json", short = 'c', value_parser)]
 	config: Option<std::path::PathBuf>,
 
 	#[clap(help = "Answer yes to all prompts", short = 'y')]
