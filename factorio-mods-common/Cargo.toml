@@ -8,8 +8,8 @@ edition = "2021"
 
 
 [dependencies]
-itertools = { version = "0.10", default-features = false, features = [
-	"use_std", # for itertools::join
+itertools = { version = "0.11", default-features = false, features = [
+	"use_alloc", # for itertools::join
 ] }
 regex = { version = "1.2", default-features = false, features = [
 	"std", # "`std` feature is currently required to build this crate"
