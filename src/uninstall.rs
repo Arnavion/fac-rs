@@ -1,6 +1,6 @@
-#[derive(clap::Parser)]
+#[derive(clap::Args)]
 pub(crate) struct SubCommand {
-	#[clap(help = "mods to uninstall", required = true)]
+	#[arg(help = "mods to uninstall", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 

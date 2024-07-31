@@ -1,6 +1,6 @@
-#[derive(clap::Parser)]
+#[derive(clap::Args)]
 pub(crate) struct SubCommand {
-	#[clap(help = "search string", default_value = "")]
+	#[arg(help = "search string", default_value = "")]
 	query: String,
 }
 

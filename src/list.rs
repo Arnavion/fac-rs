@@ -1,4 +1,4 @@
-#[derive(clap::Parser)]
+#[derive(clap::Args)]
 pub(crate) struct SubCommand {
 }
 

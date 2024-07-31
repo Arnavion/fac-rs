@@ -1,6 +1,6 @@
-#[derive(clap::Parser)]
+#[derive(clap::Args)]
 pub(crate) struct SubCommand {
-	#[clap(help = "requirements to install", required = true)]
+	#[arg(help = "requirements to install", required = true)]
 	requirements: Vec<Requirement>,
 }
 

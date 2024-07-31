@@ -1,6 +1,6 @@
-#[derive(clap::Parser)]
+#[derive(clap::Args)]
 pub(crate) struct EnableSubCommand {
-	#[clap(help = "mods to enable", required = true)]
+	#[arg(help = "mods to enable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 
@@ -15,9 +15,9 @@ impl EnableSubCommand {
 	}
 }
 
-#[derive(clap::Parser)]
+#[derive(clap::Args)]
 pub(crate) struct DisableSubCommand {
-	#[clap(help = "mods to disable", required = true)]
+	#[arg(help = "mods to disable", required = true)]
 	names: Vec<factorio_mods_common::ModName>,
 }
 

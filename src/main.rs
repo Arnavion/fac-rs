@@ -15,45 +15,45 @@ mod solve;
 mod util;
 
 #[derive(clap::Parser)]
-#[clap(about, author)]
+#[command(about, author)]
 pub(crate) struct Options {
-	#[clap(help = "Path to fac config file. Defaults to .../fac/config.json", short = 'c', value_parser)]
+	#[arg(help = "Path to fac config file. Defaults to .../fac/config.json", short = 'c', value_parser)]
 	config: Option<std::path::PathBuf>,
 
-	#[clap(help = "Answer yes to all prompts", short = 'y')]
+	#[arg(help = "Answer yes to all prompts", short = 'y')]
 	yes: bool,
 
-	#[clap(help = "Answer no to all prompts", short = 'n', conflicts_with = "yes")]
+	#[arg(help = "Answer no to all prompts", short = 'n', conflicts_with = "yes")]
 	no: bool,
 
-	#[clap(subcommand)]
+	#[command(subcommand)]
 	subcommand: SubCommand,
 }
 
-#[derive(clap::Parser)]
+#[derive(clap::Subcommand)]
 pub(crate) enum SubCommand {
-	#[clap(name = "disable", about = "Disable mods")]
+	#[command(name = "disable", about = "Disable mods")]
 	Disable(enable_disable::DisableSubCommand),
 
-	#[clap(name = "enable", about = "Enable mods")]
+	#[command(name = "enable", about = "Enable mods")]
 	Enable(enable_disable::EnableSubCommand),
 
-	#[clap(name = "install", about = "Install (or update) mods", visible_alias = "add")]
+	#[command(name = "install", about = "Install (or update) mods", visible_alias = "add")]
 	Install(install::SubCommand),
 
-	#[clap(name = "list", about = "List installed mods and their status")]
+	#[command(name = "list", about = "List installed mods and their status")]
 	List(list::SubCommand),
 
-	#[clap(name = "search", about = "Search the mods database")]
+	#[command(name = "search", about = "Search the mods database")]
 	Search(search::SubCommand),
 
-	#[clap(name = "show", about = "Show details about specific mods")]
+	#[command(name = "show", about = "Show details about specific mods")]
 	Show(show::SubCommand),
 
-	#[clap(name = "uninstall", about = "Uninstall mods", visible_alias = "remove")]
+	#[command(name = "uninstall", about = "Uninstall mods", visible_alias = "remove")]
 	Uninstall(uninstall::SubCommand),
 
-	#[clap(name = "update", about = "Update installed mods")]
+	#[command(name = "update", about = "Update installed mods")]
 	Update(update::SubCommand),
 }
 
