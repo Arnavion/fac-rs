@@ -168,20 +168,22 @@ pub fn find(
 ///
 /// Used as the default value of the `factorio_version` field in a mod's `info.json` if the field doesn't exist.
 fn default_game_version() -> factorio_mods_common::ModVersionReq {
-	static DEFAULT_GAME_VERSION: std::sync::OnceLock<factorio_mods_common::ModVersionReq> = std::sync::OnceLock::new();
+	static DEFAULT_GAME_VERSION: std::sync::LazyLock<factorio_mods_common::ModVersionReq> =
+		std::sync::LazyLock::new(|| factorio_mods_common::ModVersionReq("0.12".parse().unwrap()));
 
-	DEFAULT_GAME_VERSION.get_or_init(|| factorio_mods_common::ModVersionReq("0.12".parse().unwrap())).clone()
+	DEFAULT_GAME_VERSION.clone()
 }
 
 /// The default dependencies of a mod.
 ///
 /// Used as the default value of the `dependencies` field in a mod's `info.json` if the field doesn't exist.
 fn default_dependencies() -> Vec<factorio_mods_common::Dependency> {
-	static DEFAULT_DEPENDENCIES: std::sync::OnceLock<Vec<factorio_mods_common::Dependency>> = std::sync::OnceLock::new();
+	static DEFAULT_DEPENDENCIES: std::sync::LazyLock<Vec<factorio_mods_common::Dependency>> =
+		std::sync::LazyLock::new(|| vec![factorio_mods_common::Dependency {
+			name: factorio_mods_common::ModName("base".to_owned()),
+			version: factorio_mods_common::ModVersionReq(semver::VersionReq::STAR),
+			kind: package::DependencyKind::Required,
+		}]);
 
-	DEFAULT_DEPENDENCIES.get_or_init(|| vec![factorio_mods_common::Dependency {
-		name: factorio_mods_common::ModName("base".to_owned()),
-		version: factorio_mods_common::ModVersionReq(semver::VersionReq::STAR),
-		kind: package::DependencyKind::Required,
-	}]).clone()
+	DEFAULT_DEPENDENCIES.clone()
 }

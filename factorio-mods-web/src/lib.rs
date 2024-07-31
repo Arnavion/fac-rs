@@ -1,15 +1,6 @@
 //! API to search mods / download mods / show mod info from <https://mods.factorio.com/>
 
-#![deny(missing_docs, rust_2018_idioms, warnings)]
-
-#![deny(clippy::all, clippy::pedantic)]
-#![allow(
-	clippy::default_trait_access,
-	clippy::missing_errors_doc,
-	clippy::missing_panics_doc,
-	clippy::similar_names,
-	clippy::type_complexity,
-)]
+#![deny(missing_docs)]
 
 mod api;
 pub use self::api::Api;

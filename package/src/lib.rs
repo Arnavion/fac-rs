@@ -2,18 +2,6 @@
 //!
 //! Takes a set of packages and requirements and produces a solution of packages to be installed.
 
-#![deny(rust_2018_idioms, warnings)]
-
-#![deny(clippy::all, clippy::pedantic)]
-#![allow(
-	clippy::default_trait_access,
-	clippy::missing_errors_doc,
-	clippy::missing_panics_doc,
-	clippy::similar_names,
-	clippy::too_many_lines,
-	clippy::type_complexity,
-)]
-
 pub trait Package {
 	type Name;
 	type Version: std::cmp::Ord;
@@ -247,7 +235,8 @@ pub fn compute_solution<I>(
 					for &node_index in node_indices {
 						let conflicts: std::collections::BTreeSet<_> =
 							graph.edges(node_index)
-							.filter_map(|edge| matches!(edge.weight(), Relation::Conflicts).then(|| petgraph::visit::EdgeRef::target(&edge)))
+							.filter(|edge| matches!(edge.weight(), Relation::Conflicts))
+							.map(|edge| petgraph::visit::EdgeRef::target(&edge))
 							.collect();
 
 						common_conflicts =
@@ -434,7 +423,7 @@ impl<'a, T> Permutater<'a, T> where T: Copy {
 mod tests {
 	#[test]
 	fn test_permutater() {
-		let possibilities = vec![vec![None, Some("a"), Some("b")], vec![None, Some("c")]];
+		let possibilities = [vec![None, Some("a"), Some("b")], vec![None, Some("c")]];
 		let possibilities: Vec<_> = possibilities.iter().map(AsRef::as_ref).collect();
 		let mut values = vec![None; possibilities.len()];
 

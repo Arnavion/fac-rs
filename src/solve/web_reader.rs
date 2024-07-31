@@ -29,12 +29,11 @@ type ReqwestResponseReader<'a> = futures_util::stream::IntoAsyncRead<std::pin::P
 const REGION_LEN_MAX: usize = 1024 * 8;
 
 impl<'a> WebReader<'a> {
-	// TODO: Can't return Self because of https://github.com/rust-lang/rust/issues/61949
 	pub(super) async fn new(
 		api: &'a factorio_mods_web::Api,
 		release: std::rc::Rc<factorio_mods_web::ModRelease>,
 		user_credentials: std::rc::Rc<factorio_mods_common::UserCredentials>,
-	) -> Result<WebReader<'a>, factorio_mods_web::Error> {
+	) -> Result<Self, factorio_mods_web::Error> {
 		let len = api.get_filesize(&release, &user_credentials).await?;
 		Ok(WebReader {
 			api,

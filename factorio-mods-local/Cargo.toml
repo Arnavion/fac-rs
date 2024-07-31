@@ -24,3 +24,7 @@ zip = { version = "0.6", default-features = false, features = [
 derive-struct = { path = "../derive-struct" }
 factorio-mods-common = { path = "../factorio-mods-common" }
 package = { path = "../package" }
+
+
+[lints]
+workspace = true

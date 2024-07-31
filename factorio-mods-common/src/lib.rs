@@ -1,12 +1,6 @@
 //! Common types and functionality used by the factorio-mods-* crates.
 
-#![deny(missing_docs, rust_2018_idioms, warnings)]
-
-#![deny(clippy::all, clippy::pedantic)]
-#![allow(
-	clippy::missing_errors_doc,
-	clippy::must_use_candidate,
-)]
+#![deny(missing_docs)]
 
 mod types;
 pub use self::types::*;

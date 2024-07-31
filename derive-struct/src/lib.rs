@@ -1,9 +1,5 @@
 //! Custom derives used by the factorio-mods-* crates.
 
-#![deny(rust_2018_idioms, warnings)]
-
-#![deny(clippy::all, clippy::pedantic)]
-
 /// Derives `std::fmt::Display` on the newtype.
 #[proc_macro_derive(NewTypeDisplay)]
 pub fn derive_newtype_display(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

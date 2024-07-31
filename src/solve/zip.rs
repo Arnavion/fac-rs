@@ -81,7 +81,7 @@ pub(super) async fn find_info_json(
 	const EOCD_MIN_LEN: u64 = 22;
 
 	let file_len = futures_util::io::AsyncSeekExt::seek(reader, std::io::SeekFrom::End(0)).await.map_err(Error::Io)?;
-	let eocd_start_pos_min = file_len.saturating_sub(EOCD_MIN_LEN + u64::from(u16::max_value()));
+	let eocd_start_pos_min = file_len.saturating_sub(EOCD_MIN_LEN + u64::from(u16::MAX));
 
 	let mut eocd_start_pos = file_len.checked_sub(EOCD_MIN_LEN).ok_or(Error::EndOfCentralDirectorRecordNotFound)?;
 

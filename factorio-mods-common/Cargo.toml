@@ -29,3 +29,7 @@ package = { path = "../package" }
 serde_json = { version = "1", default-features = false, features = [
 	"alloc", # serde_json requires either `std` or `alloc`
 ] }
+
+
+[lints]
+workspace = true

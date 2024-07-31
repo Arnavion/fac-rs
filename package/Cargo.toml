@@ -6,8 +6,13 @@ authors = ["Arnavion <me@arnavion.dev>"]
 description = "Package solver used by fac-rs"
 edition = "2021"
 
+
 [dependencies]
 itertools = { version = "0.11", default-features = false, features = [
 	"use_alloc", # for itertools::Itertools::sorted_by
 ] }
 petgraph = { version = "0.6", default-features = false }
+
+
+[lints]
+workspace = true

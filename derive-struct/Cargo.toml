@@ -6,10 +6,16 @@ authors = ["Arnavion <me@arnavion.dev>"]
 description = "Custom derives used by the factorio-mods-* crates"
 edition = "2021"
 
+
 [dependencies]
 proc-macro2 = { version = "1", default-features = false }
 quote = { version = "1", default-features = false }
 syn = { version = "2", default-features = false }
 
+
 [lib]
 proc-macro = true
+
+
+[lints]
+workspace = true

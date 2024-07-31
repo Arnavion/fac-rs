@@ -21,68 +21,66 @@ pub(crate) struct Config {
 
 impl Config {
 	pub fn load(path: Option<std::path::PathBuf>) -> anyhow::Result<Self> {
-		static FACTORIO_INSTALL_SEARCH_PATHS: std::sync::OnceLock<Vec<std::path::PathBuf>> = std::sync::OnceLock::new();
-		static FACTORIO_USER_SEARCH_PATHS: std::sync::OnceLock<Vec<std::path::PathBuf>> = std::sync::OnceLock::new();
+		static FACTORIO_INSTALL_SEARCH_PATHS: std::sync::LazyLock<Vec<std::path::PathBuf>> =
+			std::sync::LazyLock::new(|| {
+				let mut result = vec![];
 
-		let factorio_install_search_paths = FACTORIO_INSTALL_SEARCH_PATHS.get_or_init(|| {
-			let mut result = vec![];
+				if cfg!(windows) {
+					if let Some(path) = std::env::var_os("ProgramW6432") {
+						let mut path: std::path::PathBuf = path.into();
+						path.push("Steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+					if let Some(path) = std::env::var_os("ProgramFiles") {
+						let mut path: std::path::PathBuf = path.into();
+						path.push("Steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+				}
+				else {
+					if let Some(mut path) = dirs::home_dir() {
+						path.push(".steam");
+						path.push("steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
 
-			if cfg!(windows) {
-				if let Some(path) = std::env::var_os("ProgramW6432") {
-					let mut path: std::path::PathBuf = path.into();
-					path.push("Steam");
-					path.push("steamapps");
-					path.push("common");
-					path.push("Factorio");
+					if let Some(mut path) = dirs::data_dir() {
+						path.push("Steam");
+						path.push("steamapps");
+						path.push("common");
+						path.push("Factorio");
+						result.push(path);
+					}
+				}
+
+				result
+			});
+		static FACTORIO_USER_SEARCH_PATHS: std::sync::LazyLock<Vec<std::path::PathBuf>> =
+			std::sync::LazyLock::new(|| {
+				let mut result = vec![];
+
+				if cfg!(windows) {
+					if let Some(mut path) = dirs::data_dir() {
+						path.push("Factorio");
+						result.push(path);
+					}
+				}
+				else if let Some(mut path) = dirs::home_dir() {
+					path.push(".factorio");
 					result.push(path);
 				}
-				if let Some(path) = std::env::var_os("ProgramFiles") {
-					let mut path: std::path::PathBuf = path.into();
-					path.push("Steam");
-					path.push("steamapps");
-					path.push("common");
-					path.push("Factorio");
-					result.push(path);
-				}
-			}
-			else {
-				if let Some(mut path) = dirs::home_dir() {
-					path.push(".steam");
-					path.push("steam");
-					path.push("steamapps");
-					path.push("common");
-					path.push("Factorio");
-					result.push(path);
-				}
 
-				if let Some(mut path) = dirs::data_dir() {
-					path.push("Steam");
-					path.push("steamapps");
-					path.push("common");
-					path.push("Factorio");
-					result.push(path);
-				}
-			}
-
-			result
-		});
-
-		let factorio_user_search_paths = FACTORIO_USER_SEARCH_PATHS.get_or_init(|| {
-			let mut result = vec![];
-
-			if cfg!(windows) {
-				if let Some(mut path) = dirs::data_dir() {
-					path.push("Factorio");
-					result.push(path);
-				}
-			}
-			else if let Some(mut path) = dirs::home_dir() {
-				path.push(".factorio");
-				result.push(path);
-			}
-
-			result
-		});
+				result
+			});
 
 		let config_file_path =
 			if let Some(path) = path {
@@ -127,7 +125,7 @@ impl Config {
 		};
 
 		let install_directory =
-			install_directory.or_else(|| factorio_install_search_paths.iter().find_map(|search_path| {
+			install_directory.or_else(|| FACTORIO_INSTALL_SEARCH_PATHS.iter().find_map(|search_path| {
 				let search_path = std::path::Path::new(search_path);
 				let base_info_file_path = search_path.join("data").join("base").join("info.json");
 				if base_info_file_path.is_file() {
@@ -139,7 +137,7 @@ impl Config {
 			}));
 
 		let user_directory =
-			user_directory.or_else(|| factorio_user_search_paths.iter().find_map(|search_path| {
+			user_directory.or_else(|| FACTORIO_USER_SEARCH_PATHS.iter().find_map(|search_path| {
 				let search_path = std::path::Path::new(search_path);
 
 				let mods_directory = search_path.join("mods");

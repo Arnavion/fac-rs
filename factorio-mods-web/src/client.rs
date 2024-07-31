@@ -7,14 +7,15 @@ pub(crate) struct Client {
 impl Client {
 	/// Creates a new `Client` object.
 	pub(crate) fn new() -> Self {
+		static USER_AGENT: http::HeaderValue = http::HeaderValue::from_static(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")));
+
 		let connector = hyper_tls::HttpsConnector::new();
 		let inner = hyper::Client::builder().build(connector);
-		let user_agent = http::HeaderValue::from_static(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")));
 
 		Client {
 			inner: std::sync::Arc::new(ClientInner {
 				inner,
-				user_agent,
+				user_agent: USER_AGENT.clone(),
 			}),
 		}
 	}
@@ -37,7 +38,7 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, application_json(), url).await?;
+			let (response, url) = inner.send(request, None, &APPLICATION_JSON, url).await?;
 			json(response, url).await
 		}
 	}
@@ -59,8 +60,8 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, range, application_zip(), url).await?;
-			let url = expect_content_type(&response, url, [application_octet_stream(), application_zip()])?;
+			let (response, url) = inner.send(request, range, &APPLICATION_ZIP, url).await?;
+			let url = expect_content_type(&response, url, [&*APPLICATION_OCTET_STREAM, &*APPLICATION_ZIP])?;
 			Ok((response, url))
 		}
 	}
@@ -80,8 +81,8 @@ impl Client {
 				request
 			};
 
-			let (response, url) = inner.send(request, None, application_zip(), url).await?;
-			let url = expect_content_type(&response, url, [application_octet_stream(), application_zip()])?;
+			let (response, url) = inner.send(request, None, &APPLICATION_ZIP, url).await?;
+			let url = expect_content_type(&response, url, [&*APPLICATION_OCTET_STREAM, &*APPLICATION_ZIP])?;
 			Ok((response, url))
 		}
 	}
@@ -108,44 +109,34 @@ impl Client {
 					Ok(uri) => uri,
 					Err(err) => return Err(crate::Error::ParseUri(url, err)),
 				};
-				request.headers_mut().insert(http::header::CONTENT_TYPE, www_form_url_encoded().clone());
+				request.headers_mut().insert(http::header::CONTENT_TYPE, WWW_FORM_URL_ENCODED.clone());
 				request
 			};
 
-			let (response, url) = inner.send(request, None, application_json(), url).await?;
+			let (response, url) = inner.send(request, None, &APPLICATION_JSON, url).await?;
 			json(response, url).await
 		})
 	}
 }
 
-static WHITELISTED_HOSTS: std::sync::OnceLock<std::collections::BTreeSet<&'static str>> = std::sync::OnceLock::new();
-fn whitelisted_hosts() -> &'static std::collections::BTreeSet<&'static str> {
-	WHITELISTED_HOSTS.get_or_init(|| [
+static WHITELISTED_HOSTS: std::sync::LazyLock<std::collections::BTreeSet<&'static str>> =
+	std::sync::LazyLock::new(|| [
 		"auth.factorio.com",
 		"dl-mod.factorio.com",
 		"mods.factorio.com",
-	].into_iter().collect())
-}
+	].into_iter().collect());
 
-static APPLICATION_JSON: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
-fn application_json() -> &'static http::HeaderValue {
-	APPLICATION_JSON.get_or_init(|| http::HeaderValue::from_static("application/json"))
-}
+static APPLICATION_JSON: std::sync::LazyLock<http::HeaderValue> =
+	std::sync::LazyLock::new(|| http::HeaderValue::from_static("application/json"));
 
-static APPLICATION_OCTET_STREAM: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
-fn application_octet_stream() -> &'static http::HeaderValue {
-	APPLICATION_OCTET_STREAM.get_or_init(|| http::HeaderValue::from_static("application/octet-stream"))
-}
+static APPLICATION_OCTET_STREAM: std::sync::LazyLock<http::HeaderValue> =
+	std::sync::LazyLock::new(|| http::HeaderValue::from_static("application/octet-stream"));
 
-static APPLICATION_ZIP: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
-fn application_zip() -> &'static http::HeaderValue {
-	APPLICATION_ZIP.get_or_init(|| http::HeaderValue::from_static("application/zip"))
-}
+static APPLICATION_ZIP: std::sync::LazyLock<http::HeaderValue> =
+	std::sync::LazyLock::new(|| http::HeaderValue::from_static("application/zip"));
 
-static WWW_FORM_URL_ENCODED: std::sync::OnceLock<http::HeaderValue> = std::sync::OnceLock::new();
-fn www_form_url_encoded() -> &'static http::HeaderValue {
-	WWW_FORM_URL_ENCODED.get_or_init(|| http::HeaderValue::from_static("application/x-www-form-urlencoded"))
-}
+static WWW_FORM_URL_ENCODED: std::sync::LazyLock<http::HeaderValue> =
+	std::sync::LazyLock::new(|| http::HeaderValue::from_static("application/x-www-form-urlencoded"));
 
 #[derive(Debug)]
 struct ClientInner {
@@ -154,79 +145,69 @@ struct ClientInner {
 }
 
 impl ClientInner {
-	fn send(
+	async fn send(
 		self: std::sync::Arc<Self>,
-		request: http::Request<hyper::Body>,
+		mut request: http::Request<hyper::Body>,
 		range: Option<http::HeaderValue>,
 		accept: &'static http::HeaderValue,
 		url: url::Url,
-	) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(http::Response<hyper::Body>, url::Url), crate::Error>>>> {
-		async fn send_inner(
-			this: std::sync::Arc<ClientInner>,
-			mut request: http::Request<hyper::Body>,
-			range: Option<http::HeaderValue>,
-			accept: &'static http::HeaderValue,
-			url: url::Url,
-		) -> Result<(http::Response<hyper::Body>, url::Url), crate::Error> {
-			if !matches!(url.host_str(), Some(host) if whitelisted_hosts().contains(host)) {
-				return Err(crate::Error::NotWhitelistedHost(url));
-			}
+	) -> Result<(http::Response<hyper::Body>, url::Url), crate::Error> {
+		if !matches!(url.host_str(), Some(host) if WHITELISTED_HOSTS.contains(host)) {
+			return Err(crate::Error::NotWhitelistedHost(url));
+		}
 
-			{
-				let headers = request.headers_mut();
-				headers.insert(http::header::ACCEPT, accept.clone());
-				headers.insert(http::header::USER_AGENT, this.user_agent.clone());
-				if let Some(range) = &range {
-					request.headers_mut().insert(http::header::RANGE, range.clone());
-				}
-			}
-
-			let response = match this.inner.request(request).await {
-				Ok(response) => response,
-				Err(err) => return Err(crate::Error::Http(url, err)),
-			};
-
-			match response.status() {
-				http::StatusCode::OK if range.is_none() => Ok((response, url)),
-
-				http::StatusCode::PARTIAL_CONTENT if range.is_some() => Ok((response, url)),
-
-				http::StatusCode::FOUND => {
-					let Some(location) = response.headers().get(http::header::LOCATION) else {
-						return Err(crate::Error::MalformedResponse(url, "No Location header".to_owned()));
-					};
-					let location = match location.to_str() {
-						Ok(location) => location,
-						Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {err}"))),
-					};
-					let location = match url.join(location) {
-						Ok(location) => location,
-						Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {err}"))),
-					};
-
-					let request = {
-						let mut request = http::Request::new(Default::default());
-						*request.method_mut() = http::Method::GET;
-						*request.uri_mut() = match location.to_string().parse() {
-							Ok(uri) => uri,
-							Err(err) => return Err(crate::Error::ParseUri(url, err)),
-						};
-						request
-					};
-
-					this.send(request, range, accept, location).await
-				},
-
-				http::StatusCode::UNAUTHORIZED => {
-					let (object, _): (LoginFailureResponse, _) = json(response, url).await?;
-					Err(crate::Error::LoginFailure(object.message))
-				},
-
-				code => Err(crate::Error::StatusCode(url, code)),
+		{
+			let headers = request.headers_mut();
+			headers.insert(http::header::ACCEPT, accept.clone());
+			headers.insert(http::header::USER_AGENT, self.user_agent.clone());
+			if let Some(range) = &range {
+				request.headers_mut().insert(http::header::RANGE, range.clone());
 			}
 		}
 
-		Box::pin(send_inner(self, request, range, accept, url))
+		let response = match self.inner.request(request).await {
+			Ok(response) => response,
+			Err(err) => return Err(crate::Error::Http(url, err)),
+		};
+
+		match response.status() {
+			http::StatusCode::OK if range.is_none() => Ok((response, url)),
+
+			http::StatusCode::PARTIAL_CONTENT if range.is_some() => Ok((response, url)),
+
+			http::StatusCode::FOUND => {
+				let Some(location) = response.headers().get(http::header::LOCATION) else {
+					return Err(crate::Error::MalformedResponse(url, "No Location header".to_owned()));
+				};
+				let location = match location.to_str() {
+					Ok(location) => location,
+					Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {err}"))),
+				};
+				let location = match url.join(location) {
+					Ok(location) => location,
+					Err(err) => return Err(crate::Error::MalformedResponse(url, format!("Malformed Location header: {err}"))),
+				};
+
+				let request = {
+					let mut request = http::Request::new(Default::default());
+					*request.method_mut() = http::Method::GET;
+					*request.uri_mut() = match location.to_string().parse() {
+						Ok(uri) => uri,
+						Err(err) => return Err(crate::Error::ParseUri(url, err)),
+					};
+					request
+				};
+
+				Box::pin(self.send(request, range, accept, location)).await
+			},
+
+			http::StatusCode::UNAUTHORIZED => {
+				let (object, _): (LoginFailureResponse, _) = json(response, url).await?;
+				Err(crate::Error::LoginFailure(object.message))
+			},
+
+			code => Err(crate::Error::StatusCode(url, code)),
+		}
 	}
 }
 
@@ -239,7 +220,7 @@ struct LoginFailureResponse {
 async fn json<T>(response: http::Response<hyper::Body>, url: url::Url) -> Result<(T, url::Url), crate::Error>
 	where T: serde::de::DeserializeOwned + 'static
 {
-	let url = expect_content_type(&response, url, [application_json()])?;
+	let url = expect_content_type(&response, url, [&*APPLICATION_JSON])?;
 	let response = response.into_body();
 	let response = match hyper::body::aggregate(response).await {
 		Ok(response) => response,

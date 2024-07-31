@@ -1,15 +1,5 @@
 //! A CLI tool to manage Factorio mods.
 
-#![deny(rust_2018_idioms, warnings)]
-
-#![deny(clippy::all, clippy::pedantic)]
-#![allow(
-	clippy::default_trait_access,
-	clippy::similar_names,
-	clippy::too_many_lines,
-	clippy::type_complexity,
-)]
-
 use anyhow::Context;
 
 mod enable_disable;

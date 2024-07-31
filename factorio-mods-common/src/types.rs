@@ -239,12 +239,10 @@ pub fn fixup_version(s: &str) -> String {
 
 /// Parses the given string as a Dependency
 fn parse_dependency<E>(s: &str) -> Result<Dependency, E> where E: serde::de::Error {
-	static DEPENDENCY_REGEX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+	static DEPENDENCY_REGEX: std::sync::LazyLock<regex::Regex> =
+		std::sync::LazyLock::new(|| regex::Regex::new(r"^((?:\?|\(\?\)|!|~)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap());
 
-	let dependency_regex =
-		DEPENDENCY_REGEX
-		.get_or_init(|| regex::Regex::new(r"^((?:\?|\(\?\)|!|~)?)\s*([^<>=]+?)\s*((<|<=|=|>=|>)\s*([\d\.]+))?\s*$").unwrap());
-	let captures = dependency_regex.captures(s)
+	let captures = DEPENDENCY_REGEX.captures(s)
 		.ok_or_else(|| serde::de::Error::invalid_value(serde::de::Unexpected::Str(s), &"a valid dependency specifier"))?;
 
 	let kind = match &captures[1] {
