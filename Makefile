@@ -14,4 +14,5 @@ print:
 
 test:
 	cargo test --workspace
-	cargo clippy --workspace --tests --examples
+	# Ref: https://github.com/rust-lang/rust-clippy/issues/12270
+	cargo clippy --workspace --tests --examples -- -A 'clippy::lint_groups_priority'
